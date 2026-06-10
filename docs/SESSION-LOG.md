@@ -6,6 +6,27 @@
 
 ---
 
+## Session 2 — 2026-06-11 — Status docs + Breeze auth
+
+**Goal:** Add in-repo status tracking docs, then install Breeze (auth + Vue/Inertia frontend).
+
+**Done**
+- Added `docs/STATUS.md` (status board) + `docs/SESSION-LOG.md` (this journal).
+- Installed Laravel Breeze with **Vue + Inertia** (`breeze:install vue`): auth scaffold, profile, dashboard.
+- Built frontend assets (`npm run build`) successfully.
+- Verified: `/login` & `/register` → 200, `/` → 200, `/dashboard` → redirects to login (auth guard works).
+
+**Problems hit & fixes**
+- `vite build` failed: `app.js` imported `./bootstrap` which Laravel 13 no longer ships. Created `resources/js/bootstrap.js` (axios setup) and added `axios` dev dep → build passes.
+
+**Decisions**
+- Maintain `STATUS.md` + `SESSION-LOG.md` each session as the human-readable mirror of working memory.
+
+**Next**
+- Build the domain layer (migrations + models) from `docs/02-domain-model.md`.
+
+---
+
 ## Session 1 — 2026-06-10 — Foundation & dev environment
 
 **Goal:** Lock tech stack, set up version control + local dev environment.

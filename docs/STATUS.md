@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-10
+> **Last updated:** 2026-06-11
 
 ---
 
@@ -28,18 +28,18 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - Tech stack chosen: Laravel + Inertia/Vue + Postgres (Docker-first).
 - Git: repo init, remote wired, initial docs commit + scaffold commit pushed.
 - Laravel 13 scaffolded with Sail (pgsql + redis). App serves **HTTP 200**, migrations run on Postgres.
+- Laravel Breeze installed (Inertia + Vue 3 + Tailwind). Auth working: `/login` `/register` → 200, `/dashboard` guarded. Assets build clean.
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Install Laravel Breeze (Inertia + Vue + Tailwind) — auth + frontend skeleton.
-2. Build domain layer — migrations + models from domain model (`docs/02-domain-model.md`): clients, units (serial→client), service visits, transactions (invoice/receipt), appointments, payments, warranty.
-3. RBAC — owner superuser + per-technician granular permissions (`docs/03-rbac-permissions.md`).
-4. Feature modules (`docs/04-feature-modules.md`), 11 modules.
-5. PDF (dompdf) invoice + receipt.
-6. DuitNow QR payment + webhook auto-verify (queue).
-7. Public client portal.
+1. Build domain layer — migrations + models from domain model (`docs/02-domain-model.md`): clients, units (serial→client), service visits, transactions (invoice/receipt), appointments, payments, warranty.
+2. RBAC — owner superuser + per-technician granular permissions (`docs/03-rbac-permissions.md`).
+3. Feature modules (`docs/04-feature-modules.md`), 11 modules.
+4. PDF (dompdf) invoice + receipt.
+5. DuitNow QR payment + webhook auto-verify (queue).
+6. Public client portal.
 
 ## ⏸ On Hold
 - _(none)_
