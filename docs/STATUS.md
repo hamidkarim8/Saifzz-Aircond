@@ -48,6 +48,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 ## 📋 Deferred (decided, not now)
 - Deployment doc (Dockerfile/compose for prod, GCP free VM → Linux VPS) — write AFTER core app stable.
 - WhatsApp Meta Cloud API — using `wa.me` click-to-chat for v1; full API later.
+- Redis — container runs (Sail `--with=redis`) but **unused**: cache/queue/session all on `database` driver, fine for v1 single-VM scale. Switch queue (then cache) to Redis when the DuitNow webhook queue lands or load demands. `phpredis` already present; flip `CACHE_STORE`/`QUEUE_CONNECTION`/`SESSION_DRIVER=redis` in `.env`. Verify: `docker compose exec redis redis-cli DBSIZE`.
 
 ## 🐞 Bugs
 - _(none)_
