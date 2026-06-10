@@ -1,0 +1,1037 @@
+html = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saifzz Aircond — Service System v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c1:#0A1628;--c2:#0E2040;--c3:#1A3A5C;--c4:#1E6FAE;--c5:#2E8FD4;--c6:#5AAFE8;--c7:#9DD3F5;--c8:#D4EDFA;--c9:#EBF6FD;
+  --bg:#F0F4F8;--sf:#FFFFFF;--sf2:#F7FAFC;--bd:#DDE6EE;--bd2:#C5D5E4;
+  --tx:#0A1628;--tx2:#4A6278;--tx3:#8BAABB;
+  --gr:#16A34A;--gr-bg:#DCFCE7;--am:#D97706;--am-bg:#FEF3C7;--rd:#DC2626;--rd-bg:#FEE2E2;
+  --ra:10px;--ral:14px;--rax:18px;
+  --sh:0 1px 8px rgba(10,22,40,.08);--shl:0 8px 32px rgba(10,22,40,.14);
+}
+html{font-size:14px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;line-height:1.55}
+/* SIDEBAR */
+.sb{width:232px;background:var(--c1);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column}
+.sb-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-lm{display:flex;align-items:center;gap:10px}
+.sb-ic{width:34px;height:34px;background:var(--c4);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px}
+.sb-br{color:#fff;font-size:14px;font-weight:700;line-height:1.2}
+.sb-tg{color:rgba(255,255,255,.35);font-size:10px;letter-spacing:.5px}
+.sb-nav{padding:12px 10px;flex:1;overflow-y:auto}
+.sb-sec{color:rgba(255,255,255,.25);font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:10px 8px 4px;margin-top:6px}
+.sb-it{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;font-size:13px;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;font-family:'Plus Jakarta Sans',sans-serif}
+.sb-it i{font-size:16px;flex-shrink:0}
+.sb-it:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.sb-it.active{background:var(--c4);color:#fff;font-weight:600}
+.sb-bx{margin-left:auto;background:#DC2626;color:#fff;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.sb-ft{padding:12px 10px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-ur{display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;cursor:pointer}
+.av{width:30px;height:30px;border-radius:50%;background:var(--c4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.sb-un{color:#fff;font-size:12.5px;font-weight:600}
+.sb-rl{color:rgba(255,255,255,.3);font-size:10.5px}
+/* MAIN */
+.main{margin-left:232px;min-height:100vh;display:flex;flex-direction:column}
+.tb{background:var(--sf);border-bottom:1px solid var(--bd);height:56px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.tb-ti{font-size:15px;font-weight:700;color:var(--tx)}
+.tb-rt{display:flex;align-items:center;gap:6px}
+.tb-bt{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx2);font-size:16px;position:relative;transition:all .15s}
+.tb-bt:hover{background:var(--bg)}
+.nd{position:absolute;top:6px;right:6px;width:6px;height:6px;background:var(--rd);border-radius:50%;border:1.5px solid #fff}
+.ct{padding:24px;flex:1}
+.pg{display:none}.pg.active{display:block}
+/* PAGE HEADER */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.ph-ti{font-size:19px;font-weight:700}
+.ph-sb{font-size:12.5px;color:var(--tx2);margin-top:2px}
+/* STAT CARDS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--ral);padding:18px;position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c4)}
+.sc.g::after{background:var(--gr)}.sc.a::after{background:var(--am)}.sc.r::after{background:var(--rd)}
+.si{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.ib{background:var(--c9);color:var(--c4)}.ig{background:var(--gr-bg);color:var(--gr)}.ia{background:var(--am-bg);color:var(--am)}
+.sl{font-size:11px;color:var(--tx2);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.sv{font-size:24px;font-weight:700;line-height:1;margin-top:3px}
+.ss{font-size:11.5px;color:var(--tx3);margin-top:3px}
+.su{font-size:11.5px;color:var(--gr);margin-top:3px;font-weight:600}
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--ral);overflow:hidden}
+.ch{padding:15px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.ct2{font-size:13.5px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:6px}
+.cb{padding:18px}
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--sf2);color:var(--tx2);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:9px 14px;text-align:center;border-bottom:1px solid var(--bd);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:center}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--sf2)}
+table.la thead th,table.la tbody td{text-align:left}
+/* BADGES */
+.bx{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.bb{background:var(--c8);color:var(--c3)}.bg{background:var(--gr-bg);color:#15803D}.ba{background:var(--am-bg);color:#92400E}.br{background:var(--rd-bg);color:#991B1B}.bgr{background:#F1F5F9;color:#475569}.bn{background:#E0E7FF;color:#3730A3}.bp{background:#EDE9FE;color:#5B21B6}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;text-decoration:none}
+.btn:hover{background:var(--sf2);border-color:var(--c5)}
+.btn-p{background:var(--c4);color:#fff;border-color:var(--c4)}.btn-p:hover{background:var(--c3)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-ic{padding:5px;width:30px;height:30px;justify-content:center}
+.btn-ok{background:var(--gr);color:#fff;border-color:var(--gr)}.btn-ok:hover{background:#15803D}
+.btn-wa{background:#25D366;color:#fff;border-color:#25D366}.btn-wa:hover{background:#16a34a}
+.btn-ca{background:#D97706;color:#fff;border-color:#D97706}.btn-ca:hover{background:#92400E}
+.btn-gh{background:transparent;border-color:transparent;color:var(--tx2)}.btn-gh:hover{background:var(--bg)}
+.btn-iv{background:#6366F1;color:#fff;border-color:#6366F1}.btn-iv:hover{background:#4F46E5}
+/* FORMS */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.fl span{color:var(--rd)}
+.fc{width:100%;padding:8px 11px;border:1.5px solid var(--bd);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--tx);background:#fff;transition:border .15s;outline:none}
+.fc:focus{border-color:var(--c5);box-shadow:0 0 0 3px rgba(46,143,212,.1)}
+.fc.au{background:var(--sf2);color:var(--tx2);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.5px}
+.fc[disabled]{background:var(--sf2);cursor:not-allowed;color:var(--tx2)}
+.fh{font-size:11px;color:var(--tx3);margin-top:3px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+/* SEARCHBAR */
+.sbar{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.swp{position:relative;flex:1}
+.swp i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:15px}
+.sin{width:100%;padding:8px 11px 8px 32px;border:1.5px solid var(--bd);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;outline:none;background:#fff}
+.sin:focus{border-color:var(--c5)}
+/* MODAL */
+.mbd{position:fixed;inset:0;background:rgba(10,22,40,.55);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;backdrop-filter:blur(3px)}
+.mbd.open{display:flex}
+.modal{background:#fff;border-radius:var(--rax);width:100%;max-width:740px;box-shadow:var(--shl);margin:auto}
+.modal.sm{max-width:460px}
+.modal.md{max-width:580px}
+.mh{padding:18px 22px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;border-radius:var(--rax) var(--rax) 0 0;z-index:2}
+.mt{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mb2{padding:22px}
+.mf{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:center;gap:12px}
+/* SERVICE BLOCK */
+.svb{background:var(--c9);border:1.5px solid var(--c7);border-radius:var(--ral);padding:16px 18px;margin-bottom:12px}
+.svb-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.svb-ti{font-size:13px;font-weight:700;color:var(--c3);display:flex;align-items:center;gap:6px}
+.svb-n{width:22px;height:22px;background:var(--c4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+.fd{background:var(--c4);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+.fd.un{background:var(--sf2);color:var(--tx3)}
+/* TOTAL BAR */
+.tbar{background:var(--c2);border-radius:var(--ra);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.ti2{color:rgba(255,255,255,.5);font-size:12px}
+.tv{color:#fff;font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace}
+/* PAYMENT */
+.pm{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.po{border:2px solid var(--bd);border-radius:var(--ral);padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.po:hover,.po.sel{border-color:var(--c5);background:var(--c9)}
+.po.sel{border-color:var(--c4)}
+.po.ca.sel{border-color:var(--am);background:var(--am-bg)}
+.po-ti{font-size:13.5px;font-weight:700}
+.po-sb{font-size:11px;color:var(--tx2);margin-top:2px}
+.qra{text-align:center;padding:16px 0}
+.app{background:var(--c9);border-radius:var(--ra);padding:12px 18px;text-align:center;margin-bottom:14px}
+.apl{font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px}
+.apv{font-size:28px;font-weight:700;color:var(--c2);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.qrf{width:170px;height:170px;border:2px dashed var(--bd2);border-radius:var(--ra);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;background:var(--sf2)}
+.wd{width:8px;height:8px;background:var(--am);border-radius:50%;display:inline-block;animation:pulse 1s infinite;margin-right:6px}
+/* RECEIPT */
+.rc{font-family:'JetBrains Mono',monospace;font-size:12.5px}
+.rc-h{text-align:center;padding-bottom:14px;border-bottom:2px dashed var(--bd);margin-bottom:14px}
+.rc-co{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;color:var(--c2)}
+.rc-r{display:flex;justify-content:space-between;padding:3px 0;color:var(--tx2)}
+.rc-r strong{color:var(--tx)}
+.rc-hr{border:none;border-top:1px dashed var(--bd);margin:8px 0}
+.rc-s{background:var(--c9);border-radius:8px;padding:10px 12px;margin:6px 0}
+.rc-st{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--c3);margin-bottom:6px}
+.rc-to{display:flex;justify-content:space-between;font-size:15px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--c2);padding:10px 0}
+/* PORTAL */
+.portal{min-height:100vh;background:linear-gradient(160deg,var(--c1) 0%,var(--c2) 40%,var(--c3) 100%);display:flex;flex-direction:column}
+.pb{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.pb-ic{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}
+.pb-br{color:#fff;font-size:13.5px;font-weight:700}
+.pc{flex:1;padding:32px 16px 48px;max-width:480px;width:100%;margin:0 auto}
+.pk{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.22)}
+.pk-h{background:var(--c2);padding:20px;text-align:center}
+.pk-ic{width:52px;height:52px;background:var(--c4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;margin:0 auto 10px}
+.pk-h h2{color:#fff;font-size:17px;font-weight:700}
+.pk-h p{color:rgba(255,255,255,.45);font-size:12px;margin-top:3px}
+.pk-b{padding:24px}
+.nb{background:linear-gradient(90deg,var(--c2),var(--c4));border-radius:var(--ral);padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px;color:#fff}
+.nb-l{font-size:10px;opacity:.6;letter-spacing:.5px;text-transform:uppercase}
+.nb-v{font-size:17px;font-weight:700}
+.shi{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--bd)}
+.shi:last-child{border-bottom:none}
+.shd{width:42px;height:42px;background:var(--c9);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;color:var(--c2)}
+.shd-d{font-size:14px;font-weight:700;line-height:1}
+.shd-m{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+/* REMINDER */
+.rem{background:var(--sf);border:1px solid var(--bd);border-left:4px solid var(--bd);border-radius:var(--ral);padding:16px 18px;margin-bottom:12px;transition:box-shadow .15s}
+.rem:hover{box-shadow:var(--sh)}
+.rem.ov{border-left-color:var(--rd)}.rem.du{border-left-color:var(--am)}.rem.ok{border-left-color:var(--c4)}
+.rem-tp{display:flex;align-items:flex-start;gap:12px}
+.rem-ic{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.rem-in{flex:1;min-width:0}
+.rem-nm{font-size:14px;font-weight:700}
+.rem-mt{font-size:12px;color:var(--tx2);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rem-ac{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.rem-sp{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.rem-sp.ct{background:var(--gr-bg);color:#15803D}
+.rem-sp.nc{background:var(--rd-bg);color:var(--rd)}
+/* CALENDAR */
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px}
+.cgh{font-size:10.5px;font-weight:700;color:var(--tx2);text-align:center;padding:4px 0;text-transform:uppercase;letter-spacing:.3px}
+.cd{font-size:12.5px;text-align:center;padding:7px 2px;border-radius:6px;cursor:pointer;transition:all .15s;position:relative}
+.cd:hover{background:var(--c9);color:var(--c3)}
+.cd.td{background:var(--c4);color:#fff;font-weight:700}
+.cd.ha{font-weight:600;color:var(--c4)}
+.cd.ha::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--c4);border-radius:50%}
+.cd.td.ha::after{background:#fff}
+.cd.td:hover{background:var(--c3)}
+.cd.em{cursor:default}
+.cd.sx{background:var(--c8);color:var(--c2);font-weight:700;outline:2px solid var(--c4)}
+.alp{background:var(--c9);border-radius:var(--ra);padding:14px;margin-top:14px;min-height:60px}
+.alt{font-size:12px;font-weight:700;color:var(--c3);margin-bottom:10px}
+.ali{background:#fff;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid var(--c7)}
+.ali:last-child{margin-bottom:0}
+.att{font-size:11.5px;font-weight:700;color:var(--c4);min-width:58px;flex-shrink:0}
+/* SERVICE FEE */
+.ftr{max-height:320px;overflow-y:auto}
+.fr{display:grid;grid-template-columns:1fr 1fr 1fr 80px;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.fr:last-child{border-bottom:none}
+.fr:nth-child(even){background:var(--sf2)}
+/* FILTER TABS */
+.ftabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.ft{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--bd);background:#fff;color:var(--tx2);font-family:inherit;transition:all .15s}
+.ft:hover{border-color:var(--c5);color:var(--c4)}
+.ft.active{background:var(--c4);color:#fff;border-color:var(--c4)}
+/* WARRANTY COUNTDOWN */
+.wc{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
+.wc.active{background:#DCFCE7;color:#15803D}
+.wc.expiring{background:#FEF3C7;color:#92400E}
+.wc.expired{background:#F1F5F9;color:#64748B}
+/* MISC */
+.fl2{display:flex}.g8{gap:8px}.ic{align-items:center}.jb{justify-content:space-between}
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.tsm{font-size:12px}.tmu{color:var(--tx2)}.tr{text-align:right}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.3px}
+.wf{width:100%}
+.sep{border:none;border-top:1px solid var(--bd);margin:16px 0}
+.ib2{background:var(--c9);border:1px solid var(--c7);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--c3);display:flex;align-items:flex-start;gap:8px}
+.ib2 i{font-size:16px;flex-shrink:0;margin-top:1px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+</style>
+</head>
+<body>
+<!-- ADMIN APP -->
+<div id="adminApp">
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="sb-lm">
+      <div class="sb-ic"><i class="ti ti-air-conditioning"></i></div>
+      <div><div class="sb-br">Saifzz Aircond</div><div class="sb-tg">Service System v4</div></div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Main</div>
+    <button class="sb-it active" onclick="goPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+    <button class="sb-it" onclick="goPage('clients',this)"><i class="ti ti-users"></i>Client</button>
+    <button class="sb-it" onclick="goPage('reminder',this)"><i class="ti ti-bell"></i>Reminder<span class="sb-bx">5</span></button>
+    <button class="sb-it" onclick="goPage('transaction',this)"><i class="ti ti-credit-card"></i>Transaction</button>
+    <div class="sb-sec">Management</div>
+    <button class="sb-it" onclick="goPage('servicefee',this)"><i class="ti ti-currency-dollar"></i>Service Fee</button>
+    <button class="sb-it" onclick="goPage('appointment',this)"><i class="ti ti-calendar-event"></i>Appointment</button>
+    <div class="sb-sec">Portal</div>
+    <button class="sb-it" onclick="toPortal()"><i class="ti ti-qrcode"></i>Client Portal</button>
+  </nav>
+  <div class="sb-ft">
+    <div class="sb-ur">
+      <div class="av">SA</div>
+      <div><div class="sb-un">Saifuddin A.</div><div class="sb-rl">Administrator</div></div>
+      <i class="ti ti-logout" style="color:rgba(255,255,255,.25);font-size:15px;margin-left:auto;cursor:pointer"></i>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <header class="tb">
+    <div class="tb-ti" id="tbTitle">Dashboard</div>
+    <div class="tb-rt">
+      <div class="tb-bt"><i class="ti ti-search"></i></div>
+      <div class="tb-bt"><i class="ti ti-bell"></i><span class="nd"></span></div>
+      <div class="av" style="width:30px;height:30px;font-size:11px">SA</div>
+    </div>
+  </header>
+  <div class="ct">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="pg active" id="page-dashboard">
+  <div class="ph"><div><div class="ph-ti">Dashboard</div><div class="ph-sb">Sunday, 8 June 2026 — Welcome back!</div></div><button class="btn btn-sm"><i class="ti ti-calendar"></i> June 2026</button></div>
+  <div class="sg">
+    <div class="sc"><div class="si ib"><i class="ti ti-users"></i></div><div class="sl">Total Clients</div><div class="sv">148</div><div class="su"><i class="ti ti-trending-up"></i> +12 this month</div></div>
+    <div class="sc g"><div class="si ig"><i class="ti ti-cash"></i></div><div class="sl">Revenue (June)</div><div class="sv"><span style="font-size:13px;color:var(--tx2);font-weight:500">RM </span>4,820</div><div class="su"><i class="ti ti-trending-up"></i> +8% vs May</div></div>
+    <div class="sc"><div class="si ib"><i class="ti ti-report-money"></i></div><div class="sl">All-Time Revenue</div><div class="sv"><span style="font-size:13px;color:var(--tx2);font-weight:500">RM </span>87,340</div><div class="ss">Since Jan 2024</div></div>
+    <div class="sc a"><div class="si ia"><i class="ti ti-bell-ringing"></i></div><div class="sl">Pending Reminders</div><div class="sv">5</div><div class="ss">Clients to follow up</div></div>
+  </div>
+  <div class="g2" style="margin-bottom:18px">
+    <!-- [FIX 5] Dashboard calendar with click-to-show panel -->
+    <div class="card">
+      <div class="ch"><div class="ct2"><i class="ti ti-calendar" style="color:var(--c4)"></i> Appointments — June 2026</div><button class="btn btn-sm" onclick="goPage('appointment',document.querySelector('[onclick*=appointment]'))">View All</button></div>
+      <div class="cb" style="padding:14px 16px">
+        <div class="cg">
+          <div class="cgh">Sun</div><div class="cgh">Mon</div><div class="cgh">Tue</div><div class="cgh">Wed</div><div class="cgh">Thu</div><div class="cgh">Fri</div><div class="cgh">Sat</div>
+          <div class="cd em"></div><div class="cd" onclick="pickDay(this,1,'Jun','dash')">1</div><div class="cd ha" onclick="pickDay(this,2,'Jun','dash')">2</div><div class="cd" onclick="pickDay(this,3,'Jun','dash')">3</div><div class="cd ha" onclick="pickDay(this,4,'Jun','dash')">4</div><div class="cd" onclick="pickDay(this,5,'Jun','dash')">5</div><div class="cd" onclick="pickDay(this,6,'Jun','dash')">6</div>
+          <div class="cd" onclick="pickDay(this,7,'Jun','dash')">7</div><div class="cd td ha" onclick="pickDay(this,8,'Jun','dash')">8</div><div class="cd" onclick="pickDay(this,9,'Jun','dash')">9</div><div class="cd ha" onclick="pickDay(this,10,'Jun','dash')">10</div><div class="cd" onclick="pickDay(this,11,'Jun','dash')">11</div><div class="cd ha" onclick="pickDay(this,12,'Jun','dash')">12</div><div class="cd" onclick="pickDay(this,13,'Jun','dash')">13</div>
+          <div class="cd" onclick="pickDay(this,14,'Jun','dash')">14</div><div class="cd" onclick="pickDay(this,15,'Jun','dash')">15</div><div class="cd ha" onclick="pickDay(this,16,'Jun','dash')">16</div><div class="cd" onclick="pickDay(this,17,'Jun','dash')">17</div><div class="cd" onclick="pickDay(this,18,'Jun','dash')">18</div><div class="cd ha" onclick="pickDay(this,19,'Jun','dash')">19</div><div class="cd" onclick="pickDay(this,20,'Jun','dash')">20</div>
+          <div class="cd" onclick="pickDay(this,21,'Jun','dash')">21</div><div class="cd" onclick="pickDay(this,22,'Jun','dash')">22</div><div class="cd" onclick="pickDay(this,23,'Jun','dash')">23</div><div class="cd ha" onclick="pickDay(this,24,'Jun','dash')">24</div><div class="cd" onclick="pickDay(this,25,'Jun','dash')">25</div><div class="cd" onclick="pickDay(this,26,'Jun','dash')">26</div><div class="cd" onclick="pickDay(this,27,'Jun','dash')">27</div>
+          <div class="cd" onclick="pickDay(this,28,'Jun','dash')">28</div><div class="cd" onclick="pickDay(this,29,'Jun','dash')">29</div><div class="cd" onclick="pickDay(this,30,'Jun','dash')">30</div>
+        </div>
+        <div class="alp" id="dashApptPanel">
+          <div class="alt" id="dashApptTitle">Click a date to view appointments</div>
+          <div id="dashApptItems" style="color:var(--tx3);font-size:12.5px;text-align:center;padding:8px 0">Select a highlighted date above</div>
+        </div>
+      </div>
+    </div>
+    <!-- Services by type with filter tabs -->
+    <div class="card">
+      <div class="ch"><div class="ct2"><i class="ti ti-chart-bar" style="color:var(--c4)"></i> Services by Type</div></div>
+      <div class="cb">
+        <div class="ftabs">
+          <button class="ft active" onclick="filterChart('all',this)">All Time</button>
+          <button class="ft" onclick="filterChart('month',this)">This Month</button>
+          <button class="ft" onclick="filterChart('week',this)">This Week</button>
+          <button class="ft" onclick="filterChart('today',this)">Today</button>
+        </div>
+        <div id="chartBars" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct2">Recent Transactions</div><button class="btn btn-sm" onclick="goPage('transaction',document.querySelector('[onclick*=transaction]'))">View all</button></div>
+    <div class="tw"><table class="la"><thead><tr><th>Client</th><th>Serial</th><th>Service</th><th>Amount</th><th>Payment</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><span style="font-weight:600">Zainab Rahman</span></td><td class="mono">000148</td><td><span class="bx bb">Cleaning</span></td><td style="font-weight:700">RM 120</td><td class="tsm tmu">DuitNow QR</td><td><span class="bx bg">Paid</span></td></tr>
+      <tr><td><span style="font-weight:600">Lim Kok Wei</span></td><td class="mono">000145</td><td><span class="bx ba">Gas Top-Up</span></td><td style="font-weight:700">RM 280</td><td class="tsm tmu">Cash</td><td><span class="bx bg">Paid</span></td></tr>
+      <tr><td><span style="font-weight:600">Kavitha Nair</span></td><td class="mono">000139</td><td><span class="bx bn">Installation</span></td><td style="font-weight:700">RM 450</td><td class="tsm tmu">DuitNow QR</td><td><span class="bx ba">Pending</span></td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+
+<!-- ══ CLIENTS ══ -->
+<div class="pg" id="page-clients">
+  <div class="ph"><div><div class="ph-ti">Client Management</div><div class="ph-sb">148 registered clients</div></div><button class="btn btn-p" onclick="openModal('addSvcModal')"><i class="ti ti-plus"></i> Add Service Record</button></div>
+  <div class="sbar">
+    <div class="swp" style="max-width:340px"><i class="ti ti-search"></i><input class="sin" placeholder="Search name, serial, phone…"></div>
+    <select class="fc" style="width:170px"><option>All Service Types</option><option>Cleaning</option><option>Gas Top-Up</option><option>Repair</option><option>Installation</option><option>Troubleshoot</option></select>
+    <button class="btn btn-sm"><i class="ti ti-filter"></i> Filter</button>
+  </div>
+  <div class="card"><div class="tw"><table>
+    <thead><tr><th>Serial No.</th><th>Client Name</th><th>Phone</th><th>Last Service</th><th>Services</th><th>Units</th><th>Next Service</th><th>Amount</th><th>Warranty</th><th>Actions</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mono">000148</td>
+        <td><div style="font-weight:600">Zainab Rahman</div><div class="tsm tmu">No. 5, Jalan Maju, KL</div></td>
+        <td>012-3456789</td><td class="tsm">05 Jun 2026</td>
+        <td><span class="bx bb">Cleaning</span></td><td>2</td>
+        <td><span class="bx ba">05 Sep 2026</span></td>
+        <td style="font-weight:700">RM 120</td>
+        <td><span class="wc active"><i class="ti ti-shield-check" style="font-size:11px"></i> 2 mos left</span></td>
+        <td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-ic btn-sm" onclick="openModal('rcptModal')" title="View"><i class="ti ti-eye"></i></button><button class="btn btn-ic btn-sm" title="Edit"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd)" title="Delete"><i class="ti ti-trash"></i></button></div></td>
+      </tr>
+      <tr>
+        <td class="mono">000145</td>
+        <td><div style="font-weight:600">Lim Kok Wei</div><div class="tsm tmu">Lot 12, Taman Damai, PJ</div></td>
+        <td>016-9876543</td><td class="tsm">02 Jun 2026</td>
+        <td><span class="bx ba">Gas Top-Up</span> <span class="bx bb" style="margin-left:2px">Cleaning</span></td><td>1</td>
+        <td><span class="bx bg">02 Oct 2026</span></td>
+        <td style="font-weight:700">RM 350</td>
+        <td><span class="wc expired"><i class="ti ti-shield-off" style="font-size:11px"></i> No warranty</span></td>
+        <td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-ic btn-sm" onclick="openModal('rcptModal')" title="View"><i class="ti ti-eye"></i></button><button class="btn btn-ic btn-sm" title="Edit"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd)" title="Delete"><i class="ti ti-trash"></i></button></div></td>
+      </tr>
+      <tr>
+        <td class="mono">000139</td>
+        <td><div style="font-weight:600">Kavitha Nair</div><div class="tsm tmu">Unit 3A, Sri Maju Condo</div></td>
+        <td>011-22334455</td><td class="tsm">28 May 2026</td>
+        <td><span class="bx bn">Installation</span></td><td>3</td>
+        <td><span class="bx br">28 Nov 2026</span></td>
+        <td style="font-weight:700">RM 450</td>
+        <td><span class="wc active"><i class="ti ti-shield-check" style="font-size:11px"></i> 5 mos left</span></td>
+        <td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-ic btn-sm" onclick="openModal('rcptModal')" title="View"><i class="ti ti-eye"></i></button><button class="btn btn-ic btn-sm" title="Edit"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd)" title="Delete"><i class="ti ti-trash"></i></button></div></td>
+      </tr>
+      <tr>
+        <td class="mono">000134</td>
+        <td><div style="font-weight:600">Mohd Faris</div><div class="tsm tmu">22, Jalan Kenanga, Shah Alam</div></td>
+        <td>017-7654321</td><td class="tsm">20 May 2026</td>
+        <td><span class="bx bgr">Repair</span></td><td>1</td>
+        <td><span class="bx bg">20 Aug 2026</span></td>
+        <td style="font-weight:700">RM 200</td>
+        <td><span class="wc expiring"><i class="ti ti-shield-half" style="font-size:11px"></i> Expires 20 Jul</span></td>
+        <td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-ic btn-sm" onclick="openModal('rcptModal')" title="View"><i class="ti ti-eye"></i></button><button class="btn btn-ic btn-sm" title="Edit"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd)" title="Delete"><i class="ti ti-trash"></i></button></div></td>
+      </tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ══ REMINDER ══ -->
+<div class="pg" id="page-reminder">
+  <div class="ph"><div><div class="ph-ti">Service Reminders</div><div class="ph-sb">5 clients overdue or due this month</div></div><button class="btn btn-sm"><i class="ti ti-filter"></i> Filter</button></div>
+  <div class="rem ov">
+    <div class="rem-tp"><div class="rem-ic" style="background:var(--rd-bg);color:var(--rd)"><i class="ti ti-alert-circle"></i></div>
+    <div class="rem-in"><div class="rem-nm">Kavitha Nair</div><div class="rem-mt"><i class="ti ti-map-pin" style="font-size:11px"></i>Unit 3A, Sri Maju Condo<span class="bx br">Overdue: Apr 2026</span></div><div class="rem-mt"><i class="ti ti-tool" style="font-size:11px"></i>Installation · 3 units · <span class="mono">000139</span></div><div class="rem-mt"><i class="ti ti-phone" style="font-size:11px"></i>011-22334455</div></div></div>
+    <div class="rem-ac"><button class="btn btn-sm btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button><button class="btn btn-sm btn-p" onclick="openModal('apptModal')"><i class="ti ti-calendar-plus"></i> Set Appointment</button><div style="flex:1"></div><button class="rem-sp nc" onclick="toggleCt(this)"><i class="ti ti-x" style="font-size:12px"></i> Not Contacted</button></div>
+  </div>
+  <div class="rem du">
+    <div class="rem-tp"><div class="rem-ic" style="background:var(--am-bg);color:var(--am)"><i class="ti ti-clock"></i></div>
+    <div class="rem-in"><div class="rem-nm">Ahmad Hakim</div><div class="rem-mt"><i class="ti ti-map-pin" style="font-size:11px"></i>No. 8, Jalan Bahagia, Ampang<span class="bx ba">Due: Jun 2026</span></div><div class="rem-mt"><i class="ti ti-tool" style="font-size:11px"></i>Cleaning · 2 units · <span class="mono">000127</span></div><div class="rem-mt"><i class="ti ti-phone" style="font-size:11px"></i>017-8889990</div></div></div>
+    <div class="rem-ac"><button class="btn btn-sm btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button><button class="btn btn-sm btn-p" onclick="openModal('apptModal')"><i class="ti ti-calendar-plus"></i> Set Appointment</button><div style="flex:1"></div><button class="rem-sp ct" onclick="toggleCt(this)"><i class="ti ti-check" style="font-size:12px"></i> Contacted</button></div>
+  </div>
+  <div class="rem du">
+    <div class="rem-tp"><div class="rem-ic" style="background:var(--am-bg);color:var(--am)"><i class="ti ti-clock"></i></div>
+    <div class="rem-in"><div class="rem-nm">Siti Nurhaliza</div><div class="rem-mt"><i class="ti ti-map-pin" style="font-size:11px"></i>Lot 22, Taman Sejahtera, Klang<span class="bx ba">Due: Jun 2026</span></div><div class="rem-mt"><i class="ti ti-tool" style="font-size:11px"></i>Cleaning · 1 unit · <span class="mono">000112</span></div><div class="rem-mt"><i class="ti ti-phone" style="font-size:11px"></i>013-5556677</div></div></div>
+    <div class="rem-ac"><button class="btn btn-sm btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button><button class="btn btn-sm btn-p" onclick="openModal('apptModal')"><i class="ti ti-calendar-plus"></i> Set Appointment</button><div style="flex:1"></div><button class="rem-sp nc" onclick="toggleCt(this)"><i class="ti ti-x" style="font-size:12px"></i> Not Contacted</button></div>
+  </div>
+  <div class="rem ok">
+    <div class="rem-tp"><div class="rem-ic" style="background:var(--c9);color:var(--c4)"><i class="ti ti-clock"></i></div>
+    <div class="rem-in"><div class="rem-nm">Tan Boon Huat</div><div class="rem-mt"><i class="ti ti-map-pin" style="font-size:11px"></i>No. 3, Jalan Utama, Subang<span class="bx ba">Due: Jun 2026</span></div><div class="rem-mt"><i class="ti ti-tool" style="font-size:11px"></i>Gas Top-Up · 1 unit · <span class="mono">000098</span></div><div class="rem-mt"><i class="ti ti-phone" style="font-size:11px"></i>016-3334445</div></div></div>
+    <div class="rem-ac"><button class="btn btn-sm btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button><button class="btn btn-sm btn-p" onclick="openModal('apptModal')"><i class="ti ti-calendar-plus"></i> Set Appointment</button><div style="flex:1"></div><button class="rem-sp nc" onclick="toggleCt(this)"><i class="ti ti-x" style="font-size:12px"></i> Not Contacted</button></div>
+  </div>
+  <div class="rem ok">
+    <div class="rem-tp"><div class="rem-ic" style="background:var(--c9);color:var(--c4)"><i class="ti ti-clock"></i></div>
+    <div class="rem-in"><div class="rem-nm">Ravi Kumar</div><div class="rem-mt"><i class="ti ti-map-pin" style="font-size:11px"></i>Unit 7, Maju Impian, PJ<span class="bx ba">Due: Jun 2026</span></div><div class="rem-mt"><i class="ti ti-tool" style="font-size:11px"></i>Troubleshoot · 2 units · <span class="mono">000087</span></div><div class="rem-mt"><i class="ti ti-phone" style="font-size:11px"></i>019-2223334</div></div></div>
+    <div class="rem-ac"><button class="btn btn-sm btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button><button class="btn btn-sm btn-p" onclick="openModal('apptModal')"><i class="ti ti-calendar-plus"></i> Set Appointment</button><div style="flex:1"></div><button class="rem-sp ct" onclick="toggleCt(this)"><i class="ti ti-check" style="font-size:12px"></i> Contacted</button></div>
+  </div>
+</div>
+
+<!-- ══ TRANSACTION ══ -->
+<div class="pg" id="page-transaction">
+  <div class="ph"><div><div class="ph-ti">Transactions</div><div class="ph-sb">All payment records</div></div><button class="btn btn-sm"><i class="ti ti-download"></i> Export CSV</button></div>
+  <div class="sbar"><div class="swp" style="max-width:280px"><i class="ti ti-search"></i><input class="sin" placeholder="Search…"></div><input type="date" class="fc" style="width:150px" value="2026-06-01"><input type="date" class="fc" style="width:150px" value="2026-06-08"><select class="fc" style="width:150px"><option>All Status</option><option>Paid</option><option>Pending</option><option>Failed</option></select></div>
+  <div class="g3 mb12">
+    <div class="card"><div class="cb" style="padding:14px;text-align:center"><div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Collected</div><div style="font-size:20px;font-weight:700;color:var(--gr);margin-top:4px">RM 4,820</div></div></div>
+    <div class="card"><div class="cb" style="padding:14px;text-align:center"><div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Pending</div><div style="font-size:20px;font-weight:700;color:var(--am);margin-top:4px">RM 450</div></div></div>
+    <div class="card"><div class="cb" style="padding:14px;text-align:center"><div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Transactions</div><div style="font-size:20px;font-weight:700;margin-top:4px">28</div></div></div>
+  </div>
+  <div class="card"><div class="tw"><table>
+    <thead><tr><th>Transaction ID</th><th>Date & Time</th><th>Client</th><th>Serial</th><th>Services</th><th>Payment</th><th>Amount</th><th>Status</th><th>Documents</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TXN-20260608-001</td><td><div>08 Jun 2026</div><div class="tsm tmu">10:42 AM</div></td><td style="font-weight:600">Zainab Rahman</td><td class="mono">000148</td><td><span class="bx bb">Cleaning</span></td><td class="tsm">DuitNow QR</td><td style="font-weight:700">RM 120.00</td><td><span class="bx bg">Paid</span></td><td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-sm" style="font-size:11px;padding:4px 9px" onclick="openModal('invModal')"><i class="ti ti-file-invoice"></i> Invoice</button><button class="btn btn-sm btn-p" style="font-size:11px;padding:4px 9px" onclick="openModal('rcptModal')"><i class="ti ti-receipt"></i> Receipt</button></div></td></tr>
+      <tr><td class="mono">TXN-20260608-002</td><td><div>08 Jun 2026</div><div class="tsm tmu">02:15 PM</div></td><td style="font-weight:600">Lim Kok Wei</td><td class="mono">000145</td><td><span class="bx ba">Gas Top-Up</span><br><span class="bx bb mt4">Cleaning</span></td><td class="tsm">Cash</td><td style="font-weight:700">RM 350.00</td><td><span class="bx bg">Paid</span></td><td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-sm" style="font-size:11px;padding:4px 9px" onclick="openModal('invModal')"><i class="ti ti-file-invoice"></i> Invoice</button><button class="btn btn-sm btn-p" style="font-size:11px;padding:4px 9px" onclick="openModal('rcptModal')"><i class="ti ti-receipt"></i> Receipt</button></div></td></tr>
+      <tr><td class="mono">TXN-20260607-008</td><td><div>07 Jun 2026</div><div class="tsm tmu">11:00 AM</div></td><td style="font-weight:600">Kavitha Nair</td><td class="mono">000139</td><td><span class="bx bn">Installation</span></td><td class="tsm">DuitNow QR</td><td style="font-weight:700">RM 450.00</td><td><span class="bx ba">Pending</span></td><td><div class="fl2 g8" style="justify-content:center"><button class="btn btn-sm" style="font-size:11px;padding:4px 9px" onclick="openModal('invModal')"><i class="ti ti-file-invoice"></i> Invoice</button><button class="btn btn-sm" style="font-size:11px;padding:4px 9px;opacity:.4" disabled><i class="ti ti-receipt"></i> Receipt</button></div></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ══ SERVICE FEE ══ -->
+<div class="pg" id="page-servicefee">
+  <div class="ph"><div><div class="ph-ti">Service Fee Settings</div><div class="ph-sb">Set price per service type and unit type</div></div><button class="btn btn-p" onclick="openModal('feeModal')"><i class="ti ti-plus"></i> Add Fee Entry</button></div>
+  <div class="ib2 mb12"><i class="ti ti-info-circle"></i><span>Rates are auto-applied when technician selects service type + unit type. Gas Top-Up is billed by PSI level. Repair uses flexible pricing entered per job.</span></div>
+  <div class="card">
+    <div class="ch"><div class="ct2">Service Fee Table</div></div>
+    <div class="ftr">
+      <div class="fr" style="font-size:10.5px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;background:var(--sf2)"><span>Service Type</span><span>Unit / Option</span><span>Fee (RM)</span><span style="text-align:center">Actions</span></div>
+      <div class="fr"><span><span class="bx bb">Cleaning</span></span><span>Wall Mounted</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 60.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bb">Cleaning</span></span><span>Cassette</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 90.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx ba">Gas Top-Up</span></span><span>20 PSI</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 80.00</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx ba">Gas Top-Up</span></span><span>Half Top-Up</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 150.00</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx ba">Gas Top-Up</span></span><span>Full Top-Up</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 280.00</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bgr">Repair</span></span><span colspan="2" style="display:flex;align-items:center;gap:6px"><span class="bx" style="background:#FEF9C3;color:#854D0E">Flexible</span><span class="tsm tmu">Technician enters per job</span></span><span style="text-align:center;grid-column:4"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bn">Installation</span></span><span>Wall Mounted</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 120.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bn">Installation</span></span><span>Cassette</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 180.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bp">Troubleshoot</span></span><span>Wall Mounted</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 80.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+      <div class="fr"><span><span class="bx bp">Troubleshoot</span></span><span>Cassette</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">RM 110.00 / unit</span><span style="text-align:center"><button class="btn btn-ic btn-sm" style="margin:0 2px"><i class="ti ti-edit"></i></button><button class="btn btn-ic btn-sm" style="color:var(--rd);margin:0 2px"><i class="ti ti-trash"></i></button></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APPOINTMENT ══ [FIX 5] Same concept as dashboard calendar -->
+<div class="pg" id="page-appointment">
+  <div class="ph"><div><div class="ph-ti">Appointments</div><div class="ph-sb">Click a date to see scheduled appointments</div></div><button class="btn btn-p" onclick="openModal('apptModal')"><i class="ti ti-plus"></i> New Appointment</button></div>
+  <div class="g2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="ch"><div class="ct2">June 2026</div><div class="fl2 g8"><button class="btn btn-ic btn-sm"><i class="ti ti-chevron-left"></i></button><button class="btn btn-ic btn-sm"><i class="ti ti-chevron-right"></i></button></div></div>
+      <div class="cb" style="padding:12px 14px">
+        <div class="cg">
+          <div class="cgh">Sun</div><div class="cgh">Mon</div><div class="cgh">Tue</div><div class="cgh">Wed</div><div class="cgh">Thu</div><div class="cgh">Fri</div><div class="cgh">Sat</div>
+          <div class="cd em"></div><div class="cd" onclick="pickDay(this,1,'Jun','appt')">1</div><div class="cd ha" onclick="pickDay(this,2,'Jun','appt')">2</div><div class="cd" onclick="pickDay(this,3,'Jun','appt')">3</div><div class="cd ha" onclick="pickDay(this,4,'Jun','appt')">4</div><div class="cd" onclick="pickDay(this,5,'Jun','appt')">5</div><div class="cd" onclick="pickDay(this,6,'Jun','appt')">6</div>
+          <div class="cd" onclick="pickDay(this,7,'Jun','appt')">7</div><div class="cd td ha" onclick="pickDay(this,8,'Jun','appt')">8</div><div class="cd" onclick="pickDay(this,9,'Jun','appt')">9</div><div class="cd ha" onclick="pickDay(this,10,'Jun','appt')">10</div><div class="cd" onclick="pickDay(this,11,'Jun','appt')">11</div><div class="cd ha" onclick="pickDay(this,12,'Jun','appt')">12</div><div class="cd" onclick="pickDay(this,13,'Jun','appt')">13</div>
+          <div class="cd" onclick="pickDay(this,14,'Jun','appt')">14</div><div class="cd" onclick="pickDay(this,15,'Jun','appt')">15</div><div class="cd ha" onclick="pickDay(this,16,'Jun','appt')">16</div><div class="cd" onclick="pickDay(this,17,'Jun','appt')">17</div><div class="cd" onclick="pickDay(this,18,'Jun','appt')">18</div><div class="cd ha" onclick="pickDay(this,19,'Jun','appt')">19</div><div class="cd" onclick="pickDay(this,20,'Jun','appt')">20</div>
+          <div class="cd" onclick="pickDay(this,21,'Jun','appt')">21</div><div class="cd" onclick="pickDay(this,22,'Jun','appt')">22</div><div class="cd" onclick="pickDay(this,23,'Jun','appt')">23</div><div class="cd ha" onclick="pickDay(this,24,'Jun','appt')">24</div><div class="cd" onclick="pickDay(this,25,'Jun','appt')">25</div><div class="cd" onclick="pickDay(this,26,'Jun','appt')">26</div><div class="cd" onclick="pickDay(this,27,'Jun','appt')">27</div>
+          <div class="cd" onclick="pickDay(this,28,'Jun','appt')">28</div><div class="cd" onclick="pickDay(this,29,'Jun','appt')">29</div><div class="cd" onclick="pickDay(this,30,'Jun','appt')">30</div>
+        </div>
+        <div class="alp" id="apptPanel">
+          <div class="alt" id="apptPanelTitle">Click a date to see appointments</div>
+          <div id="apptPanelItems" style="color:var(--tx3);font-size:12.5px;text-align:center;padding:8px 0">Select a highlighted date above</div>
+        </div>
+      </div>
+    </div>
+    <!-- summary stats -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><div class="cb" style="padding:16px"><div class="sl" style="margin-bottom:6px">This Month</div><div style="font-size:22px;font-weight:700;color:var(--c4)">9 appointments</div><div class="ss">8 confirmed · 1 pending</div></div></div>
+      <div class="card"><div class="cb" style="padding:16px"><div class="sl" style="margin-bottom:6px">Today — 8 Jun</div><div style="font-size:22px;font-weight:700;">2 appointments</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+        <div style="background:var(--c9);border-radius:8px;padding:9px 12px;font-size:12.5px"><span style="font-weight:700;color:var(--c4)">09:00 AM</span> Zainab Rahman — Cleaning</div>
+        <div style="background:var(--am-bg);border-radius:8px;padding:9px 12px;font-size:12.5px"><span style="font-weight:700;color:var(--am)">02:30 PM</span> Ahmad Hakim — Repair</div>
+      </div></div></div>
+    </div>
+  </div>
+  <!-- [FIX 6] Appointment table with contact number column -->
+  <div class="card">
+    <div class="ch"><div class="ct2">All Appointments — June 2026</div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Date & Time</th><th>Client Name</th><th>Contact</th><th>Serial</th><th>Service</th><th>Address</th><th>Units</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><div>08 Jun 2026</div><div class="tsm tmu">09:00 AM</div></td><td style="font-weight:600">Zainab Rahman</td><td>012-3456789</td><td class="mono">000148</td><td><span class="bx bb">Cleaning</span></td><td class="tsm">No. 5, Jalan Maju, KL</td><td>2</td><td style="font-weight:700">RM 120</td><td><span class="bx bg">Confirmed</span></td></tr>
+        <tr><td><div>08 Jun 2026</div><div class="tsm tmu">02:30 PM</div></td><td style="font-weight:600">Ahmad Hakim</td><td>017-8889990</td><td class="mono">000127</td><td><span class="bx bgr">Repair</span></td><td class="tsm">Jalan Bahagia, Ampang</td><td>1</td><td style="font-weight:700">RM 100</td><td><span class="bx ba">Pending</span></td></tr>
+        <tr><td><div>10 Jun 2026</div><div class="tsm tmu">10:00 AM</div></td><td style="font-weight:600">Siti Nurhaliza</td><td>013-5556677</td><td class="mono">000112</td><td><span class="bx bb">Cleaning</span></td><td class="tsm">Taman Sejahtera, Klang</td><td>1</td><td style="font-weight:700">RM 60</td><td><span class="bx bg">Confirmed</span></td></tr>
+        <tr><td><div>12 Jun 2026</div><div class="tsm tmu">09:30 AM</div></td><td style="font-weight:600">Ravi Kumar</td><td>019-2223334</td><td class="mono">000087</td><td><span class="bx bp">Troubleshoot</span></td><td class="tsm">Unit 7, Maju Impian, PJ</td><td>2</td><td style="font-weight:700">RM 160</td><td><span class="bx bg">Confirmed</span></td></tr>
+        <tr><td><div>16 Jun 2026</div><div class="tsm tmu">10:00 AM</div></td><td style="font-weight:600">Kavitha Nair</td><td>011-22334455</td><td class="mono">000139</td><td><span class="bx bn">Installation</span></td><td class="tsm">Unit 3A, Sri Maju Condo</td><td>3</td><td style="font-weight:700">RM 450</td><td><span class="bx ba">Pending</span></td></tr>
+        <tr><td><div>19 Jun 2026</div><div class="tsm tmu">03:00 PM</div></td><td style="font-weight:600">Tan Boon Huat</td><td>016-3334445</td><td class="mono">000098</td><td><span class="bx ba">Gas Top-Up</span></td><td class="tsm">No. 3, Jalan Utama, Subang</td><td>1</td><td style="font-weight:700">RM 150</td><td><span class="bx bg">Confirmed</span></td></tr>
+        <tr><td><div>24 Jun 2026</div><div class="tsm tmu">09:00 AM</div></td><td style="font-weight:600">Lim Kok Wei</td><td>016-9876543</td><td class="mono">000145</td><td><span class="bx ba">Gas Top-Up</span></td><td class="tsm">Lot 12, Taman Damai, PJ</td><td>1</td><td style="font-weight:700">RM 80</td><td><span class="bx bg">Confirmed</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+  </div>
+</main>
+</div>
+
+<!-- ══ CLIENT PORTAL ══ -->
+<div class="portal" id="clientPortal" style="display:none">
+  <div class="pb">
+    <div class="pb-ic"><i class="ti ti-air-conditioning"></i></div>
+    <div class="pb-br">Saifzz Aircond</div>
+    <button class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.15)" onclick="toAdmin()"><i class="ti ti-arrow-left"></i> Admin</button>
+  </div>
+  <div class="pc" id="pLogin">
+    <div style="text-align:center;margin-bottom:24px"><p style="color:rgba(255,255,255,.5);font-size:13px">Scan QR on your remote control sticker, then enter the 6-digit serial number</p></div>
+    <div class="pk">
+      <div class="pk-h"><div class="pk-ic"><i class="ti ti-qrcode"></i></div><h2>Enter Serial Number</h2><p>6-digit number on your AC remote sticker</p></div>
+      <div class="pk-b">
+        <div class="fg"><label class="fl">Serial Number</label><input id="pSerial" class="fc" placeholder="e.g. 000148" style="font-family:'JetBrains Mono',monospace;font-size:20px;text-align:center;letter-spacing:4px;padding:12px" maxlength="6"><div class="fh" style="text-align:center">6 digits — on the sticker on your remote control</div></div>
+        <div id="pErr" style="display:none;background:var(--rd-bg);border:1px solid #FECACA;border-radius:8px;padding:9px 13px;font-size:12.5px;color:var(--rd);margin-bottom:12px"><i class="ti ti-alert-circle"></i> Serial number not found. Please check and try again.</div>
+        <button class="btn btn-p wf" style="justify-content:center;padding:11px" onclick="pLogin()"><i class="ti ti-search"></i> View My Service Records</button>
+        <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)"><p class="tsm tmu" style="margin-bottom:8px">Need help?</p><button class="btn btn-wa"><i class="ti ti-brand-whatsapp"></i> WhatsApp Us</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="pc" id="pDash" style="display:none;max-width:520px">
+    <div class="nb"><i class="ti ti-calendar-event" style="font-size:26px;opacity:.8"></i><div><div class="nb-l">Next Recommended Service</div><div class="nb-v">05 September 2026</div></div><button class="btn btn-wa btn-sm" style="margin-left:auto;white-space:nowrap"><i class="ti ti-brand-whatsapp"></i> Set Appointment</button></div>
+    <div class="pk" style="margin-bottom:14px">
+      <div class="pk-h" style="padding:14px 18px;text-align:left;display:flex;align-items:center;gap:12px">
+        <div class="av" style="width:40px;height:40px;font-size:14px">ZR</div>
+        <div style="flex:1"><h2 style="font-size:15px;margin:0">Zainab Rahman</h2><p style="font-size:11.5px;color:rgba(255,255,255,.4);margin:0">No. 5, Jalan Maju, Kuala Lumpur</p></div>
+        <div style="text-align:right"><div style="font-size:9.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px">Serial No.</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,.8);letter-spacing:2px">000148</div></div>
+      </div>
+    </div>
+    <!-- [FIX 4] Service history with warranty countdown -->
+    <div class="pk">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between"><div style="font-size:13.5px;font-weight:700">Service History</div><span class="bx bb">3 records</span></div>
+      <div style="padding:0 18px">
+        <!-- Record 1: active warranty -->
+        <div class="shi">
+          <div class="shd"><div class="shd-d">05</div><div class="shd-m">Jun</div></div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13.5px">AC Cleaning</div>
+            <div class="tsm tmu">2 Wall Mounted · RM 120</div>
+            <!-- Warranty countdown pill -->
+            <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:#DCFCE7;color:#15803D"><i class="ti ti-shield-check" style="font-size:11px"></i> Warranty: 3 months</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:#FEF3C7;color:#92400E"><i class="ti ti-clock" style="font-size:11px"></i> Expires 05 Sep 2026</span>
+            </div>
+          </div>
+          <button class="btn btn-sm" onclick="openModal('rcptModal')" style="flex-shrink:0"><i class="ti ti-download" style="font-size:12px"></i> Receipt</button>
+        </div>
+        <!-- Record 2: expired warranty -->
+        <div class="shi">
+          <div class="shd"><div class="shd-d">12</div><div class="shd-m">Feb</div></div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13.5px">Gas Top-Up + Cleaning</div>
+            <div class="tsm tmu">1 unit each · RM 210</div>
+            <div style="margin-top:5px">
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:#F1F5F9;color:#64748B"><i class="ti ti-shield-off" style="font-size:11px"></i> No warranty</span>
+            </div>
+          </div>
+          <button class="btn btn-sm" onclick="openModal('rcptModal')" style="flex-shrink:0"><i class="ti ti-download" style="font-size:12px"></i> Receipt</button>
+        </div>
+        <!-- Record 3: warranty expired (passed) -->
+        <div class="shi">
+          <div class="shd"><div class="shd-d">20</div><div class="shd-m">Sep</div></div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13.5px">AC Cleaning</div>
+            <div class="tsm tmu">2 Wall Mounted · RM 120</div>
+            <div style="margin-top:5px">
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:#F1F5F9;color:#64748B"><i class="ti ti-shield-off" style="font-size:11px"></i> Warranty expired</span>
+            </div>
+          </div>
+          <button class="btn btn-sm" onclick="openModal('rcptModal')" style="flex-shrink:0"><i class="ti ti-download" style="font-size:12px"></i> Receipt</button>
+        </div>
+      </div>
+      <div style="padding:14px 18px;border-top:1px solid var(--bd)"><button class="btn btn-wa wf" style="justify-content:center"><i class="ti ti-brand-whatsapp"></i> Contact Us via WhatsApp</button></div>
+    </div>
+    <div style="text-align:center;margin-top:18px;padding-bottom:32px"><button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" onclick="pLogout()"><i class="ti ti-logout"></i> Sign Out</button></div>
+  </div>
+</div>
+
+<!-- ════ MODALS ════ -->
+
+<!-- ADD SERVICE RECORD -->
+<div class="mbd" id="addSvcModal">
+  <div class="modal">
+    <div class="mh"><div class="mt"><i class="ti ti-clipboard-plus" style="color:var(--c4)"></i> Add Service Record</div><button class="btn btn-ic btn-gh" onclick="closeModal('addSvcModal')"><i class="ti ti-x"></i></button></div>
+    <div class="mb2">
+      <div class="fg2" style="margin-bottom:16px">
+        <div id="optNew" class="po sel" onclick="selCT('new')" style="padding:12px">
+          <i class="ti ti-user-plus" style="font-size:22px;color:var(--c4);display:block;margin-bottom:4px"></i>
+          <div class="po-ti" style="font-size:13px">New Client</div><div class="po-sb">Serial auto-generated</div>
+        </div>
+        <div id="optEx" class="po" onclick="selCT('existing')" style="padding:12px">
+          <i class="ti ti-user-search" style="font-size:22px;color:var(--c4);display:block;margin-bottom:4px"></i>
+          <div class="po-ti" style="font-size:13px">Existing Client</div><div class="po-sb">Search by serial number</div>
+        </div>
+      </div>
+      <div id="exSearch" style="display:none;margin-bottom:14px">
+        <div class="fg"><label class="fl">Search Serial Number</label><div style="display:flex;gap:8px"><input class="fc" id="srchSer" placeholder="6-digit serial e.g. 000148" style="font-family:'JetBrains Mono',monospace;letter-spacing:2px" maxlength="6"><button class="btn btn-p" style="white-space:nowrap" onclick="srchClient()"><i class="ti ti-search"></i> Search</button></div></div>
+        <div id="cfound" style="display:none;background:var(--gr-bg);border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;font-size:13px;color:#166534"><i class="ti ti-circle-check"></i> Found: <strong id="fn"></strong> — <span id="fa"></span></div>
+      </div>
+      <div id="newFields">
+        <hr class="sep" style="margin-top:0">
+        <div class="fg"><label class="fl">Serial Number</label><input class="fc au" value="000149" disabled><div class="fh">Auto-generated · 6-digit unique number</div></div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">Client Name <span>*</span></label><input class="fc" placeholder="Full name"></div>
+          <div class="fg"><label class="fl">Phone Number <span>*</span></label><input class="fc" placeholder="01X-XXXXXXX"></div>
+        </div>
+        <div class="fg"><label class="fl">Address <span>*</span></label><textarea class="fc" rows="2" placeholder="Full service address"></textarea></div>
+      </div>
+      <hr class="sep">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px">Service Details</div>
+        <div class="tsm tmu">Minimum 1 service required</div>
+      </div>
+      <div id="svcCont"></div>
+      <button class="btn wf" style="justify-content:center;border-style:dashed;color:var(--c4);border-color:var(--c6);margin-bottom:4px" onclick="addSvcBlock()"><i class="ti ti-plus"></i> Add Another Service Type</button>
+      <!-- [FIX 1] Warranty at bottom, after all services -->
+      <div style="background:var(--sf2);border:1.5px solid var(--bd);border-radius:var(--ral);padding:14px 16px;margin-top:4px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><i class="ti ti-shield-check" style="color:var(--c4);font-size:16px"></i><span style="font-size:12.5px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px">Warranty (applies to entire service visit)</span></div>
+        <select class="fc" style="max-width:260px" id="warrantySelect">
+          <option value="">No Warranty</option>
+          <option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option>
+          <option value="4">4 Months</option><option value="5">5 Months</option><option value="6">6 Months</option>
+        </select>
+        <div class="fh" id="wEndDisplay" style="display:none;margin-top:6px;color:var(--gr);font-weight:600"></div>
+      </div>
+      <div class="tbar">
+        <div><div class="ti2" id="totalItems">0 services · 0 units</div><div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:2px">Total Payable (after discount)</div></div>
+        <div class="tv" id="grandTotal">RM 0.00</div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" style="min-width:110px" onclick="closeModal('addSvcModal')">Cancel</button><button class="btn btn-p" style="min-width:200px" onclick="submitSvc()"><i class="ti ti-check"></i> Submit & Proceed to Pay</button></div>
+  </div>
+</div>
+
+<!-- PAYMENT -->
+<div class="mbd" id="payModal">
+  <div class="modal md">
+    <div class="mh"><div class="mt"><i class="ti ti-credit-card" style="color:var(--c4)"></i> Collect Payment</div><button class="btn btn-ic btn-gh" onclick="closeModal('payModal')"><i class="ti ti-x"></i></button></div>
+    <div class="mb2">
+      <div class="app"><div class="apl">Total Amount</div><div class="apv" id="payAmt">RM 0.00</div></div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Select Payment Method</div>
+      <div class="pm">
+        <div class="po sel" id="optDN" onclick="selPay('dn')"><i class="ti ti-qrcode" style="font-size:32px;color:var(--c4);display:block;margin-bottom:6px"></i><div class="po-ti">DuitNow QR</div><div class="po-sb">Client scans with banking app</div></div>
+        <div class="po ca" id="optCa" onclick="selPay('ca')"><i class="ti ti-cash" style="font-size:32px;color:var(--am);display:block;margin-bottom:6px"></i><div class="po-ti">Cash</div><div class="po-sb">Received in hand</div></div>
+      </div>
+      <div id="dnSection" class="qra">
+        <p class="tsm tmu" style="margin-bottom:14px">Show this QR to the client to scan</p>
+        <div class="qrf"><svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><rect width="150" height="150" fill="white"/><rect x="10" y="10" width="42" height="42" fill="none" stroke="#0A1628" stroke-width="4"/><rect x="18" y="18" width="26" height="26" fill="#0A1628"/><rect x="98" y="10" width="42" height="42" fill="none" stroke="#0A1628" stroke-width="4"/><rect x="106" y="18" width="26" height="26" fill="#0A1628"/><rect x="10" y="98" width="42" height="42" fill="none" stroke="#0A1628" stroke-width="4"/><rect x="18" y="106" width="26" height="26" fill="#0A1628"/><rect x="62" y="10" width="6" height="6" fill="#0A1628"/><rect x="72" y="10" width="6" height="6" fill="#0A1628"/><rect x="62" y="20" width="6" height="6" fill="#0A1628"/><rect x="76" y="20" width="6" height="6" fill="#0A1628"/><rect x="64" y="32" width="6" height="6" fill="#0A1628"/><rect x="72" y="32" width="6" height="6" fill="#0A1628"/><rect x="62" y="62" width="6" height="6" fill="#0A1628"/><rect x="72" y="62" width="6" height="6" fill="#0A1628"/><rect x="82" y="62" width="6" height="6" fill="#0A1628"/><rect x="62" y="72" width="6" height="6" fill="#0A1628"/><rect x="76" y="72" width="6" height="6" fill="#0A1628"/><rect x="82" y="72" width="6" height="6" fill="#0A1628"/><rect x="64" y="82" width="6" height="6" fill="#0A1628"/><rect x="72" y="82" width="6" height="6" fill="#0A1628"/><rect x="98" y="62" width="6" height="6" fill="#0A1628"/><rect x="108" y="62" width="6" height="6" fill="#0A1628"/><rect x="118" y="62" width="6" height="6" fill="#0A1628"/><rect x="98" y="72" width="6" height="6" fill="#0A1628"/><rect x="118" y="72" width="6" height="6" fill="#0A1628"/><rect x="108" y="82" width="6" height="6" fill="#0A1628"/><rect x="118" y="82" width="6" height="6" fill="#0A1628"/><rect x="98" y="92" width="6" height="6" fill="#0A1628"/><rect x="110" y="98" width="6" height="6" fill="#0A1628"/><rect x="120" y="98" width="6" height="6" fill="#0A1628"/><rect x="10" y="62" width="6" height="6" fill="#0A1628"/><rect x="20" y="62" width="6" height="6" fill="#0A1628"/><rect x="30" y="62" width="6" height="6" fill="#0A1628"/><rect x="40" y="62" width="6" height="6" fill="#0A1628"/><rect x="10" y="72" width="6" height="6" fill="#0A1628"/><rect x="30" y="72" width="6" height="6" fill="#0A1628"/><rect x="20" y="82" width="6" height="6" fill="#0A1628"/><rect x="40" y="82" width="6" height="6" fill="#0A1628"/><text x="75" y="142" font-family="Arial" font-size="9" fill="#1A3A5C" text-anchor="middle" font-weight="bold">DuitNow QR</text></svg></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px"><span class="wd"></span><span class="tsm tmu">Waiting for payment…</span></div>
+      </div>
+      <div id="caSection" style="display:none;text-align:center;padding:16px 0">
+        <div style="width:64px;height:64px;background:var(--am-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--am);margin:0 auto 12px"><i class="ti ti-cash"></i></div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Collect Cash Payment</div>
+        <div class="tsm tmu">Confirm once cash has been received</div>
+      </div>
+      <div style="display:flex;gap:10px"><button class="btn wf" style="justify-content:center" onclick="closeModal('payModal')">Cancel</button><button class="btn btn-ok wf" style="justify-content:center" id="cpBtn" onclick="confPay()"><i class="ti ti-check"></i> Confirm Payment</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT -->
+<div class="mbd" id="rcptModal">
+  <div class="modal sm">
+    <div class="mh"><div class="mt"><i class="ti ti-receipt" style="color:var(--c4)"></i> Official Receipt</div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-p"><i class="ti ti-download"></i> PDF</button><button class="btn btn-ic btn-gh" onclick="closeModal('rcptModal')"><i class="ti ti-x"></i></button></div></div>
+    <div class="mb2 rc">
+      <div class="rc-h"><div class="rc-co">Saifzz Aircond Services</div><div style="color:var(--tx2);font-size:11.5px;font-family:'Plus Jakarta Sans',sans-serif;margin-top:3px">📍 No. 12, Jalan Teknologi, KL · 📞 012-9876543</div><div style="margin-top:10px;font-size:16px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--c2)">OFFICIAL RECEIPT</div></div>
+      <div class="rc-r"><span>Receipt No.</span><strong>RCP-20260608-001</strong></div>
+      <div class="rc-r"><span>Date</span><strong>08 Jun 2026, 10:42 AM</strong></div>
+      <div class="rc-r"><span>Payment</span><strong>DuitNow QR</strong></div>
+      <div class="rc-r"><span>Txn ID</span><strong>TXN-20260608-001</strong></div>
+      <hr class="rc-hr">
+      <div class="rc-r"><span>Client</span><strong>Zainab Rahman</strong></div>
+      <div class="rc-r"><span>Phone</span><strong>012-3456789</strong></div>
+      <div class="rc-r"><span>Address</span><strong style="text-align:right;max-width:55%">No. 5, Jalan Maju, KL</strong></div>
+      <div class="rc-r"><span>Serial No.</span><strong style="font-family:'JetBrains Mono',monospace;letter-spacing:1px">000148</strong></div>
+      <div class="rc-r"><span>Warranty</span><strong>3 Months (expires 05 Sep 2026)</strong></div>
+      <hr class="rc-hr">
+      <div style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-family:'Plus Jakarta Sans',sans-serif">Services Performed</div>
+      <div class="rc-s">
+        <div class="rc-st">1. AC Cleaning — Wall Mounted</div>
+        <div class="rc-r" style="padding:1px 0"><span>Units</span><strong>2</strong></div>
+        <div class="rc-r" style="padding:1px 0"><span>Date</span><strong>08 Jun 2026</strong></div>
+        <div class="rc-r" style="padding:1px 0"><span>Rate</span><strong>RM 60.00 / unit</strong></div>
+        <div class="rc-r" style="padding:1px 0"><span>Subtotal</span><strong>RM 120.00</strong></div>
+        <div class="rc-r" style="padding:1px 0"><span>Discount</span><strong style="color:var(--gr)">- RM 10.00</strong></div>
+        <div class="rc-r" style="padding:1px 0;font-family:'Plus Jakarta Sans',sans-serif"><span style="font-weight:700">Service Total</span><strong>RM 110.00</strong></div>
+        <div class="rc-r" style="padding:1px 0"><span>Next Service</span><strong>05 Sep 2026</strong></div>
+      </div>
+      <hr class="rc-hr">
+      <div class="rc-to"><span>TOTAL PAID</span><span>RM 110.00</span></div>
+      <div style="text-align:center;margin-top:10px;padding:10px;background:var(--c9);border-radius:7px;font-family:'Plus Jakarta Sans',sans-serif"><div style="font-size:10px;color:var(--tx2);margin-bottom:2px">Payment Method</div><div style="font-weight:700;font-size:13px;color:var(--c2)">DuitNow QR</div></div>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--tx3);font-family:'Plus Jakarta Sans',sans-serif">Thank you for trusting Saifzz Aircond! 🙏</div>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE -->
+<div class="mbd" id="invModal">
+  <div class="modal sm">
+    <div class="mh"><div class="mt"><i class="ti ti-file-invoice" style="color:#6366F1"></i> Invoice</div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-iv"><i class="ti ti-download"></i> PDF</button><button class="btn btn-ic btn-gh" onclick="closeModal('invModal')"><i class="ti ti-x"></i></button></div></div>
+    <div class="mb2 rc">
+      <div class="rc-h"><div class="rc-co">Saifzz Aircond Services</div><div style="color:var(--tx2);font-size:11.5px;font-family:'Plus Jakarta Sans',sans-serif;margin-top:3px">📍 No. 12, Jalan Teknologi, KL · 📞 012-9876543</div><div style="margin-top:10px;font-size:16px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:#4338CA">INVOICE</div></div>
+      <div class="rc-r"><span>Invoice No.</span><strong>INV-20260607-008</strong></div>
+      <div class="rc-r"><span>Invoice Date</span><strong>07 Jun 2026</strong></div>
+      <div class="rc-r"><span>Due Date</span><strong>14 Jun 2026</strong></div>
+      <div class="rc-r"><span>Status</span><strong><span class="bx ba">Pending</span></strong></div>
+      <hr class="rc-hr">
+      <div class="rc-r"><span>Bill To</span><strong>Kavitha Nair</strong></div>
+      <div class="rc-r"><span>Phone</span><strong>011-22334455</strong></div>
+      <div class="rc-r"><span>Address</span><strong style="text-align:right;max-width:55%">Unit 3A, Sri Maju Condo</strong></div>
+      <div class="rc-r"><span>Serial No.</span><strong style="font-family:'JetBrains Mono',monospace;letter-spacing:1px">000139</strong></div>
+      <hr class="rc-hr">
+      <div class="rc-s"><div class="rc-st">1. Installation — Wall Mounted</div><div class="rc-r" style="padding:1px 0"><span>Units</span><strong>3</strong></div><div class="rc-r" style="padding:1px 0"><span>Rate</span><strong>RM 120.00 / unit</strong></div><div class="rc-r" style="padding:1px 0"><span>Subtotal</span><strong>RM 360.00</strong></div><div class="rc-r" style="padding:1px 0"><span>Additional</span><strong>RM 90.00</strong></div><div class="rc-r" style="padding:1px 0;font-family:'Plus Jakarta Sans',sans-serif"><span style="font-weight:700">Total</span><strong>RM 450.00</strong></div></div>
+      <hr class="rc-hr">
+      <div class="rc-to"><span>AMOUNT DUE</span><span style="color:#4338CA">RM 450.00</span></div>
+      <div style="text-align:center;margin-top:10px;padding:10px;background:#EDE9FE;border-radius:7px;font-family:'Plus Jakarta Sans',sans-serif"><div style="font-size:10px;color:#5B21B6;margin-bottom:2px">Payment via</div><div style="font-weight:700;font-size:13px;color:#3730A3">DuitNow QR · 012-9876543</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- APPOINTMENT MODAL -->
+<div class="mbd" id="apptModal">
+  <div class="modal sm">
+    <div class="mh"><div class="mt"><i class="ti ti-calendar-plus" style="color:var(--c4)"></i> Set Appointment</div><button class="btn btn-ic btn-gh" onclick="closeModal('apptModal')"><i class="ti ti-x"></i></button></div>
+    <div class="mb2">
+      <div class="fg"><label class="fl">Client Name</label><input class="fc" value="Kavitha Nair" readonly></div>
+      <div class="fg"><label class="fl">Serial Number</label><input class="fc au" value="000139" readonly></div>
+      <div class="fg2"><div class="fg"><label class="fl">Phone Number <span>*</span></label><input class="fc" value="011-22334455"></div><div class="fg"><label class="fl">Service Type</label><select class="fc"><option>Cleaning</option><option>Gas Top-Up</option><option selected>Repair</option><option>Installation</option><option>Troubleshoot</option></select></div></div>
+      <div class="fg"><label class="fl">Address <span>*</span></label><textarea class="fc" rows="2">Unit 3A, Sri Maju Condo</textarea></div>
+      <div class="fg2"><div class="fg"><label class="fl">Date <span>*</span></label><input type="date" class="fc" value="2026-06-15"></div><div class="fg"><label class="fl">Time <span>*</span></label><input type="time" class="fc" value="10:00"></div></div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fc" rows="2" placeholder="Optional notes…"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeModal('apptModal')">Cancel</button><button class="btn btn-p" onclick="closeModal('apptModal');showToast('Appointment set for 15 Jun 2026 at 10:00 AM')"><i class="ti ti-check"></i> Confirm Appointment</button></div>
+  </div>
+</div>
+
+<!-- SERVICE FEE MODAL -->
+<div class="mbd" id="feeModal">
+  <div class="modal sm">
+    <div class="mh"><div class="mt"><i class="ti ti-currency-dollar" style="color:var(--c4)"></i> Add Service Fee</div><button class="btn btn-ic btn-gh" onclick="closeModal('feeModal')"><i class="ti ti-x"></i></button></div>
+    <div class="mb2">
+      <div class="fg"><label class="fl">Service Type <span>*</span></label><select class="fc" id="fts" onchange="onFTS()"><option value="">— Select —</option><option>Cleaning</option><option>Gas Top-Up</option><option>Repair</option><option>Installation</option><option>Troubleshoot</option></select></div>
+      <div class="fg" id="ftUnit"><label class="fl">AC Unit Type <span>*</span></label><select class="fc"><option value="">— Select —</option><option>Wall Mounted</option><option>Cassette</option></select></div>
+      <div class="fg" id="ftPsi" style="display:none"><label class="fl">Gas Top-Up Option <span>*</span></label><select class="fc"><option>20 PSI</option><option>Half Top-Up</option><option>Full Top-Up</option></select></div>
+      <div class="fg" id="ftAmt"><label class="fl">Fee (RM) <span>*</span></label><input type="number" class="fc" placeholder="e.g. 60.00"><div class="fh" id="ftAH">Per unit</div></div>
+      <div id="ftRep" style="display:none;background:var(--am-bg);border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#92400E"><i class="ti ti-info-circle"></i> Repair uses flexible pricing — technician enters fee per job when recording service.</div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeModal('feeModal')">Cancel</button><button class="btn btn-p" onclick="closeModal('feeModal');showToast('Service fee saved.')"><i class="ti ti-check"></i> Save Fee</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:22px;right:22px;background:var(--c2);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:none;align-items:center;gap:10px;box-shadow:var(--shl);font-family:'Plus Jakarta Sans',sans-serif">
+  <i class="ti ti-circle-check" style="font-size:18px;color:#4ADE80"></i><span id="toastMsg">Done.</span>
+</div>
+
+<script>
+const FEES={
+  'Cleaning':{'Wall Mounted':60,'Cassette':90},
+  'Gas Top-Up':{'20 PSI':80,'Half Top-Up':150,'Full Top-Up':280},
+  'Installation':{'Wall Mounted':120,'Cassette':180},
+  'Troubleshoot':{'Wall Mounted':80,'Cassette':110}
+};
+const APPTS={
+  2:[{t:'10:00 AM',n:'Lim Kok Wei',sv:'Gas Top-Up',u:1,s:'000145',st:'Confirmed',sc:'bg'}],
+  4:[{t:'02:00 PM',n:'Mohd Faris',sv:'Repair',u:1,s:'000134',st:'Pending',sc:'ba'}],
+  8:[{t:'09:00 AM',n:'Zainab Rahman',sv:'Cleaning',u:2,s:'000148',st:'Confirmed',sc:'bg'},{t:'02:30 PM',n:'Ahmad Hakim',sv:'Repair',u:1,s:'000127',st:'Pending',sc:'ba'}],
+  10:[{t:'11:00 AM',n:'Priya Selvam',sv:'Cleaning',u:2,s:'000128',st:'Confirmed',sc:'bg'}],
+  12:[{t:'09:30 AM',n:'Ravi Kumar',sv:'Troubleshoot',u:2,s:'000087',st:'Confirmed',sc:'bg'}],
+  16:[{t:'10:00 AM',n:'Kavitha Nair',sv:'Installation',u:3,s:'000139',st:'Pending',sc:'ba'}],
+  19:[{t:'03:00 PM',n:'Tan Boon Huat',sv:'Gas Top-Up',u:1,s:'000098',st:'Confirmed',sc:'bg'}],
+  24:[{t:'09:00 AM',n:'Siti Nurhaliza',sv:'Cleaning',u:1,s:'000112',st:'Confirmed',sc:'bg'}]
+};
+const CHART={
+  all:{Cleaning:64,'Gas Top-Up':31,Repair:21,Installation:18,Troubleshoot:14},
+  month:{Cleaning:18,'Gas Top-Up':9,Repair:6,Installation:5,Troubleshoot:4},
+  week:{Cleaning:6,'Gas Top-Up':3,Repair:2,Installation:1,Troubleshoot:1},
+  today:{Cleaning:2,'Gas Top-Up':1,Repair:1,Installation:0,Troubleshoot:0}
+};
+const CCOL={Cleaning:'var(--c4)','Gas Top-Up':'var(--am)',Repair:'var(--rd)',Installation:'var(--gr)',Troubleshoot:'#6366F1'};
+let svcCount=0,payMeth='dn';
+
+function renderChart(f){
+  const d=CHART[f];const mx=Math.max(...Object.values(d))||1;
+  document.getElementById('chartBars').innerHTML=Object.entries(d).map(([k,v])=>
+    `<div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>${k}</span><span style="font-weight:700">${v}</span></div>
+    <div style="height:5px;background:var(--c8);border-radius:3px"><div style="width:${Math.round(v/mx*100)}%;height:100%;background:${CCOL[k]};border-radius:3px;transition:width .4s"></div></div></div>`
+  ).join('');
+}
+renderChart('all');
+function filterChart(f,btn){document.querySelectorAll('.ftabs .ft').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderChart(f);}
+
+// Calendar pick — shared by dashboard and appointment page
+function pickDay(el,day,mon,ctx){
+  // Clear selection in same calendar context
+  el.closest('.cg').querySelectorAll('.cd').forEach(d=>d.classList.remove('sx'));
+  if(!el.classList.contains('em'))el.classList.add('sx');
+  const panelId=ctx==='dash'?'dashApptPanel':'apptPanel';
+  const titleId=ctx==='dash'?'dashApptTitle':'apptPanelTitle';
+  const itemsId=ctx==='dash'?'dashApptItems':'apptPanelItems';
+  const panel=document.getElementById(panelId);
+  const title=document.getElementById(titleId);
+  const items=document.getElementById(itemsId);
+  if(!panel)return;
+  if(APPTS[day]&&APPTS[day].length){
+    title.textContent=`${day} ${mon} 2026 — ${APPTS[day].length} appointment${APPTS[day].length>1?'s':''}`;
+    items.innerHTML=APPTS[day].map(a=>`
+      <div class="ali">
+        <div class="att">${a.t}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${a.n}</div><div class="tsm tmu">${a.sv} · ${a.u} unit${a.u>1?'s':''} · ${a.s}</div></div>
+        <span class="bx b${a.sc}">${a.st}</span>
+      </div>`).join('');
+  } else {
+    title.textContent=`${day} ${mon} 2026`;
+    items.innerHTML='<div style="color:var(--tx3);font-size:12.5px;text-align:center;padding:12px 0"><i class="ti ti-calendar-off" style="font-size:20px;display:block;margin-bottom:4px"></i>No appointments on this date</div>';
+  }
+}
+// Auto-show today on load
+setTimeout(()=>{
+  document.querySelectorAll('.cd.td').forEach(el=>{
+    const ctx=el.closest('#page-dashboard')?'dash':'appt';
+    pickDay(el,8,'Jun',ctx);
+  });
+},80);
+
+function goPage(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-it').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  const t={dashboard:'Dashboard',clients:'Client Management',reminder:'Service Reminders',transaction:'Transactions',servicefee:'Service Fee Settings',appointment:'Appointments'};
+  document.getElementById('tbTitle').textContent=t[id]||id;
+}
+function toPortal(){document.getElementById('adminApp').style.display='none';document.getElementById('clientPortal').style.display='flex';}
+function toAdmin(){document.getElementById('adminApp').style.display='block';document.getElementById('clientPortal').style.display='none';}
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+document.querySelectorAll('.mbd').forEach(b=>b.addEventListener('click',e=>{if(e.target===b){b.classList.remove('open');document.body.style.overflow='';}}));
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.style.display='flex';setTimeout(()=>t.style.display='none',3000);}
+
+function selCT(type){
+  document.getElementById('optNew').classList.toggle('sel',type==='new');
+  document.getElementById('optEx').classList.toggle('sel',type==='existing');
+  document.getElementById('exSearch').style.display=type==='existing'?'block':'none';
+  document.getElementById('newFields').style.display=type==='new'?'block':'none';
+}
+function srchClient(){
+  const v=document.getElementById('srchSer').value.trim();
+  const db={'000145':['Lim Kok Wei','Lot 12, Taman Damai, PJ'],'000148':['Zainab Rahman','No. 5, Jalan Maju, KL']};
+  const el=document.getElementById('cfound');
+  if(db[v]){el.style.background='var(--gr-bg)';el.style.borderColor='#BBF7D0';el.style.color='#166534';el.innerHTML=`<i class="ti ti-circle-check"></i> Found: <strong>${db[v][0]}</strong> — ${db[v][1]}`;}
+  else{el.style.background='var(--rd-bg)';el.style.borderColor='#FECACA';el.style.color='var(--rd)';el.innerHTML=`<i class="ti ti-alert-circle"></i> Serial <strong>${v}</strong> not found.`;}
+  el.style.display='block';
+}
+function toggleCt(btn){
+  if(btn.classList.contains('ct')){btn.className='rem-sp nc';btn.innerHTML='<i class="ti ti-x" style="font-size:12px"></i> Not Contacted';}
+  else{btn.className='rem-sp ct';btn.innerHTML='<i class="ti ti-check" style="font-size:12px"></i> Contacted';}
+}
+
+// Warranty end date preview
+document.getElementById('warrantySelect').addEventListener('change',function(){
+  const m=parseInt(this.value)||0;
+  const el=document.getElementById('wEndDisplay');
+  if(m){const d=new Date('2026-06-08');d.setMonth(d.getMonth()+m);el.textContent='⚠ Warranty ends: '+d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});el.style.display='block';}
+  else el.style.display='none';
+});
+
+// Service block logic
+function isGas(t){return t==='Gas Top-Up';}
+function isRepair(t){return t==='Repair';}
+function needsNext(t){return['Cleaning','Installation','Troubleshoot'].includes(t);}// [FIX 2] Gas topup has NO next service
+
+function buildBlock(n){
+  return `<div class="svb" id="svc-${n}">
+    <div class="svb-hd">
+      <div class="svb-ti"><div class="svb-n">${n}</div> Service ${n}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="fd un" id="fd-${n}">Select type</div>
+        ${n>1?`<button class="btn btn-ic btn-sm" style="color:var(--rd)" onclick="removeSvc(${n})"><i class="ti ti-trash"></i></button>`:''}
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Service Type <span>*</span></label>
+      <select class="fc" id="typ-${n}" onchange="onTyp(${n})">
+        <option value="">— Select —</option>
+        <option>Cleaning</option><option>Gas Top-Up</option><option>Repair</option><option>Installation</option><option>Troubleshoot</option>
+      </select>
+    </div>
+    <div id="sf-${n}" style="display:none">
+      <div id="utRow-${n}" class="fg">
+        <label class="fl">AC Unit Type <span>*</span></label>
+        <select class="fc" id="ut-${n}" onchange="onUT(${n})"><option value="">— Select —</option><option>Wall Mounted</option><option>Cassette</option></select>
+      </div>
+      <div id="psiRow-${n}" class="fg" style="display:none">
+        <label class="fl">Gas Top-Up Amount <span>*</span></label>
+        <select class="fc" id="psi-${n}" onchange="onPsi(${n})">
+          <option value="">— Select amount —</option>
+          <option value="20 PSI">20 PSI — RM 80.00</option>
+          <option value="Half Top-Up">Half Top-Up — RM 150.00</option>
+          <option value="Full Top-Up">Full Top-Up — RM 280.00</option>
+        </select>
+      </div>
+      <div id="repRow-${n}" class="fg" style="display:none">
+        <label class="fl">Repair Description & Fee (RM) <span>*</span></label>
+        <div class="fg2" style="margin-bottom:0">
+          <input class="fc" placeholder="Describe the repair…" id="rdesc-${n}">
+          <input type="number" class="fc" id="rfee-${n}" placeholder="Enter fee e.g. 150.00" min="0" oninput="calcAll()">
+        </div>
+      </div>
+      <div class="fg3">
+        <div class="fg" style="margin-bottom:0"><label class="fl">Total Units <span>*</span></label><input type="number" class="fc" id="uni-${n}" min="1" value="1" oninput="calcAll()"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">Service Date <span>*</span></label><input type="date" class="fc" id="sdt-${n}" value="2026-06-08"></div>
+        <div class="fg" style="margin-bottom:0" id="nxWrap-${n}">
+          <label class="fl">Next Service</label>
+          <select class="fc" id="nxm-${n}" onchange="calcNx(${n})">
+            <option value="">— Select —</option>
+            ${[3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}">${m} months</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div id="nxDisp-${n}" style="display:none;margin-top:8px;background:var(--c9);border-radius:7px;padding:8px 12px;font-size:12.5px;color:var(--c3)">
+        <i class="ti ti-calendar-check" style="font-size:13px"></i> Next service date: <strong id="nxVal-${n}">—</strong>
+      </div>
+      <!-- [FIX 3] Notes row: hidden for Repair -->
+      <div class="fg2" style="margin-top:12px" id="notesDiscRow-${n}">
+        <div class="fg" style="margin-bottom:0" id="notesWrap-${n}"><label class="fl">Technician Notes</label><input class="fc" id="notes-${n}" placeholder="Optional notes…"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">Discount (RM)</label><input type="number" class="fc" id="disc-${n}" value="0" min="0" oninput="calcAll()"></div>
+      </div>
+      <!-- Repair: only discount row -->
+      <div class="fg" style="margin-top:12px;display:none" id="repDiscRow-${n}">
+        <label class="fl">Discount (RM)</label><input type="number" class="fc" id="rdisc-${n}" value="0" min="0" oninput="calcAll()">
+      </div>
+      <div style="margin-top:10px;background:var(--c9);border-radius:7px;padding:9px 12px;font-size:12.5px;color:var(--c3);display:flex;justify-content:space-between;align-items:center">
+        <span><i class="ti ti-calculator" style="font-size:13px"></i> Subtotal</span>
+        <span style="font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--c2)" id="sub-${n}">RM 0.00</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addSvcBlock(){svcCount++;document.getElementById('svcCont').insertAdjacentHTML('beforeend',buildBlock(svcCount));calcAll();}
+function removeSvc(n){const e=document.getElementById('svc-'+n);if(e)e.remove();calcAll();}
+
+function onTyp(n){
+  const t=document.getElementById('typ-'+n).value;
+  const sf=document.getElementById('sf-'+n);
+  if(!t){sf.style.display='none';return;}
+  sf.style.display='block';
+  document.getElementById('utRow-'+n).style.display=(!isGas(t)&&!isRepair(t))?'block':'none';
+  document.getElementById('psiRow-'+n).style.display=isGas(t)?'block':'none';
+  document.getElementById('repRow-'+n).style.display=isRepair(t)?'block':'none';
+  // [FIX 2] No next service for Gas Top-Up
+  document.getElementById('nxWrap-'+n).style.display=needsNext(t)?'block':'none';
+  if(!needsNext(t))document.getElementById('nxDisp-'+n).style.display='none';
+  // [FIX 3] Hide tech notes for Repair, show only discount
+  document.getElementById('notesDiscRow-'+n).style.display=isRepair(t)?'none':'flex';
+  document.getElementById('repDiscRow-'+n).style.display=isRepair(t)?'block':'none';
+  updFD(n);calcAll();
+}
+function onUT(n){updFD(n);calcAll();}
+function onPsi(n){updFD(n);calcAll();}
+
+function getF(n){
+  const t=document.getElementById('typ-'+n)?document.getElementById('typ-'+n).value:'';
+  if(!t)return 0;
+  if(isRepair(t))return parseFloat(document.getElementById('rfee-'+n)?document.getElementById('rfee-'+n).value:0)||0;
+  if(isGas(t)){const p=document.getElementById('psi-'+n)?document.getElementById('psi-'+n).value:'';return(FEES['Gas Top-Up']&&p)?FEES['Gas Top-Up'][p]||0:0;}
+  const ut=document.getElementById('ut-'+n)?document.getElementById('ut-'+n).value:'';
+  return(FEES[t]&&ut)?FEES[t][ut]||0:0;
+}
+function updFD(n){
+  const f=getF(n);const t=document.getElementById('typ-'+n)?document.getElementById('typ-'+n).value:'';const el=document.getElementById('fd-'+n);
+  if(isRepair(t)){el.textContent='Flexible';el.className='fd';}
+  else if(f>0){el.textContent='RM '+f.toFixed(2)+'/unit';el.className='fd';}
+  else{el.textContent='Select type';el.className='fd un';}
+}
+function calcNx(n){
+  const m=parseInt(document.getElementById('nxm-'+n).value)||0;
+  const sd=document.getElementById('sdt-'+n).value;
+  const disp=document.getElementById('nxDisp-'+n);const val=document.getElementById('nxVal-'+n);
+  if(m&&sd){const d=new Date(sd);d.setMonth(d.getMonth()+m);val.textContent=d.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});disp.style.display='block';}
+}
+function calcAll(){
+  let grand=0,units=0,names=[];
+  for(let i=1;i<=svcCount;i++){
+    if(!document.getElementById('svc-'+i))continue;
+    const t=document.getElementById('typ-'+i)?document.getElementById('typ-'+i).value:'';
+    const u=parseInt(document.getElementById('uni-'+i)?document.getElementById('uni-'+i).value:1)||0;
+    const disc=isRepair(t)?parseFloat(document.getElementById('rdisc-'+i)?document.getElementById('rdisc-'+i).value:0)||0:parseFloat(document.getElementById('disc-'+i)?document.getElementById('disc-'+i).value:0)||0;
+    const f=getF(i);const sub=Math.max(0,f*u-disc);
+    const el=document.getElementById('sub-'+i);if(el)el.textContent='RM '+sub.toFixed(2);
+    grand+=sub;units+=u;if(t)names.push(t);
+  }
+  document.getElementById('grandTotal').textContent='RM '+grand.toFixed(2);
+  document.getElementById('totalItems').textContent=names.length+' service(s) · '+units+' unit(s)';
+}
+function submitSvc(){document.getElementById('payAmt').textContent=document.getElementById('grandTotal').textContent;closeModal('addSvcModal');openModal('payModal');}
+
+function selPay(m){
+  payMeth=m;
+  document.getElementById('optDN').classList.toggle('sel',m==='dn');
+  document.getElementById('optCa').classList.toggle('sel',m==='ca');
+  document.getElementById('dnSection').style.display=m==='dn'?'block':'none';
+  document.getElementById('caSection').style.display=m==='ca'?'block':'none';
+  const b=document.getElementById('cpBtn');
+  b.className=m==='ca'?'btn btn-ca wf':'btn btn-ok wf';b.style.justifyContent='center';
+}
+function confPay(){closeModal('payModal');showToast('Payment confirmed via '+(payMeth==='dn'?'DuitNow QR':'Cash')+'! Receipt generated.');setTimeout(()=>openModal('rcptModal'),600);}
+
+function pLogin(){
+  const v=document.getElementById('pSerial').value.trim();
+  if(v==='000148'||v===''){document.getElementById('pErr').style.display='none';document.getElementById('pLogin').style.display='none';document.getElementById('pDash').style.display='block';}
+  else document.getElementById('pErr').style.display='block';
+}
+function pLogout(){document.getElementById('pSerial').value='';document.getElementById('pLogin').style.display='block';document.getElementById('pDash').style.display='none';}
+
+function onFTS(){
+  const t=document.getElementById('fts').value;
+  const isG=t==='Gas Top-Up',isR=t==='Repair';
+  document.getElementById('ftUnit').style.display=(!isG&&!isR)?'block':'none';
+  document.getElementById('ftPsi').style.display=isG?'block':'none';
+  document.getElementById('ftAmt').style.display=isR?'none':'block';
+  document.getElementById('ftRep').style.display=isR?'block':'none';
+  document.getElementById('ftAH').textContent=isG?'Per topup session':'Per unit';
+}
+// Init first block
+addSvcBlock();
+</script>
+</body>
+</html>"""
