@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11
+> **Last updated:** 2026-06-11 (session 3)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Foundation — dev environment ready, app code not started |
+| **Phase** | Domain layer built (migrations + models + seed) — RBAC + features next |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | dompdf · DuitNow QR webhook + Cash (not built) |
@@ -29,17 +29,17 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - Git: repo init, remote wired, initial docs commit + scaffold commit pushed.
 - Laravel 13 scaffolded with Sail (pgsql + redis). App serves **HTTP 200**, migrations run on Postgres.
 - Laravel Breeze installed (Inertia + Vue 3 + Tailwind). Auth working: `/login` `/register` → 200, `/dashboard` guarded. Assets build clean.
+- Domain layer built (`docs/02-domain-model.md`): 8 migrations (clients, service_fees, service_visits, service_lines, transactions, invoices, receipts, appointments) + Eloquent models with relations/casts. Business rules in models: R6 serial auto-gen, R5 warranty_end, R8 subtotal/total. ServiceFee price book seeded (10 rows). Migrated + verified on Postgres.
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Build domain layer — migrations + models from domain model (`docs/02-domain-model.md`): clients, units (serial→client), service visits, transactions (invoice/receipt), appointments, payments, warranty.
-2. RBAC — owner superuser + per-technician granular permissions (`docs/03-rbac-permissions.md`).
-3. Feature modules (`docs/04-feature-modules.md`), 11 modules.
-4. PDF (dompdf) invoice + receipt.
-5. DuitNow QR payment + webhook auto-verify (queue).
-6. Public client portal.
+1. RBAC — owner superuser + per-technician granular permissions (`docs/03-rbac-permissions.md`). Adds `role`/`permissions`/`active` to users + policies.
+2. Feature modules (`docs/04-feature-modules.md`), 11 modules.
+3. PDF (dompdf) invoice + receipt.
+4. DuitNow QR payment + webhook auto-verify (queue).
+5. Public client portal.
 
 ## ⏸ On Hold
 - _(none)_

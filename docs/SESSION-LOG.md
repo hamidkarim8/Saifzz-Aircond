@@ -6,6 +6,29 @@
 
 ---
 
+## Session 3 — 2026-06-11 — Domain layer (migrations + models + seed)
+
+**Goal:** Build the domain layer from `docs/02-domain-model.md` — schema, Eloquent models, ServiceFee seed.
+
+**Done**
+- 8 migrations: clients, service_fees, service_visits, service_lines, transactions, invoices, receipts, appointments.
+- 8 models with relations, casts, and business-rule events:
+  - R6 — `Client` auto-generates 6-digit zero-padded monotonic `serial_no` (`max(serial_no)+1`, withTrashed).
+  - R5 — `ServiceVisit` derives `warranty_end` = `visit_date + warranty_months` (null when 0).
+  - R8 — `ServiceLine` derives `subtotal = max(0, rate*units - discount)`; `ServiceVisit::recalculateTotal()` sums lines.
+  - R1 — `rate` stored as a snapshot column on `service_lines`.
+- `ServiceFeeSeeder` seeds the 10-row price book (Repair = null rate, flexible); wired into `DatabaseSeeder`.
+- `migrate --seed` clean on Postgres; tinker-verified serial gen, warranty_end, subtotal, total, Repair null rate. Test rows removed.
+
+**Decisions**
+- **Client key:** `id` PK + unique `serial_no` (FKs use `client_id`), not serial-as-PK — more idiomatic, simpler soft-delete. Docs' `client_serial` is the UI/portal identity, not the DB FK.
+- Derived values computed in model `saving` events; `total_amount` recalculated explicitly after line changes (not auto, to avoid N+1 on bulk insert).
+
+**Next**
+- RBAC: add `role`/`permissions`/`active` to users + policies (`docs/03-rbac-permissions.md`).
+
+---
+
 ## Session 2 — 2026-06-11 — Status docs + Breeze auth
 
 **Goal:** Add in-repo status tracking docs, then install Breeze (auth + Vue/Inertia frontend).
