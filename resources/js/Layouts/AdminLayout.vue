@@ -30,6 +30,7 @@ watch(
 const nav = computed(() => [
     { label: 'Dashboard', route: 'dashboard', icon: 'grid', permission: null },
     { label: 'Clients', route: 'clients.index', match: 'clients', icon: 'users', permission: 'view_clients' },
+    { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: 'tag', permission: 'edit_fees' },
 ].filter((i) => i.permission === null || can.value[i.permission]));
 
 const isActive = (item) => {
@@ -47,6 +48,7 @@ const logout = () => router.post(route('logout'));
 const icons = {
     grid: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z',
     users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+    tag: 'M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01',
 };
 </script>
 

@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (module 2) done; design system wired |
+| **Phase** | Feature modules underway — Clients (2) + Service Fees (3) done |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | dompdf · DuitNow QR webhook + Cash (not built) |
@@ -33,12 +33,13 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - RBAC built (`docs/03-rbac-permissions.md`): `role`/`permissions`/`active` on users; 9-permission catalogue + helpers on `User`; one Gate per permission with admin-implies-all (`Gate::before`); P1 (manage_users admin-only), P4 (inactive users blocked at login). Seeded admin = Khalid (`admin@saifzz.test`). Tinker-verified.
 - Design system wired (`docs/05`): Tailwind tokens (navy/blue scale, semantic, service-type colours), Plus Jakarta Sans + JetBrains Mono fonts, radii/shadows. New `AdminLayout.vue` — navy sidebar, responsive drawer, top bar, flash toast, permission-gated nav. Inertia shares `auth.can` map + `flash`.
 - **Module 2 — Clients** done: `ClientController` (index/create/store/show/edit/update/destroy), Store/Update requests (MY phone validation), routes gated `can:view_clients`/`can:edit_client` (P3). Vue pages Index (search + service-type filter + table→card reflow + pagination), Create/Edit (shared form), Show (profile + service history w/ warranty & payment status + appointments). 8 feature tests pass (33 assertions) on Postgres.
+- **Module 3 — Service Fees** done: `ServiceFeeController` (index/store/update/destroy), Store/Update requests (rate required unless flexible, duplicate type+option blocked), all routes gated `can:edit_fees`. Vue Index (price book grouped by service type, add/edit modal, mode badges) + nav item. Edits affect future lines only (R1 snapshot). 10 feature tests pass (18 assertions). Dashboard now uses `AdminLayout`.
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): Service Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Portal (10), Notifications (11), Users mgmt screen (1).
+1. Remaining feature modules (`docs/04`): **Service Records (4)** ← next, Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Portal (10), Notifications (11), Users mgmt screen (1).
 2. PDF (dompdf) invoice + receipt.
 3. DuitNow QR payment + webhook auto-verify (queue).
 4. Public client portal (unauthenticated, serial-gated — P5).

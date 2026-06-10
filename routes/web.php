@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ServiceFeeController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -32,6 +33,14 @@ Route::middleware('auth')->group(function () {
     Route::get('clients/{client}/edit', [ClientController::class, 'edit'])->middleware('can:edit_client')->name('clients.edit');
     Route::put('clients/{client}', [ClientController::class, 'update'])->middleware('can:edit_client')->name('clients.update');
     Route::delete('clients/{client}', [ClientController::class, 'destroy'])->middleware('can:edit_client')->name('clients.destroy');
+
+    // Service Fees (module 3) — price book, all gated by edit_fees (P3)
+    Route::middleware('can:edit_fees')->group(function () {
+        Route::get('fees', [ServiceFeeController::class, 'index'])->name('fees.index');
+        Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
+        Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
+        Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
+    });
 });
 
 require __DIR__.'/auth.php';

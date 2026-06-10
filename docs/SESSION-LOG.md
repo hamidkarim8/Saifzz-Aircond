@@ -6,6 +6,24 @@
 
 ---
 
+## Session 6 — 2026-06-11 — Service Fees module (module 3)
+
+**Goal:** Build the price-book management module + fix dashboard to use the admin shell.
+
+**Done**
+- Dashboard now renders inside `AdminLayout` with a module launcher (was the Breeze starter page).
+- **Service Fees backend:** `ServiceFeeController` (index/store/update/destroy); `StoreServiceFeeRequest` (type/mode in allowed sets, `rate` `required_unless:pricing_mode,flexible`, duplicate type+option rejected via `withValidator`); `UpdateServiceFeeRequest` (mode + rate only — identity is immutable). Update nulls `rate` when switched to flexible. All routes gated `can:edit_fees`.
+- **Service Fees UI:** `Fees/Index` — price book grouped by service type with left-accent colour, mode badges, per-row edit/remove; `FeeModal` partial reused for add + edit (service_type/option locked on edit, rate hidden when flexible). Sidebar nav item added (gated `edit_fees`).
+- **Tests:** `ServiceFeeTest` — 10 / 18 assertions green (gate enforcement, add, rate-required-unless-flexible, flexible null rate, duplicate rejection, update rate, switch-to-flexible nulls rate, delete).
+
+**Notes**
+- Browsing on built assets (`npm run build`) — Vite dev server is slow on Docker/Windows; only run `npm run dev` while actively editing.
+
+**Next**
+- Module 4 — Service Records (the operational heart): multi-line visit builder, rate auto-fill from fees (R1 snapshot), per-visit warranty, creates Transaction (R4).
+
+---
+
 ## Session 5 — 2026-06-11 — Design system + Clients module (module 2)
 
 **Goal:** Wire the design system, then build the Clients feature module end-to-end.
