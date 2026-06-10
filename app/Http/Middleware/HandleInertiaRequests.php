@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,10 +30,23 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                // Effective permission map (admins implicitly hold all — P1/P3).
+                'can' => $user
+                    ? collect(User::PERMISSIONS)->mapWithKeys(
+                        fn ($p) => [$p => $user->hasPermission($p)]
+                    )
+                    : [],
+                'isAdmin' => (bool) $user?->isAdmin(),
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
         ];
     }

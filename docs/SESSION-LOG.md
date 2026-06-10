@@ -6,6 +6,27 @@
 
 ---
 
+## Session 5 — 2026-06-11 — Design system + Clients module (module 2)
+
+**Goal:** Wire the design system, then build the Clients feature module end-to-end.
+
+**Done**
+- **Design tokens** (`docs/05`): `tailwind.config.js` — navy/blue scale, semantic (ok/warn/danger/wa/invoice), service-type colours, radii (ra/ral/rax), shadows (card/lift); fonts Plus Jakarta Sans + JetBrains Mono via Google Fonts in `app.css`; base bg/text.
+- **`AdminLayout.vue`** — navy sidebar, off-canvas drawer < lg, sticky top bar, user menu, flash toast; nav is data-driven and permission-gated.
+- **Inertia share** (`HandleInertiaRequests`): `auth.can` (effective permission map, admin-implies-all), `auth.isAdmin`, `flash.success/error`.
+- **Clients backend:** `ClientController` (full resource minus API), `StoreClientRequest`/`UpdateClientRequest` (MY mobile regex `^01\d-?\d{7,8}$`), routes gated `can:view_clients` (read) / `can:edit_client` (write).
+- **Clients UI:** `Index` (debounced search over name/serial/phone, service-type filter tabs, desktop table + mobile card reflow, pagination), `Create`/`Edit` (shared `ClientForm` partial), `Show` (navy profile header + WhatsApp link, service history with warranty + payment badges, appointments).
+- **Tests:** `tests/Feature/ClientTest.php` — 8 tests / 33 assertions, all green on Postgres (guest redirect, gate enforcement, serial gen R6, phone validation, `ilike` search, soft-delete R7).
+
+**Notes**
+- Search uses Postgres `ilike` → tests must run on pg (testing DB already existed), not sqlite.
+- `assets build clean`; `AdminLayout` will also host future modules' nav items as they ship.
+
+**Next**
+- Module 3 (Service Fees) then module 4 (Service Records) per `docs/04` dependency order.
+
+---
+
 ## Session 4 — 2026-06-11 — RBAC (roles, permissions, gates)
 
 **Goal:** Implement role + granular permission access control from `docs/03-rbac-permissions.md`.
