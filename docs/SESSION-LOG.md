@@ -6,6 +6,22 @@
 
 ---
 
+## Session 7 — 2026-06-11 — Service Records module (module 4)
+
+**Goal:** Build the "Add Service Record" flow — the operational heart.
+
+**Done**
+- **Backend:** `ServiceVisitController` (index/create/store/show). `StoreServiceVisitRequest` validates client mode (existing id or inline new client w/ MY phone), visit meta, payment method, and a nested `lines[]` array; `withValidator` adds per-line conditional rules — unit_type required for Cleaning/Installation/Troubleshoot, gas_option for Gas, repair_desc + manual rate for Repair, and a fee-must-exist check for fee-driven lines.
+- **Business rules enforced server-side:** R1 rate snapshotted from the fee book (client-sent rate ignored except Repair flexible); R2 next_service stripped for Gas/Repair; R3 unit_type/notes stripped for Repair; R4 visit+lines+Transaction created in one DB transaction (status pending, `TXN-YYYYMMDD-NNN` daily sequence); R5 warranty_end derived; R8 subtotal/total.
+- **`ClientController@lookup`** — JSON client search (name/serial/phone, `ilike`) for the picker, gated `can:record_service`; route ordered before `clients/{client}`.
+- **UI:** `Create` builder — `ClientPicker` (existing async search via lookup, or new inline), adaptive `ServiceLineCard` (fields appear per service type, rate auto-fills from fee map and is read-only except Repair, live subtotal), sticky grand-total bar, warranty (0–6 w/ live end date) + payment-method selector. `Index` (recent records, table→card) and `Show` (navy summary, lines, totals, warranty/payment badges). Sidebar nav item (gated `record_service`).
+- **Tests:** `ServiceVisitTest` — 9 / 34 assertions green, incl. rate-tamper resistance (sends rate=5, stored 60), Repair field stripping, Gas next-service strip, warranty derive, conditional validation, new-client creation, lookup JSON.
+
+**Next**
+- Module 5 — Payments: cash confirm (`collect_payment`) + DuitNow QR generate/await webhook → flip Transaction to paid, trigger Receipt (with module 6). See `docs/06-integrations.md`.
+
+---
+
 ## Session 6 — 2026-06-11 — Service Fees module (module 3)
 
 **Goal:** Build the price-book management module + fix dashboard to use the admin shell.

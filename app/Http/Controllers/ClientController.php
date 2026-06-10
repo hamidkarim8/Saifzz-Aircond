@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreClientRequest;
 use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,6 +42,26 @@ class ClientController extends Controller
             'filters' => ['search' => $search, 'service_type' => $serviceType],
             'serviceTypes' => self::SERVICE_TYPES,
         ]);
+    }
+
+    /**
+     * Lightweight JSON search for pickers (e.g. the service-record builder).
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        $clients = Client::query()
+            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
+                $w->where('name', 'ilike', "%{$q}%")
+                    ->orWhere('serial_no', 'ilike', "%{$q}%")
+                    ->orWhere('phone', 'ilike', "%{$q}%");
+            }))
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get(['id', 'serial_no', 'name', 'phone']);
+
+        return response()->json($clients);
     }
 
     public function create(): Response

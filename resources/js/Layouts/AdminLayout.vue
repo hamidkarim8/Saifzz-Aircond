@@ -30,6 +30,7 @@ watch(
 const nav = computed(() => [
     { label: 'Dashboard', route: 'dashboard', icon: 'grid', permission: null },
     { label: 'Clients', route: 'clients.index', match: 'clients', icon: 'users', permission: 'view_clients' },
+    { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: 'clipboard', permission: 'record_service' },
     { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: 'tag', permission: 'edit_fees' },
 ].filter((i) => i.permission === null || can.value[i.permission]));
 
@@ -49,6 +50,7 @@ const icons = {
     grid: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z',
     users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
     tag: 'M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01',
+    clipboard: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2',
 };
 </script>
 
