@@ -6,6 +6,29 @@
 
 ---
 
+## Session 4 — 2026-06-11 — RBAC (roles, permissions, gates)
+
+**Goal:** Implement role + granular permission access control from `docs/03-rbac-permissions.md`.
+
+**Done**
+- Migration adds `role` (default technician), `permissions` (json), `active` (default true) to `users`.
+- `User` model: 9-permission catalogue, `ROLE_*` consts, `DEFAULT_TECHNICIAN_PERMISSIONS`; `isAdmin()`, `hasPermission()`, `grantPermission()`, `revokePermission()`. New technicians default to the minimum 3 perms via creating event.
+- `AppServiceProvider` registers one Gate per permission + `Gate::before` so admins implicitly pass every gate (P3).
+- `LoginRequest` rejects inactive users after a valid attempt (P4).
+- Seeded user is now admin Khalid (`admin@saifzz.test`).
+
+**Rules enforced**
+- P1 — `manage_users` admin-only; `grantPermission`/`hasPermission` refuse it for technicians.
+- P3 — gates are the server-side enforcement points (UI hiding comes later).
+- P4 — inactive users cannot log in even with valid credentials.
+
+**Verified (tinker)** — technician default perms = view_clients/record_service/set_appointment; admin passes manage_users; tech collect_payment/manage_users denied; grant manage_users is a no-op (P1); grant view_reports works; gates resolve correctly for admin vs technician.
+
+**Next**
+- Feature modules from `docs/04-feature-modules.md`: controllers + Inertia pages, applying `can:` gates per action.
+
+---
+
 ## Session 3 — 2026-06-11 — Domain layer (migrations + models + seed)
 
 **Goal:** Build the domain layer from `docs/02-domain-model.md` — schema, Eloquent models, ServiceFee seed.
