@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/*',
             'dev/bayarcash/*',
         ]);
+
+        $middleware->alias([
+            'portal.auth' => \App\Http\Middleware\EnsurePortalClient::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
