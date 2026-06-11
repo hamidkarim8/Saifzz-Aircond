@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\StubGatewayController;
@@ -23,9 +25,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Dashboard (module 9) — landing page; report payload gated view_reports inside the controller.
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -86,6 +88,10 @@ Route::middleware('auth')->group(function () {
         Route::get('reminders', [ReminderController::class, 'index'])->name('reminders.index');
         Route::patch('reminders/{client}/contacted', [ReminderController::class, 'toggleContacted'])->name('reminders.contacted');
     });
+
+    // Reports (module 9) — transactions CSV export, gated export_data (P3).
+    Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
+        ->middleware('can:export_data')->name('reports.transactions.export');
 });
 
 // Stub gateway hosted page — only when the fake driver is active.

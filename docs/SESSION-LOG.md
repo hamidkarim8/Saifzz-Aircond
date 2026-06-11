@@ -6,6 +6,66 @@
 
 ---
 
+## Session 12 — 2026-06-11 — Dashboard & Reports module (module 9)
+
+**Goal:** Build Module 9 — aggregated read-only insight: KPI cards, services-by-type chart,
+mini appointments calendar, recent-transactions table, transactions CSV export (`docs/04` §9).
+Brainstormed → spec'd (`docs/superpowers/specs/2026-06-11-dashboard-reports-design.md`) →
+implemented directly → tests → eyeballed.
+
+**Decisions (brainstorm)**
+- **Access = adapt by permission.** `/dashboard` stays everyone's landing page; the reporting
+  payload (KPIs/chart/txns/calendar) renders only for `view_reports`, else the module launcher.
+  Data gated server-side, not the route — technicians keep their home page. CSV export = own
+  route gated `export_data`.
+- **One shared period filter** (All time / This month / This week / Today) scopes the
+  services-by-type chart, the transactions table, **and** the CSV export, so the export always
+  mirrors the screen. Period changes via Inertia GET round-trip (`?period=`); the mini-calendar
+  month nav uses a separate `?month=` param (both preserved across each other).
+- **No chart dependency** — services-by-type renders as CSS horizontal bars (mockup-style).
+- **Scope:** no full paginated transactions index page, no revenue line chart (recent table +
+  export cover v1).
+
+**Done**
+- **Service:** `App\Services\Reports\ReportService` (injects `ReminderService`). `kpis()` —
+  Total Clients (+this-month delta), Revenue this month (paid-only by `paid_at`) + MoM % (null
+  when no prior month), All-time Revenue, Pending Reminders. `servicesByType(period)` — service
+  line counts by `service_type` scoped by `visit_date`. `transactions(period, ?limit)` — joined
+  to client via visit, windowed by `COALESCE(paid_at, created_at)`, newest first (`null` limit
+  = export, no cap). Private `range()` maps period → Carbon bounds.
+- **HTTP:** `DashboardController@index` replaces the `/dashboard` closure (reads `?period`/`?month`,
+  validates, branches on `view_reports`). `ReportController@exportTransactions` streams a CSV
+  (`Txn ID, Date, Client, Serial, Amount, Method, Status`) via `streamDownload`, gated
+  `export_data`, filename `transactions-{period}-{date}.csv`. Route `reports.transactions.export`
+  added inside the auth group.
+- **UI:** rewrote `Dashboard.vue` — `canReport` branch: 4 KPI stat cards (Pending Reminders card
+  links to `reminders.index`), period tabs, reused `Appointments/Partials/MonthCalendar` (mini)
+  + day panel, Services-by-Type CSS bars (width = count/max, per-type colour), transactions table
+  with status badges + Export CSV `<a>` (gated `export_data`, carries period). Launcher fallback
+  for non-reporting users now has live Clients/Service-Records/Appointments links (was a dead
+  placeholder).
+- **Tests:** `ReportServiceTest` ×6 (paid-only + month revenue + MoM, MoM null, clients delta,
+  pending-reminders KPI, services-by-type per period, transactions period + newest-first) +
+  `DashboardTest` ×6 (guest redirect, `view_reports` payload, technician launcher, export
+  `export_data` 403/200, CSV header+row, period filter). Time frozen via `travelTo`. **Full suite:
+  114 passed / 365 assertions** on Postgres. Pint clean.
+
+**Notes**
+- HMR confirmed working on WSL/ext4 (dev server `npm run dev`, `public/hot` present) — a live
+  `Dashboard.vue` tweak hot-pushed without reload. Clarified the model: HMR live-updates only an
+  already-connected tab on **frontend** edits; backend/route/prop changes and first visits to a
+  new page still need a navigation/reload.
+- PHP 8.4 `fputcsv` quotes the `"Txn ID"` header (contains a space) — test asserts the unquoted
+  remainder.
+- Demo `Demo …` clients (from session 11) still seeded in the dev DB for eyeballing.
+
+**Next**
+- Module 10 — Client Portal: public, serial-gated (no password), client header + next service
+  date + history with warranty status, receipt download, WhatsApp (`docs/04` §10). Reuses the
+  Documents routes/templates and the Reminders next-service logic.
+
+---
+
 ## Session 11 — 2026-06-11 — Reminders module (module 8)
 
 **Goal:** Build Module 8 — surface clients due/overdue for service and drive follow-up
