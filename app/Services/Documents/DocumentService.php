@@ -25,6 +25,24 @@ final class DocumentService
         );
     }
 
+    /**
+     * Receipt view-model from the frozen Receipt snapshot. Shared by the staff
+     * DocumentController and the client PortalController so the two can't drift.
+     * 404 when the transaction has no Receipt (i.e. it is unpaid).
+     */
+    public function receiptViewModel(Transaction $transaction): array
+    {
+        $receipt = $transaction->receipt;
+
+        abort_if($receipt === null, 404);
+
+        return [
+            'snapshot' => $receipt->snapshot,
+            'number' => $receipt->number,
+            'issuedAt' => $receipt->created_at,
+        ];
+    }
+
     /** INV-YYYYMMDD-NNN — daily sequence, mirrors RCP/TXN numbering. */
     private function nextInvoiceNumber(): string
     {

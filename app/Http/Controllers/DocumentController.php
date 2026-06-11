@@ -51,16 +51,9 @@ class DocumentController extends Controller
         ];
     }
 
-    /** Receipt view-model — reads the existing Receipt; 404 if the txn is unpaid. */
+    /** Receipt view-model — delegates to the shared renderer (404 if unpaid). */
     private function receiptData(Transaction $transaction): array
     {
-        $receipt = $transaction->receipt;
-        abort_if($receipt === null, 404);
-
-        return [
-            'snapshot' => $receipt->snapshot,
-            'number' => $receipt->number,
-            'issuedAt' => $receipt->created_at,
-        ];
+        return $this->documents->receiptViewModel($transaction);
     }
 }
