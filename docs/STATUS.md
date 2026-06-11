@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11 (session 3)
+> **Last updated:** 2026-06-11 (session 8)
 
 ---
 
@@ -11,10 +11,10 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4) done |
+| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5) done |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
-| **PDF / Pay** | dompdf · DuitNow QR webhook + Cash (not built) |
+| **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; receipt record on paid · invoice/receipt PDF (dompdf) not built |
 | **Run** | `docker compose up -d` → http://localhost:8000 |
 | **Repo** | https://github.com/hamidkarim8/Saifzz-Aircond |
 
@@ -35,14 +35,15 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - **Module 2 — Clients** done: `ClientController` (index/create/store/show/edit/update/destroy), Store/Update requests (MY phone validation), routes gated `can:view_clients`/`can:edit_client` (P3). Vue pages Index (search + service-type filter + table→card reflow + pagination), Create/Edit (shared form), Show (profile + service history w/ warranty & payment status + appointments). 8 feature tests pass (33 assertions) on Postgres.
 - **Module 3 — Service Fees** done: `ServiceFeeController` (index/store/update/destroy), Store/Update requests (rate required unless flexible, duplicate type+option blocked), all routes gated `can:edit_fees`. Vue Index (price book grouped by service type, add/edit modal, mode badges) + nav item. Edits affect future lines only (R1 snapshot). 10 feature tests pass (18 assertions). Dashboard now uses `AdminLayout`.
 - **Module 4 — Service Records** done (operational heart): `ServiceVisitController` (index/create/store/show) + `StoreServiceVisitRequest` (per-line conditional rules R2/R3, fee-existence check); `ClientController@lookup` JSON search (gated `record_service`). Server snapshots rate from fee book — client-sent rate ignored (R1); strips next-service for Gas/Repair (R2), unit_type/notes for Repair (R3); creates visit+lines+Transaction (pending, `TXN-YYYYMMDD-NNN`) in one DB transaction (R4); warranty_end derived (R5); totals (R8). Vue: builder (ClientPicker existing-search/new, adaptive ServiceLineCard with live rate auto-fill + subtotal, sticky grand-total bar, warranty + payment method), Index (recent records), Show (summary). 9 feature tests pass (34 assertions). Nav item added (gated `record_service`).
+- **Module 5 — Payments** done: `PaymentGateway` interface with two drivers (`FakeBayarCashGateway` active stub, `BayarCashGateway` scaffolded live) selected by `config('services.bayarcash.driver')` via `PaymentServiceProvider` — going live = fill creds + flip `BAYARCASH_DRIVER=live`. **Cash** path (`PaymentController@cash`, gated `collect_payment`) marks paid + issues a Receipt record (`RCP-YYYYMMDD-NNN`, one-per-txn, frozen snapshot). **BayarCash redirect flow**: `startGateway` → stub hosted page (`dev/bayarcash`, fake-driver-only) → checksum-signed callback → public CSRF-exempt webhook (`webhooks/bayarcash`) → `HandleGatewayCallback` (idempotent, amount-guarded, locks row) marks paid + Receipt. `Checksum` HMAC-SHA256 + shared `CallbackParser` (go-live constants centralized, `TODO(go-live)`). Vue: `Payments/Show` (method chooser), `Payments/Return` (result + receipt no.); gated "Collect payment" CTA on the service-record page. **Full suite: 72 tests / 202 assertions green** (new: Checksum, FakeBayarCashGateway, Payment, PaymentWebhook, StubGateway). Receipt **PDF** deferred to Documents (module 6) — the record already exists.
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): **Payments (5)** ← next (cash confirm + DuitNow QR/webhook), Documents (6) invoice/receipt PDF, Appointments (7), Reminders (8), Dashboard/Reports (9), Portal (10), Notifications (11), Users mgmt screen (1).
-2. PDF (dompdf) invoice + receipt.
-3. DuitNow QR payment + webhook auto-verify (queue).
+1. Remaining feature modules (`docs/04`): **Documents (6)** ← next (invoice/receipt PDF — Receipt record already created by Payments), Appointments (7), Reminders (8), Dashboard/Reports (9), Portal (10), Notifications (11), Users mgmt screen (1).
+2. PDF (dompdf) invoice + receipt (Documents module).
+3. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
 4. Public client portal (unauthenticated, serial-gated — P5).
 
 ## ⏸ On Hold

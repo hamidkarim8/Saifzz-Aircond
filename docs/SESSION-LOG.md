@@ -6,6 +6,28 @@
 
 ---
 
+## Session 8 — 2026-06-11 — Payments module (module 5)
+
+**Goal:** Build Module 5 — Cash manual confirm + a BayarCash (DuitNow QR) redirect flow behind a swappable gateway interface, shipped with a working stub so go-live = fill creds + flip one env var. Executed `docs/superpowers/plans/2026-06-11-payments-bayarcash-stub.md` task-by-task (TDD).
+
+**Done**
+- **Gateway seam:** `PaymentGateway` interface + two drivers — `FakeBayarCashGateway` (active stub) and `BayarCashGateway` (scaffolded live, inert without creds) — bound by `config('services.bayarcash.driver')` via `PaymentServiceProvider`. DTOs (`PaymentIntentData`/`Result`, `CallbackResult`), `PaymentStatus` enum, `Checksum` (HMAC-SHA256 make/verify), shared `CallbackParser`. Go-live constants centralized + `TODO(go-live)` marked. (Tasks 1–2, committed prior session start.)
+- **Cash path:** `PaymentService::confirmCash` marks paid + issues a Receipt (`RCP-YYYYMMDD-NNN`, daily sequence, one-per-txn via `firstOrCreate`, frozen client+lines snapshot). Idempotent. Gated `collect_payment`.
+- **Gateway path:** `startGateway` creates an intent (persists `gateway_ref`, method `DuitNow QR`), redirects to the hosted page. `HandleGatewayCallback` action applies a verified callback idempotently — row-locked, amount-guarded, already-paid short-circuit, unknown-order ignored, failed→failed (no receipt).
+- **HTTP:** `PaymentController` (show/cash/pay/return), `PaymentWebhookController` (verify → 403 on bad sig, else 200), `StubGatewayController` (hosted blade page + `simulate` that fires a signed callback through the REAL webhook path). Routes: payment routes gated `collect_payment`; public CSRF-exempt `webhooks/bayarcash`; stub routes guarded to `driver=fake`. CSRF exempt `webhooks/*` + `dev/bayarcash/*`.
+- **UI:** `Payments/Show` (method chooser) + `Payments/Return` (result + receipt number, retry on failed); gated "Collect payment" CTA + "Paid · View receipt" replacing the old static notice on `ServiceRecords/Show`. Assets build clean.
+- **Env:** `BAYARCASH_*` added to `.env`/`.env.example` (driver=fake, stub secret; live creds commented).
+- **Tests:** new ChecksumTest (2), FakeBayarCashGatewayTest (3), PaymentTest (6), PaymentWebhookTest (6), StubGatewayTest (3). **Full suite: 72 passed / 202 assertions** on Postgres.
+
+**Notes**
+- Deviation from spec (documented in plan): `ServiceVisitController@store` redirect left as `service-records.show` — a `record_service`-only tech lacks `collect_payment`, so auto-redirecting to the gated payment page would 403; the gated CTA covers it instead.
+- Receipt **record** exists now; receipt/invoice **PDF** is Documents (module 6).
+
+**Next**
+- Module 6 — Documents: invoice + receipt PDF (dompdf), rendering the snapshot the Receipt already stores.
+
+---
+
 ## Session 7 — 2026-06-11 — Service Records module (module 4)
 
 **Goal:** Build the "Add Service Record" flow — the operational heart.
