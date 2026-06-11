@@ -6,6 +6,29 @@
 
 ---
 
+## Session 10 — 2026-06-11 — Appointments module (module 7)
+
+**Goal:** Build Module 7 — scheduling: month calendar + list view, create/edit, status lifecycle, summary stats (`docs/04` §7). Followed the locked per-module pattern (controller + requests + `can:` gates + Inertia pages + feature tests), TDD red→green.
+
+**Decisions**
+- Whole module gated by **`set_appointment`** (the catalogue's create/edit-appointments permission). Viewing the calendar = same gate; no separate "view appointments" permission exists.
+- **`clients.lookup` gate relaxed `record_service` → `view_clients`** so appointment-setters (default tech has `view_clients`, not necessarily `record_service`) can search clients in the modal. Safe: the recorder test already grants `view_clients`, so no breakage.
+- **Client is optional** on an appointment (migration FK is nullable / "loosely linked") — a prospective lead can be booked before any client record exists. The modal lets you pick an existing client (prefills phone/address) or type details manually.
+- **Modal-based create/edit** (like Fees), matching the mockup `apptModal`, rather than a full page — the Index already holds the appointment objects so no separate edit GET is needed.
+- `date` + `time` are two user-facing fields folded server-side into one `datetime` (precise per-field validation messages).
+
+**Done**
+- **Model:** `Appointment` gains `SERVICE_TYPES`, `STATUSES`, `TRANSITIONS` (pending→confirmed→done/cancelled; done/cancelled terminal) + `canTransitionTo()` + `scopeForMonth('YYYY-MM')`.
+- **HTTP:** `AppointmentController` — `index` (month-scoped list + today's list + summary stats), `store`, `update`, `updateStatus` (validates target ∈ catalogue, `abort_unless($appt->canTransitionTo($target), 422)`). `StoreAppointmentRequest` (+ `UpdateAppointmentRequest` subclass) authorize `set_appointment`, MY phone regex, `client_id` nullable-exists, expose `datetime()`/`appointmentData()` helpers. Store/update redirect to the new appointment's month so it's visible.
+- **Routes:** `appointments` group gated `can:set_appointment` (index/store, `{appointment}` put, `{appointment}/status` patch).
+- **UI:** `Appointments/Index.vue` (calendar + selected-day panel + stat cards + month table with status/type badges and inline lifecycle buttons + prev/next month nav), `Partials/MonthCalendar.vue` (self-contained month grid, day dots, today ring), `Partials/AppointmentModal.vue` (debounced client search via `clients.lookup`, date/time, optional units/amount, prefill on edit via string-slice to dodge tz drift). Nav item (calendar icon) gated `set_appointment`. "New appointment" CTA on `Clients/Show` → `appointments.index?client=ID` (auto-opens modal with preset client).
+- **Tests:** `AppointmentTest` ×11 — gate/guard, store (combined datetime, pending default, client-less), validation, bad phone, update, legal transition, illegal transition→422, month scope + stats. **Full suite: 92 passed / 275 assertions** on Postgres. Pint clean.
+
+**Next**
+- Module 8 — Reminders: derived overdue/due-this-month list from next-service dates, per-client WhatsApp + "set appointment", contacted toggle (`docs/04` §8). Reuses this module's preset-client appointment flow.
+
+---
+
 ## Session 9 — 2026-06-11 — Documents module (module 6)
 
 **Goal:** Build Module 6 — invoice + receipt as an on-screen view **and** a downloadable PDF, from frozen snapshots, matching the mockup. Brainstormed → spec'd → planned → executed TDD (`docs/superpowers/specs/2026-06-11-documents-pdf-design.md`, `docs/superpowers/plans/2026-06-11-documents-pdf.md`).
