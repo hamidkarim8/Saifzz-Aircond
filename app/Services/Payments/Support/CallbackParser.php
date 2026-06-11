@@ -32,7 +32,7 @@ final class CallbackParser
         return new CallbackResult(
             verified: $verified,
             orderNumber: (string) $request->input('order_number', ''),
-            gatewayRef: $request->input('transaction_id'),
+            gatewayRef: $request->filled('transaction_id') ? (string) $request->input('transaction_id') : null,
             status: $status,
             amount: $request->filled('amount') ? (float) $request->input('amount') : null,
             raw: $request->all(),
