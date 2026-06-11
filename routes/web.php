@@ -104,6 +104,8 @@ Route::prefix('portal')->name('portal.')->group(function () {
 
     Route::middleware('portal.auth')->group(function () {
         Route::get('account', [PortalController::class, 'account'])->name('account');
+        Route::get('receipt/{transaction}', [PortalController::class, 'receipt'])->name('receipt');
+        Route::get('receipt/{transaction}/pdf', [PortalController::class, 'receiptPdf'])->name('receipt.pdf');
     });
 });
 

@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
+use App\Services\Documents\DocumentService;
 use App\Services\Portal\PortalService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class PortalController extends Controller
 {
-    public function __construct(private readonly PortalService $portal) {}
+    public function __construct(
+        private readonly PortalService $portal,
+        private readonly DocumentService $documents,
+    ) {}
 
     /** Login form (or bounce to the account if already authed). */
     public function showLogin(Request $request): InertiaResponse|RedirectResponse
@@ -63,6 +70,33 @@ class PortalController extends Controller
         $request->session()->forget('portal_client_id');
 
         return redirect()->route('portal.login');
+    }
+
+    public function receipt(Request $request, Transaction $transaction): Response
+    {
+        $this->authorizeReceipt($request, $transaction);
+
+        return response(view('documents.receipt', $this->documents->receiptViewModel($transaction)));
+    }
+
+    public function receiptPdf(Request $request, Transaction $transaction): Response
+    {
+        $this->authorizeReceipt($request, $transaction);
+        $data = $this->documents->receiptViewModel($transaction);
+
+        return Pdf::loadView('documents.receipt', $data)->download($data['number'].'.pdf');
+    }
+
+    /**
+     * The receipt must belong to the session client (cross-client isolation) and
+     * be paid (receiptViewModel 404s when unpaid). 404 — not 403 — so the portal
+     * never confirms that another client's transaction exists.
+     */
+    private function authorizeReceipt(Request $request, Transaction $transaction): void
+    {
+        $client = $request->attributes->get('portal_client');
+
+        abort_unless($transaction->visit->client_id === $client->id, 404);
     }
 
     /** Business identity + WhatsApp number (MY: drop leading 0, prefix 60). */
