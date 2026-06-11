@@ -4,13 +4,17 @@ namespace App\Services\Payments;
 
 use App\Models\Receipt;
 use App\Models\Transaction;
+use App\Services\Documents\SnapshotBuilder;
 use App\Services\Payments\Contracts\PaymentGateway;
 use App\Services\Payments\Data\PaymentIntentData;
 use Illuminate\Support\Facades\DB;
 
 final class PaymentService
 {
-    public function __construct(private readonly PaymentGateway $gateway) {}
+    public function __construct(
+        private readonly PaymentGateway $gateway,
+        private readonly SnapshotBuilder $snapshots,
+    ) {}
 
     /** Cash path: staff confirms manually (gated collect_payment). */
     public function confirmCash(Transaction $transaction): void
@@ -62,7 +66,7 @@ final class PaymentService
             [
                 'number' => $this->nextReceiptNumber(),
                 'amount' => $transaction->amount,
-                'snapshot' => $this->snapshot($transaction),
+                'snapshot' => $this->snapshots->forTransaction($transaction),
             ],
         );
     }
@@ -75,36 +79,5 @@ final class PaymentService
         $n = $last ? ((int) substr($last, -3)) + 1 : 1;
 
         return $prefix.str_pad((string) $n, 3, '0', STR_PAD_LEFT);
-    }
-
-    /** Freeze client + line + payment details for stable reprints. */
-    private function snapshot(Transaction $transaction): array
-    {
-        $visit = $transaction->visit()->with(['client', 'lines'])->first();
-
-        return [
-            'txn_id' => $transaction->txn_id,
-            'method' => $transaction->method,
-            'paid_at' => optional($transaction->paid_at)->toIso8601String(),
-            'client' => [
-                'name' => $visit->client->name,
-                'serial_no' => $visit->client->serial_no,
-                'phone' => $visit->client->phone,
-                'address' => $visit->client->address,
-            ],
-            'visit_date' => optional($visit->visit_date)->toDateString(),
-            'warranty_end' => optional($visit->warranty_end)->toDateString(),
-            'lines' => $visit->lines->map(fn ($l) => [
-                'service_type' => $l->service_type,
-                'unit_type' => $l->unit_type,
-                'gas_option' => $l->gas_option,
-                'units' => $l->units,
-                'rate' => $l->rate,
-                'discount' => $l->discount,
-                'subtotal' => $l->subtotal,
-                'repair_desc' => $l->repair_desc,
-            ])->all(),
-            'total_amount' => $visit->total_amount,
-        ];
     }
 }
