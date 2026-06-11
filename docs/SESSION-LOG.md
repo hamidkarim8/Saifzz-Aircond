@@ -6,6 +6,37 @@
 
 ---
 
+## Session 14 — 2026-06-11 — History cleanup, auth UI rebrand, Notifications (module 11)
+
+**Goal:** Post-portal housekeeping (strip co-author trailer from git history), replace the default
+Breeze/Laravel auth + landing UI with the design system, and close module 11 (Notifications, v1).
+
+**Decisions**
+- **Portal access stays serial + phone-last-4 for v1.** Discussed alternatives (random serial —
+  rejected: fixes enumeration but not secrecy of a printed 6-digit value; capability-URL QR token —
+  the right long-term fix; OTP — overkill). Ship current, demo to Khalid, amend if needed.
+- **Public registration flagged, not fixed** — `/register` self-serve grants default technician
+  permissions (sees client data). Logged under 🔒 Security in STATUS; module 1 closes it.
+- **Module 11 kept thin** — no DB/routes; one WhatsApp builder per side (PHP + JS), Cloud API
+  lands behind the PHP service later.
+
+**Done**
+- **History rewrite:** `git filter-branch --msg-filter` stripped the `Co-Authored-By` trailer from
+  the root commit (all 52 SHAs rewritten); force-pushed; backup refs + reflog purged.
+- **Auth UI rebrand:** `GuestLayout`, `Auth/Login`, `Auth/Register` onto design tokens;
+  `Welcome.vue` → branded landing with **Customer portal** + **Staff sign in** entry cards;
+  staff login links customers to the portal.
+- **Module 11 — Notifications:** `App\Services\Notifications\WhatsApp` (`normalize`/`link`,
+  WhatsAppTest ×5) + JS mirror `resources/js/lib/whatsapp.js`; Reminders/Index, Clients/Show,
+  Portal/Show, `PortalController::business()` all refactored onto the shared builders.
+- **Sail build perms fixed** (root-owned `node_modules/.vite-temp` + `public/build` chowned).
+
+**Tests:** 138 passed / 427 assertions.
+
+**Next:** Users mgmt screen (module 1) — last module; also closes the public-registration hole.
+
+---
+
 ## Session 13 — 2026-06-11 — Client Portal module (module 10)
 
 **Goal:** Build Module 10 — public, unauthenticated self-service portal: serial + phone-last-4

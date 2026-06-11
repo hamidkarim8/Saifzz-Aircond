@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11 (session 13)
+> **Last updated:** 2026-06-11 (session 14)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10) done |
+| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10), Notifications (11) done — only Users mgmt (1) left |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; invoice + receipt **view + PDF (dompdf) done** |
@@ -45,13 +45,15 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 
 - **Module 10 — Client Portal** done: public, unauthenticated, **serial + phone-last-4** gated self-service (P5). Serials are enumerable (monotonic), so the second factor (last 4 digits of the phone on file, digits-only match) blocks scraping; failures return one **generic** "no matching record" (no enumeration oracle) and the lookup is **rate-limited** (`throttle:5,1`). `App\Services\Portal\PortalService` (`authenticate`, `accountFor` — history + warranty + `next_service_date` = MAX over lines). `EnsurePortalClient` middleware (`portal.auth`) holds the matched client in session (id regenerated on auth — fixation defense); logout clears it. `PortalController` renders an own mobile-first Inertia area (`Pages/Portal/{PortalLayout,Login,Show}.vue`, **not** AdminLayout): client header, next-service banner, history cards (warranty badges reused from the staff view), per-paid-visit **receipt download** and `wa.me` contact/appointment to the business number. Receipts are **session-scoped + paid-only** — `PortalController` re-checks the txn belongs to the session client and reuses the new shared `DocumentService::receiptViewModel()` (extracted from `DocumentController`); cross-client and unpaid both **404** (no oracle). No portal-side DB writes. **Full suite: 133 passed / 421 assertions** (new: PortalService ×5, PortalAuth ×6, PortalAccount ×3, PortalReceipt ×5).
 
+- **Module 11 — Notifications** done (v1, thin): one WhatsApp seam on each side instead of four inline `wa.me` builders. `App\Services\Notifications\WhatsApp` (`normalize` — digits-only, drop leading 0, prefix 60, keep existing 60; `link` — wa.me + `rawurlencode`d text); class docblock marks it as where the Meta Cloud API `send()` lands later, callers unchanged. JS mirror `resources/js/lib/whatsapp.js` (`waNumber`/`waLink`) — Reminders/Index, Clients/Show, Portal/Show refactored onto it; `PortalController::business()` delegates to the PHP service. Pure consolidation: no DB, no routes, no payload change. **Full suite: 138 passed / 427 assertions** (new: WhatsAppTest ×5).
+
 - **Auth UI rebrand** (session 14): staff `Login`/`Register` moved off default Breeze onto the design system (`GuestLayout` rebranded, native inputs + tokens); `Welcome.vue` replaced with a branded landing page exposing two entry points — **Customer portal** (`/portal`) and **Staff sign in** (`/login`). Login also links customers to the portal. Full UI/UX/cosmetics polish pass still deferred (owner will do a dedicated pass).
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): **Notifications (11)** ← next, Users mgmt screen (1) — module 1 also closes the public-registration hole (see 🔒 Security).
+1. Remaining feature modules (`docs/04`): **Users mgmt screen (1)** ← next — also closes the public-registration hole (see 🔒 Security).
 2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
 
 ## ⏸ On Hold
