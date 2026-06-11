@@ -46,8 +46,8 @@ const waAppointment = computed(() => `https://wa.me/${props.business.wa}?text=${
 
         <!-- WhatsApp actions -->
         <div class="mt-4 grid grid-cols-2 gap-3">
-            <a :href="waContact" target="_blank" class="rounded-ra bg-wa px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:opacity-90">Contact us</a>
-            <a :href="waAppointment" target="_blank" class="rounded-ra border border-line bg-surface px-4 py-2.5 text-center text-sm font-semibold text-navy-800 transition hover:bg-surface-muted">Request appointment</a>
+            <a :href="waContact" target="_blank" rel="noopener noreferrer" class="rounded-ra bg-wa px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:opacity-90">Contact us</a>
+            <a :href="waAppointment" target="_blank" rel="noopener noreferrer" class="rounded-ra border border-line bg-surface px-4 py-2.5 text-center text-sm font-semibold text-navy-800 transition hover:bg-surface-muted">Request appointment</a>
         </div>
 
         <!-- Service history -->
@@ -73,7 +73,7 @@ const waAppointment = computed(() => `https://wa.me/${props.business.wa}?text=${
                     <span class="font-mono text-base font-bold text-navy-800">{{ money(v.total_amount) }}</span>
                 </div>
                 <div v-if="v.transaction && v.transaction.status === 'paid'" class="mt-2 text-right text-xs">
-                    <a :href="route('portal.receipt.pdf', v.transaction.id)" target="_blank" class="font-semibold text-primary hover:text-primary-600">Download receipt →</a>
+                    <a :href="route('portal.receipt.pdf', v.transaction.id)" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:text-primary-600">Download receipt →</a>
                 </div>
             </article>
         </div>

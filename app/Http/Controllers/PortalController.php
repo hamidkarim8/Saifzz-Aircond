@@ -67,7 +67,9 @@ class PortalController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $request->session()->forget('portal_client_id');
+        // Full teardown on sign-out — invalidate the session and rotate the CSRF token.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('portal.login');
     }
