@@ -53,4 +53,6 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+Route::get('dev/bayarcash/{ref}', [\App\Http\Controllers\StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
+
 require __DIR__.'/auth.php';
