@@ -53,7 +53,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): **Users mgmt screen (1)** ← next — also closes the public-registration hole (see 🔒 Security).
+1. **Users mgmt screen (1)** ← next, last module. Draft spec ready: `docs/superpowers/specs/2026-06-11-users-mgmt-design.md` — review its 5 proposed decisions, then plan + build. (Registration hole already closed in session 14.)
 2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
 
 ## ⏸ On Hold
