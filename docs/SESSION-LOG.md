@@ -6,6 +6,34 @@
 
 ---
 
+## Session 9 — 2026-06-11 — Documents module (module 6)
+
+**Goal:** Build Module 6 — invoice + receipt as an on-screen view **and** a downloadable PDF, from frozen snapshots, matching the mockup. Brainstormed → spec'd → planned → executed TDD (`docs/superpowers/specs/2026-06-11-documents-pdf-design.md`, `docs/superpowers/plans/2026-06-11-documents-pdf.md`).
+
+**Decisions (brainstorm)**
+- Invoice generated **lazily** (firstOrCreate on first view/download of a pending txn), mirroring how Receipt is issued. Receipts still created by Payments on success.
+- **Single source of truth:** one Blade per doc type — the *view* route returns it as HTML, the *download* route runs the **same** Blade through dompdf. No Vue re-implementation → no drift.
+- **Links only**, no Documents index page in v1.
+- Gated by **`view_clients`** (documents = read access).
+
+**Done**
+- **Dependency/config:** added `barryvdh/laravel-dompdf` (v3.1); `config/business.php` (`BUSINESS_*`) supplies the issuer header, frozen into each snapshot so later detail changes don't mutate old docs.
+- **SnapshotBuilder:** extracted the snapshot out of `PaymentService` into `App\Services\Documents\SnapshotBuilder::forTransaction` (injected into `PaymentService`, used by both doc types). Completed it with `warranty_months` + per-line `next_service_date` + `business` — the keys the mockup needs that the old receipt snapshot lacked. Blades render defensively (missing key → row omitted) so legacy receipts still render.
+- **DocumentService:** `invoiceFor` mints one Invoice per txn (`INV-YYYYMMDD-NNN`, daily sequence, idempotent), freezing the snapshot.
+- **HTTP:** `DocumentController` — invoice/receipt × view/pdf (4 routes, gated `can:view_clients`). Invoice renders for any txn; receipt **404s** when unpaid. PDFs download as `{number}.pdf`. Renders strictly from the snapshot.
+- **Blades:** `documents/{layout,invoice,receipt}.blade.php` — dompdf-safe (table-based, CSS 2.1, no Tailwind/flex/emoji), matching the mockup `.rc` card.
+- **UI:** View/Download links on `ServiceRecords/Show` (invoice when pending, receipt when paid), `Payments/Return` (replaced the "PDF coming" notice), and `Clients/Show` history rows. Plain `<a>` (routes return Blade/PDF, not Inertia). Assets build clean.
+- **Tests:** SnapshotBuilderTest (1), InvoiceGenerationTest (1), DocumentControllerTest (7 — HTML view has number, PDF `%PDF`+attachment, receipt 404 unpaid, `view_clients` gate, guest redirect). **Full suite: 81 passed / 228 assertions** on Postgres.
+
+**Notes**
+- One transient full-suite failure (`AuthenticationTest` — "Vite manifest not found") occurred when tests ran *during* `npm run build`; re-ran after the build finished → clean. Not a code issue.
+- `public/build` is gitignored (assets built at deploy), so the asset rebuild isn't in the commit — consistent with prior modules.
+
+**Next**
+- Module 7 — Appointments: month calendar + list, create/edit, status lifecycle (`docs/04` §7).
+
+---
+
 ## Session 8 — 2026-06-11 — Payments module (module 5)
 
 **Goal:** Build Module 5 — Cash manual confirm + a BayarCash (DuitNow QR) redirect flow behind a swappable gateway interface, shipped with a working stub so go-live = fill creds + flip one env var. Executed `docs/superpowers/plans/2026-06-11-payments-bayarcash-stub.md` task-by-task (TDD).
