@@ -84,4 +84,32 @@ class PaymentTest extends TestCase
 
         $this->actingAs($tech)->post(route('payments.cash', $txn))->assertForbidden();
     }
+
+    public function test_payment_page_renders_for_collector(): void
+    {
+        $txn = $this->pendingTransaction();
+
+        $this->actingAs($this->collector())
+            ->get(route('payments.show', $txn))
+            ->assertOk();
+    }
+
+    public function test_paid_transaction_redirects_show_to_return(): void
+    {
+        $txn = $this->pendingTransaction();
+        $this->actingAs($this->collector())->post(route('payments.cash', $txn));
+
+        $this->actingAs($this->collector())
+            ->get(route('payments.show', $txn))
+            ->assertRedirect(route('payments.return', $txn));
+    }
+
+    public function test_return_page_renders(): void
+    {
+        $txn = $this->pendingTransaction();
+
+        $this->actingAs($this->collector())
+            ->get(route('payments.return', $txn))
+            ->assertOk();
+    }
 }
