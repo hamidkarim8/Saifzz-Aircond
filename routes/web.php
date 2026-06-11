@@ -6,6 +6,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\StubGatewayController;
@@ -78,6 +79,12 @@ Route::middleware('auth')->group(function () {
         Route::get('documents/invoice/{transaction}/pdf', [DocumentController::class, 'invoicePdf'])->name('documents.invoice.pdf');
         Route::get('documents/receipt/{transaction}', [DocumentController::class, 'receipt'])->name('documents.receipt');
         Route::get('documents/receipt/{transaction}/pdf', [DocumentController::class, 'receiptPdf'])->name('documents.receipt.pdf');
+    });
+
+    // Reminders (module 8) — derived due/overdue follow-up list, gated view_clients (P3).
+    Route::middleware('can:view_clients')->group(function () {
+        Route::get('reminders', [ReminderController::class, 'index'])->name('reminders.index');
+        Route::patch('reminders/{client}/contacted', [ReminderController::class, 'toggleContacted'])->name('reminders.contacted');
     });
 });
 

@@ -6,6 +6,63 @@
 
 ---
 
+## Session 11 — 2026-06-11 — Reminders module (module 8)
+
+**Goal:** Build Module 8 — surface clients due/overdue for service and drive follow-up
+(`docs/04` §8). Brainstormed → spec'd (`docs/superpowers/specs/2026-06-11-reminders-design.md`)
+→ implemented directly (user opted to finish implementation first, then tests), then added the
+test suite + eyeballed with seed data.
+
+**Decisions (brainstorm)**
+- **Contacted state → dedicated `reminder_contacts` table** (one row per client = contacted;
+  `contacted_at` + `contacted_by`). The due list stays derived; contacted is a separate overlay
+  fact. Chosen over a `clients.last_contacted_at` column (no audit) or ephemeral page state.
+- **Gated by `view_clients`** — reminders is a read-side list of clients to follow up; default
+  technicians hold it; matches how Documents reused it. The contacted toggle is a light write
+  under the same gate.
+- **Due-date basis = `MAX(next_service_date)` across all of a client's service lines** — latest
+  recommendation wins and self-clears when a newer visit sets a later date; null dates (Repair/Gas
+  strip them, R2) don't contribute, so a client still surfaces from an earlier cleaning's
+  recommendation. Chosen over "latest visit's date only".
+- **WhatsApp = v1 inline `wa.me`** prefilled text (same pattern as `Clients/Show`); module 11
+  (Notifications) abstracts it later. No automated sending in v1. Per-**client** reminders, no
+  auto-reset cycle.
+
+**Done**
+- **Schema/model:** `reminder_contacts` migration (unique `client_id` cascade, `contacted_at`,
+  `contacted_by` nullOnDelete) + `ReminderContact` model (`client`, `contactedBy`); `Client
+  hasOne reminderContact`.
+- **Service:** `App\Services\Reminders\ReminderService::dueList()` — pg aggregate query
+  (`service_lines`→`service_visits`→`clients`, left-join `reminder_contacts`), per-client
+  `next_due = MAX(next_service_date)`, `havingRaw` ≤ end-of-month, partition overdue vs
+  due-this-month in PHP, sort by `next_due` asc, returns `{overdue, due_this_month, stats}`.
+- **HTTP:** `ReminderController@index` (renders `Reminders/Index`) + `@toggleContacted`
+  (row present→delete, absent→create with `auth()->id()`). Routes `reminders.index` (GET),
+  `reminders.contacted` (PATCH), gated `can:view_clients`.
+- **UI:** `Reminders/Index.vue` — 3 stat cards, Overdue (danger accent) + Due-this-month (warn
+  accent) card sections, per-card WhatsApp / Set-appointment (`appointments.index?client=ID`,
+  module-7 preset modal) / Mark-contacted–Undo, empty state. Nav item (bell icon) gated
+  `view_clients`. Date formatting via string-slice to dodge tz drift.
+- **Tests:** `ReminderServiceTest` ×6 (partition + future-excluded, MAX-wins, null-next excluded,
+  soft-delete excluded, contacted flag, last-service = latest visit) + `ReminderTest` ×4 (guest
+  redirect, `view_clients` gate, derived-list render, contacted toggle create→delete). Time frozen
+  via `travelTo`. **Full suite: 102 passed / 314 assertions** on Postgres. Pint clean.
+
+**Notes**
+- HMR clarified: app had been served via `npm run build` (static) — new nav item needed a manual
+  reload. Moved to `npm run dev` (Vite HMR, ready in ~0.5s on ext4) as the default for eyeballing
+  now that the project lives on WSL native filesystem (session-6's "Vite slow on Windows" note is
+  stale). Captured as a working preference.
+- Seeded `Demo …` clients in the dev DB for eyeballing (overdue ×2, due ×2, future hidden,
+  one contacted) — remove when no longer needed.
+
+**Next**
+- Module 9 — Dashboard & Reports: KPI cards (clients, revenue, pending reminders), services-by-type
+  chart, recent transactions, CSV export (gated `export_data`) (`docs/04` §9). Pending-reminders
+  KPI reuses this module's `ReminderService`.
+
+---
+
 ## Session 10 — 2026-06-11 — Appointments module (module 7)
 
 **Goal:** Build Module 7 — scheduling: month calendar + list view, create/edit, status lifecycle, summary stats (`docs/04` §7). Followed the locked per-module pattern (controller + requests + `can:` gates + Inertia pages + feature tests), TDD red→green.

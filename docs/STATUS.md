@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11 (session 10)
+> **Last updated:** 2026-06-11 (session 11)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7) done |
+| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8) done |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; invoice + receipt **view + PDF (dompdf) done** |
@@ -39,11 +39,13 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - **Module 7 — Appointments** done: scheduling — month calendar + list + summary stats, create/edit, status lifecycle. `Appointment` model gains `STATUSES`/`SERVICE_TYPES`/`TRANSITIONS` (pending→confirmed→done/cancelled) + `canTransitionTo()` + `scopeForMonth()`. `AppointmentController` (index = month-scoped list + today list + stats, store, update, **updateStatus** lifecycle-guarded → 422 on illegal transition); Store/Update requests fold `date`+`time`→`datetime`, MY phone regex, `client_id` nullable (loosely linked — leads need no record). Routes gated `can:set_appointment`; `clients.lookup` gate relaxed `record_service`→`view_clients` so setters can pick clients. Vue: `Appointments/Index` (MonthCalendar w/ day dots + day panel, stat cards, full month table w/ status badges + inline lifecycle actions, prev/next month nav) + `AppointmentModal` (client search prefill, date/time, optional units/amount) + nav item. "New appointment" CTA on `Clients/Show` (preset client → opens modal). **Full suite: 92 passed / 275 assertions** (new: AppointmentTest ×11).
 - **Module 5 — Payments** done: `PaymentGateway` interface with two drivers (`FakeBayarCashGateway` active stub, `BayarCashGateway` scaffolded live) selected by `config('services.bayarcash.driver')` via `PaymentServiceProvider` — going live = fill creds + flip `BAYARCASH_DRIVER=live`. **Cash** path (`PaymentController@cash`, gated `collect_payment`) marks paid + issues a Receipt record (`RCP-YYYYMMDD-NNN`, one-per-txn, frozen snapshot). **BayarCash redirect flow**: `startGateway` → stub hosted page (`dev/bayarcash`, fake-driver-only) → checksum-signed callback → public CSRF-exempt webhook (`webhooks/bayarcash`) → `HandleGatewayCallback` (idempotent, amount-guarded, locks row) marks paid + Receipt. `Checksum` HMAC-SHA256 + shared `CallbackParser` (go-live constants centralized, `TODO(go-live)`). Vue: `Payments/Show` (method chooser), `Payments/Return` (result + receipt no.); gated "Collect payment" CTA on the service-record page. **Full suite: 72 tests / 202 assertions green** (new: Checksum, FakeBayarCashGateway, Payment, PaymentWebhook, StubGateway). Receipt **PDF** deferred to Documents (module 6) — the record already exists.
 
+- **Module 8 — Reminders** done: derived (not stored) follow-up list. `reminder_contacts` table (one row per client = contacted, `contacted_at`/`contacted_by`) overlays the list; `Client hasOne reminderContact`. `App\Services\Reminders\ReminderService::dueList()` aggregates `service_lines` per client (`next_due = MAX(next_service_date)`, null dates from Repair/Gas excluded), joins clients (soft-deletes excluded) + latest-visit summary + contacted flag, partitions **overdue** (`next_due < today`) vs **due-this-month** (`today ≤ next_due ≤ end-of-month`), drops future/none, sorts by `next_due` asc. `ReminderController` (index renders `Reminders/Index`; `toggleContacted` create↔delete row), routes gated `can:view_clients`. Vue: stat cards (overdue/due/contacted) + two card sections with one-tap WhatsApp (`wa.me` prefilled, v1 inline — module 11 abstracts later), Set appointment (reuses module-7 preset-client modal), Mark contacted/Undo, empty state; nav item (bell) gated `view_clients`. **Full suite: 102 passed / 314 assertions** (new: ReminderServiceTest ×6, ReminderTest ×4).
+
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): **Reminders (8)** ← next, Dashboard/Reports (9), Portal (10), Notifications (11), Users mgmt screen (1).
+1. Remaining feature modules (`docs/04`): **Dashboard/Reports (9)** ← next, Portal (10), Notifications (11), Users mgmt screen (1).
 2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
 3. Public client portal (unauthenticated, serial-gated — P5) — will reuse the Documents routes/templates for receipt download.
 

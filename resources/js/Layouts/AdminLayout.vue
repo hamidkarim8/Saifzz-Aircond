@@ -32,6 +32,7 @@ const nav = computed(() => [
     { label: 'Clients', route: 'clients.index', match: 'clients', icon: 'users', permission: 'view_clients' },
     { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: 'clipboard', permission: 'record_service' },
     { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: 'calendar', permission: 'set_appointment' },
+    { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: 'bell', permission: 'view_clients' },
     { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: 'tag', permission: 'edit_fees' },
 ].filter((i) => i.permission === null || can.value[i.permission]));
 
@@ -53,6 +54,7 @@ const icons = {
     tag: 'M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01',
     clipboard: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2',
     calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
 };
 </script>
 
