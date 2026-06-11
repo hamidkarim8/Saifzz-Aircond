@@ -6,6 +6,59 @@
 
 ---
 
+## Session 13 — 2026-06-11 — Client Portal module (module 10)
+
+**Goal:** Build Module 10 — public, unauthenticated self-service portal: serial + phone-last-4
+gated login, client account page (next-service banner + visit history + warranty), receipt
+download, WhatsApp contact/appointment links (`docs/04` §10).
+
+**Decisions**
+- **Two-factor gate (serial + phone-last-4)** because client serials are monotonic and therefore
+  enumerable. The second factor (last 4 digits of the phone number on file, digits-only match)
+  makes enumeration impractical. No password; no portal-user table.
+- **Generic "no matching record" error** — same message whether the serial doesn't exist or the
+  phone-last-4 is wrong; no oracle that tells an attacker which factor failed.
+- **Rate-limited** (`throttle:5,1`) on the login POST — 5 attempts per minute, then 429.
+- **Session with id-regeneration on auth** (session fixation defense); logout clears the portal
+  session key completely.
+- **Receipts session-scoped + paid-only** — `PortalController` re-checks that the requested txn
+  belongs to the session client before rendering; cross-client and unpaid both 404 (no oracle).
+  Reuses the new shared `DocumentService::receiptViewModel()` (extracted from `DocumentController`
+  to avoid duplication).
+- **WhatsApp links** point to the business number (`config/business.php`), prefilled for contact
+  or appointment — same `wa.me` pattern as staff modules.
+- **Own mobile-first layout** (`Pages/Portal/PortalLayout.vue`) — not AdminLayout; the portal is
+  a separate user-facing area, needs no sidebar nav, designed for phone screens.
+- **No portal-side DB writes** — read-only; contacted/appointment state lives in the staff modules.
+
+**Done**
+- **Service:** `App\Services\Portal\PortalService` — `authenticate(serial, phone4)` (digits-only
+  normalisation, constant-time-safe comparison via `hash_equals`); `accountFor(client)` (history
+  rows with warranty status + `next_service_date = MAX` over lines, ignoring nulls).
+- **Middleware:** `App\Http\Middleware\EnsurePortalClient` registered as `portal.auth` — reads
+  `session('portal_client_id')`, resolves client, shares to request; redirects to
+  `portal.login` on miss.
+- **HTTP:** `PortalController` — `showLogin` / `login` (rate-limited, authenticate, regenerate,
+  store id, redirect to account) / `showAccount` / `logout` / `receipt` / `receiptPdf`.
+  Routes prefixed `/portal` (guest login pair + `portal.auth`-gated account/logout/receipts).
+- **DocumentService:** extracted `receiptViewModel(Receipt)` from `DocumentController` so both
+  the staff and portal receipt views share one snapshot-to-view-data path.
+- **UI:** `Pages/Portal/Login.vue` (serial + phone-last-4 form, generic error), `Pages/Portal/Show.vue`
+  (client header with serial, next-service banner, history cards with warranty badges and
+  per-paid-visit receipt links, WhatsApp contact + appointment CTAs), `Pages/Portal/PortalLayout.vue`
+  (mobile-first shell, no sidebar).
+- **Tests:** `PortalServiceTest` ×5, `PortalAuthTest` ×6, `PortalAccountTest` ×3, `PortalReceiptTest` ×5.
+  **Full suite: 133 passed / 421 assertions** on Postgres. Pint clean.
+
+**Notes**
+- `DocumentService::receiptViewModel()` extraction was a non-breaking refactor — `DocumentController`
+  now delegates to it; all existing document tests remained green.
+
+**Next**
+- Module 11 — Notifications: WhatsApp abstraction layer, scheduled/triggered reminders.
+
+---
+
 ## Session 12 — 2026-06-11 — Dashboard & Reports module (module 9)
 
 **Goal:** Build Module 9 — aggregated read-only insight: KPI cards, services-by-type chart,

@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11 (session 12)
+> **Last updated:** 2026-06-11 (session 13)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9) done |
+| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10) done |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; invoice + receipt **view + PDF (dompdf) done** |
@@ -43,13 +43,14 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 
 - **Module 9 — Dashboard & Reports** done: aggregated read-only insight. `App\Services\Reports\ReportService` — `kpis()` (Total Clients +this-month delta, Revenue this month w/ MoM %, All-time Revenue — both paid-only by `paid_at`, Pending Reminders via `ReminderService`), `servicesByType(period)` (service-line counts by type, scoped by `visit_date`), `transactions(period, ?limit)` (joined to client, `COALESCE(paid_at, created_at)` window, newest first). One **period** filter (all/month/week/today) scopes chart + table + export so they always agree. `DashboardController@index` replaces the old `/dashboard` closure: renders the report payload only for `view_reports`, else the module launcher (technicians keep their landing page). `ReportController@exportTransactions` streams a CSV (gated `export_data`) for the same period. Vue: rewrote `Dashboard.vue` — 4 KPI cards, period tabs, reused module-7 `MonthCalendar` (mini) + day panel, Services-by-Type **CSS bars** (no chart lib), transactions table + Export CSV; launcher fallback now has live Clients/Service/Appointments links. **Full suite: 114 passed / 365 assertions** (new: ReportServiceTest ×6, DashboardTest ×6).
 
+- **Module 10 — Client Portal** done: public, unauthenticated, **serial + phone-last-4** gated self-service (P5). Serials are enumerable (monotonic), so the second factor (last 4 digits of the phone on file, digits-only match) blocks scraping; failures return one **generic** "no matching record" (no enumeration oracle) and the lookup is **rate-limited** (`throttle:5,1`). `App\Services\Portal\PortalService` (`authenticate`, `accountFor` — history + warranty + `next_service_date` = MAX over lines). `EnsurePortalClient` middleware (`portal.auth`) holds the matched client in session (id regenerated on auth — fixation defense); logout clears it. `PortalController` renders an own mobile-first Inertia area (`Pages/Portal/{PortalLayout,Login,Show}.vue`, **not** AdminLayout): client header, next-service banner, history cards (warranty badges reused from the staff view), per-paid-visit **receipt download** and `wa.me` contact/appointment to the business number. Receipts are **session-scoped + paid-only** — `PortalController` re-checks the txn belongs to the session client and reuses the new shared `DocumentService::receiptViewModel()` (extracted from `DocumentController`); cross-client and unpaid both **404** (no oracle). No portal-side DB writes. **Full suite: 133 passed / 421 assertions** (new: PortalService ×5, PortalAuth ×6, PortalAccount ×3, PortalReceipt ×5).
+
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. Remaining feature modules (`docs/04`): **Client Portal (10)** ← next, Notifications (11), Users mgmt screen (1).
+1. Remaining feature modules (`docs/04`): **Notifications (11)** ← next, Users mgmt screen (1).
 2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
-3. Public client portal (unauthenticated, serial-gated — P5) — will reuse the Documents routes/templates for receipt download.
 
 ## ⏸ On Hold
 - _(none)_
