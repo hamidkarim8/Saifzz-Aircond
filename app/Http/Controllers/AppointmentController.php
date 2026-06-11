@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreAppointmentRequest;
+use App\Http\Requests\UpdateAppointmentRequest;
+use App\Models\Appointment;
+use App\Models\Client;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class AppointmentController extends Controller
+{
+    /**
+     * Month calendar + list + summary stats. `month` = 'YYYY-MM' (defaults to now).
+     */
+    public function index(Request $request): Response
+    {
+        $month = (string) $request->input('month', '');
+        if (! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $month = now()->format('Y-m');
+        }
+
+        $appointments = Appointment::query()
+            ->with('client:id,serial_no,name')
+            ->forMonth($month)
+            ->orderBy('datetime')
+            ->get();
+
+        $today = Appointment::query()
+            ->with('client:id,serial_no,name')
+            ->whereDate('datetime', now()->toDateString())
+            ->orderBy('datetime')
+            ->get();
+
+        $stats = [
+            'month_total' => $appointments->count(),
+            'month_confirmed' => $appointments->where('status', 'confirmed')->count(),
+            'month_pending' => $appointments->where('status', 'pending')->count(),
+            'today_total' => $today->count(),
+        ];
+
+        return Inertia::render('Appointments/Index', [
+            'appointments' => $appointments,
+            'today' => $today,
+            'month' => $month,
+            'stats' => $stats,
+            'serviceTypes' => Appointment::SERVICE_TYPES,
+            'transitions' => Appointment::TRANSITIONS,
+            // Optional pre-selected client (e.g. arriving from a client profile or reminder).
+            'presetClient' => $request->filled('client')
+                ? Client::where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
+                : null,
+        ]);
+    }
+
+    public function store(StoreAppointmentRequest $request): RedirectResponse
+    {
+        Appointment::create($request->appointmentData() + ['status' => 'pending']);
+
+        return redirect()
+            ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])
+            ->with('success', 'Appointment scheduled.');
+    }
+
+    public function update(UpdateAppointmentRequest $request, Appointment $appointment): RedirectResponse
+    {
+        // Status is owned by the lifecycle endpoint, not the edit form.
+        $appointment->update($request->appointmentData());
+
+        return redirect()
+            ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])
+            ->with('success', 'Appointment updated.');
+    }
+
+    /**
+     * Lifecycle transition (pending → confirmed → done / cancelled), guarded server-side.
+     */
+    public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
+    {
+        $request->validate([
+            'status' => ['required', Rule::in(Appointment::STATUSES)],
+        ]);
+
+        $target = $request->input('status');
+
+        abort_unless(
+            $appointment->canTransitionTo($target),
+            422,
+            "Cannot move appointment from {$appointment->status} to {$target}.",
+        );
+
+        $appointment->update(['status' => $target]);
+
+        return redirect()
+            ->route('appointments.index', ['month' => Carbon::parse($appointment->datetime)->format('Y-m')])
+            ->with('success', "Appointment marked {$target}.");
+    }
+}

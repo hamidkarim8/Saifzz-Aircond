@@ -106,7 +106,14 @@ const waLink = computed(() => {
 
             <!-- Appointments -->
             <section>
-                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-ink-soft">Appointments</h3>
+                <div class="mb-3 flex items-center justify-between">
+                    <h3 class="text-sm font-bold uppercase tracking-wide text-ink-soft">Appointments</h3>
+                    <Link
+                        v-if="can.set_appointment"
+                        :href="route('appointments.index', { client: client.id })"
+                        class="text-sm font-semibold text-primary hover:text-primary-hover"
+                    >+ New appointment</Link>
+                </div>
                 <div v-if="client.appointments.length" class="space-y-3">
                     <div v-for="a in client.appointments" :key="a.id" class="rounded-ral border border-line bg-surface p-4 shadow-card">
                         <div class="flex items-center justify-between">

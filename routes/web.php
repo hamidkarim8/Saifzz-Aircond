@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\ServiceVisitController;
+use App\Http\Controllers\StubGatewayController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -30,7 +32,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Clients (module 2) — read gated by view_clients, writes by edit_client (P3)
-    Route::get('clients/lookup', [ClientController::class, 'lookup'])->middleware('can:record_service')->name('clients.lookup');
+    // Client picker JSON — read-only, shared by the record-service builder and the appointment modal.
+    Route::get('clients/lookup', [ClientController::class, 'lookup'])->middleware('can:view_clients')->name('clients.lookup');
     Route::get('clients', [ClientController::class, 'index'])->middleware('can:view_clients')->name('clients.index');
     Route::get('clients/create', [ClientController::class, 'create'])->middleware('can:edit_client')->name('clients.create');
     Route::post('clients', [ClientController::class, 'store'])->middleware('can:edit_client')->name('clients.store');
@@ -45,6 +48,14 @@ Route::middleware('auth')->group(function () {
         Route::get('service-records/create', [ServiceVisitController::class, 'create'])->name('service-records.create');
         Route::post('service-records', [ServiceVisitController::class, 'store'])->name('service-records.store');
         Route::get('service-records/{serviceRecord}', [ServiceVisitController::class, 'show'])->name('service-records.show');
+    });
+
+    // Appointments (module 7) — scheduling, all gated by set_appointment (P3)
+    Route::middleware('can:set_appointment')->group(function () {
+        Route::get('appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+        Route::post('appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+        Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])->name('appointments.update');
+        Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
     });
 
     // Service Fees (module 3) — price book, all gated by edit_fees (P3)
@@ -72,8 +83,8 @@ Route::middleware('auth')->group(function () {
 
 // Stub gateway hosted page — only when the fake driver is active.
 if (config('services.bayarcash.driver') === 'fake') {
-    Route::get('dev/bayarcash/{ref}', [\App\Http\Controllers\StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
-    Route::post('dev/bayarcash/{ref}/simulate', [\App\Http\Controllers\StubGatewayController::class, 'simulate'])->name('dev.bayarcash.simulate');
+    Route::get('dev/bayarcash/{ref}', [StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
+    Route::post('dev/bayarcash/{ref}/simulate', [StubGatewayController::class, 'simulate'])->name('dev.bayarcash.simulate');
 }
 
 // Payment gateway callback — public, CSRF-exempt, signature-verified.
