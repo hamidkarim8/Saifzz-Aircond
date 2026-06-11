@@ -36,9 +36,12 @@ const view = computed(() => ({
                 <div class="mt-4 text-3xl font-extrabold text-navy-800">{{ money(transaction.amount) }}</div>
                 <div class="mt-1 text-sm text-ink-soft">{{ transaction.client.name }} · #{{ transaction.client.serial_no }}</div>
 
-                <div v-if="transaction.receipt" class="mt-4 rounded-ral bg-surface-muted px-4 py-2 text-sm text-ink-soft">
-                    Receipt <span class="font-mono font-semibold text-ink">{{ transaction.receipt.number }}</span>
-                    <span class="text-ink-muted">· PDF coming in Documents module</span>
+                <div v-if="transaction.receipt" class="mt-4 rounded-ral bg-surface-muted px-4 py-3 text-sm text-ink-soft">
+                    <div>Receipt <span class="font-mono font-semibold text-ink">{{ transaction.receipt.number }}</span></div>
+                    <div class="mt-2 flex justify-center gap-3">
+                        <a :href="route('documents.receipt', transaction.id)" target="_blank" class="font-semibold text-primary hover:text-primary-600">View</a>
+                        <a :href="route('documents.receipt.pdf', transaction.id)" class="font-semibold text-primary hover:text-primary-600">Download PDF</a>
+                    </div>
                 </div>
 
                 <div v-if="transaction.status === 'failed'" class="mt-5">

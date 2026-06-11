@@ -90,6 +90,15 @@ const waLink = computed(() => {
                             <span class="font-semibold text-ink-soft">Total</span>
                             <span class="font-mono text-base font-bold text-navy-800">{{ money(v.total_amount) }}</span>
                         </div>
+                        <div v-if="v.transaction" class="mt-2 text-right text-xs">
+                            <a
+                                :href="v.transaction.status === 'paid' ? route('documents.receipt', v.transaction.id) : route('documents.invoice', v.transaction.id)"
+                                target="_blank"
+                                class="font-semibold text-primary hover:text-primary-600"
+                            >
+                                {{ v.transaction.status === 'paid' ? 'View receipt' : 'View invoice' }} →
+                            </a>
+                        </div>
                     </article>
                 </div>
                 <p v-else class="rounded-ral border border-dashed border-line bg-surface py-10 text-center text-sm text-ink-soft">No service records yet.</p>

@@ -82,17 +82,24 @@ const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? 
             <!-- Payment collection (module 5) -->
             <div v-if="txn && txn.status === 'pending'" class="flex flex-col gap-3 rounded-ral border border-warn/30 bg-warn-bg px-5 py-4 text-sm text-warn sm:flex-row sm:items-center sm:justify-between">
                 <span>Payment pending via {{ txn.method }}.</span>
-                <Link
-                    v-if="canCollect"
-                    :href="route('payments.show', txn.id)"
-                    class="inline-block rounded-ral bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-600"
-                >
-                    Collect payment
-                </Link>
+                <span class="flex flex-wrap items-center gap-3">
+                    <a :href="route('documents.invoice', txn.id)" target="_blank" class="font-semibold underline">View invoice</a>
+                    <a :href="route('documents.invoice.pdf', txn.id)" class="font-semibold underline">Download PDF</a>
+                    <Link
+                        v-if="canCollect"
+                        :href="route('payments.show', txn.id)"
+                        class="inline-block rounded-ral bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-600"
+                    >
+                        Collect payment
+                    </Link>
+                </span>
             </div>
-            <div v-else-if="txn && txn.status === 'paid'" class="rounded-ral border border-ok/30 bg-ok-bg px-5 py-4 text-sm text-ok">
-                Paid via {{ txn.method }}.
-                <Link :href="route('payments.return', txn.id)" class="font-semibold underline">View receipt</Link>
+            <div v-else-if="txn && txn.status === 'paid'" class="flex flex-col gap-3 rounded-ral border border-ok/30 bg-ok-bg px-5 py-4 text-sm text-ok sm:flex-row sm:items-center sm:justify-between">
+                <span>Paid via {{ txn.method }}.</span>
+                <span class="flex flex-wrap items-center gap-3">
+                    <a :href="route('documents.receipt', txn.id)" target="_blank" class="font-semibold underline">View receipt</a>
+                    <a :href="route('documents.receipt.pdf', txn.id)" class="font-semibold underline">Download PDF</a>
+                </span>
             </div>
         </div>
     </AdminLayout>
