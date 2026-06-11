@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -92,6 +93,18 @@ Route::middleware('auth')->group(function () {
     // Reports (module 9) — transactions CSV export, gated export_data (P3).
     Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
         ->middleware('can:export_data')->name('reports.transactions.export');
+});
+
+// Client Portal (module 10) — public, serial + phone-last-4 gated (P5). No RBAC.
+Route::prefix('portal')->name('portal.')->group(function () {
+    Route::get('/', [PortalController::class, 'showLogin'])->name('login');
+    Route::post('/', [PortalController::class, 'authenticate'])
+        ->middleware('throttle:5,1')->name('authenticate');
+    Route::post('logout', [PortalController::class, 'logout'])->name('logout');
+
+    Route::middleware('portal.auth')->group(function () {
+        Route::get('account', [PortalController::class, 'account'])->name('account');
+    });
 });
 
 // Stub gateway hosted page — only when the fake driver is active.
