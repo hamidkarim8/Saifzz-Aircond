@@ -12,10 +12,9 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // Public registration disabled (security — self-serve accounts got default
+    // technician permissions). Staff accounts are created by an admin via the
+    // Users mgmt screen (module 1); RegisteredUserController is reused there.
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

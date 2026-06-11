@@ -65,7 +65,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - Redis — container runs (Sail `--with=redis`) but **unused**: cache/queue/session all on `database` driver, fine for v1 single-VM scale. Switch queue (then cache) to Redis when the DuitNow webhook queue lands or load demands. `phpredis` already present; flip `CACHE_STORE`/`QUEUE_CONNECTION`/`SESSION_DRIVER=redis` in `.env`. Verify: `docker compose exec redis redis-cli DBSIZE`.
 
 ## 🔒 Security / pre-prod (must close before go-live)
-- **Public registration is open.** `/register` (Breeze) is unauthenticated and `User::booted` grants new accounts the default technician permissions (`view_clients`, `record_service`, `set_appointment`) → anyone who signs up immediately sees all client data. Fine for solo dev/bootstrapping the first admin; **disable or admin-gate `register` before production**. Owned by **module 1 (Users mgmt)** — staff accounts should be created by an admin (`manage_users`), not self-served. (Flagged 2026-06-11, session 14.)
+- ~~**Public registration is open.**~~ **CLOSED (session 14):** `/register` routes removed from `routes/auth.php` (both GET/POST now 404, RegistrationTest asserts it). `RegisteredUserController` + `Auth/Register.vue` kept for reuse by module 1 (admin-created staff). New staff until then: tinker/seeder.
 
 ## 🐞 Bugs
 - _(none)_
