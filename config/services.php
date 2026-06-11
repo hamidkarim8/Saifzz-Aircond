@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'bayarcash' => [
+        'driver' => env('BAYARCASH_DRIVER', 'fake'),       // fake | live
+        'api_token' => env('BAYARCASH_API_TOKEN'),          // Personal Access Token (live only)
+        'api_secret' => env('BAYARCASH_API_SECRET', 'local-stub-secret'),
+        'portal_key' => env('BAYARCASH_PORTAL_KEY'),
+        'channel' => (int) env('BAYARCASH_CHANNEL', 5),     // 5 = DuitNow QR
+        'base_url' => env('BAYARCASH_BASE_URL', 'https://console.bayar.cash/api/v3'),
+    ],
+
 ];
