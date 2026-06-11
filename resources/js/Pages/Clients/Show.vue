@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { waLink as wa } from '@/lib/whatsapp';
 
 const props = defineProps({ client: Object });
 const can = computed(() => usePage().props.auth.can ?? {});
@@ -24,10 +25,7 @@ const txnStatus = {
     failed: 'bg-danger-bg text-danger',
 };
 
-const waLink = computed(() => {
-    const phone = (props.client.phone ?? '').replace(/\D/g, '').replace(/^0/, '60');
-    return `https://wa.me/${phone}`;
-});
+const waLink = computed(() => wa(props.client.phone));
 </script>
 
 <template>

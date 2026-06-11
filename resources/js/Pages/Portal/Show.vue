@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import PortalLayout from './PortalLayout.vue';
+import { waLink as wa } from '@/lib/whatsapp';
 
 const props = defineProps({
     client: Object,
@@ -22,9 +23,9 @@ const warrantyStatus = (end) => {
     return { label: `Active · until ${fmtDate(end)}`, cls: 'bg-ok-bg text-ok' };
 };
 
-const waText = encodeURIComponent(`Hi, this is ${props.client.name} (serial ${props.client.serial_no}).`);
-const waContact = computed(() => `https://wa.me/${props.business.wa}?text=${waText}`);
-const waAppointment = computed(() => `https://wa.me/${props.business.wa}?text=${encodeURIComponent(`Hi, I'd like to set an appointment. ${props.client.name}, serial ${props.client.serial_no}.`)}`);
+// business.wa arrives already normalized; the shared builder keeps it as-is (module 11).
+const waContact = computed(() => wa(props.business.wa, `Hi, this is ${props.client.name} (serial ${props.client.serial_no}).`));
+const waAppointment = computed(() => wa(props.business.wa, `Hi, I'd like to set an appointment. ${props.client.name}, serial ${props.client.serial_no}.`));
 </script>
 
 <template>

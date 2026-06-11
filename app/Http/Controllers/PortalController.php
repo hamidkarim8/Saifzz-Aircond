@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use App\Services\Documents\DocumentService;
+use App\Services\Notifications\WhatsApp;
 use App\Services\Portal\PortalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ class PortalController extends Controller
     public function __construct(
         private readonly PortalService $portal,
         private readonly DocumentService $documents,
+        private readonly WhatsApp $whatsapp,
     ) {}
 
     /** Login form (or bounce to the account if already authed). */
@@ -101,14 +103,12 @@ class PortalController extends Controller
         abort_unless($transaction->visit->client_id === $client->id, 404);
     }
 
-    /** Business identity + WhatsApp number (MY: drop leading 0, prefix 60). */
+    /** Business identity + WhatsApp number (normalized by the module-11 service). */
     protected function business(): array
     {
-        $digits = preg_replace('/\D/', '', (string) config('business.phone'));
-
         return [
             'name' => config('business.name'),
-            'wa' => '60'.ltrim($digits, '0'),
+            'wa' => $this->whatsapp->normalize(config('business.phone')),
         ];
     }
 }

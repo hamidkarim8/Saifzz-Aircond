@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { waLink as wa } from '@/lib/whatsapp';
 
 const props = defineProps({
     overdue: { type: Array, default: () => [] },
@@ -19,14 +20,9 @@ const fmtDate = (d) => {
     return `${day} ${months[+m - 1]} ${y}`;
 };
 
-// wa.me click-to-chat with a prefilled reminder (v1 — module 11 abstracts this later).
-const waLink = (item) => {
-    const phone = (item.phone ?? '').replace(/\D/g, '').replace(/^0/, '60');
-    const text = encodeURIComponent(
-        `Hi ${item.name}, this is Saifzz Aircond. Your aircond service (#${item.serial_no}) is due on ${fmtDate(item.next_due)}. Reply to schedule a visit.`,
-    );
-    return `https://wa.me/${phone}?text=${text}`;
-};
+// wa.me click-to-chat with a prefilled reminder (module 11 — shared builder).
+const waLink = (item) =>
+    wa(item.phone, `Hi ${item.name}, this is Saifzz Aircond. Your aircond service (#${item.serial_no}) is due on ${fmtDate(item.next_due)}. Reply to schedule a visit.`);
 
 const setAppointment = (item) => route('appointments.index', { client: item.client_id });
 
