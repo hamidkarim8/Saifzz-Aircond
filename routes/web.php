@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
@@ -59,6 +60,14 @@ Route::middleware('auth')->group(function () {
     Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
     Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
     Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->name('payments.return');
+
+    // Documents (module 6) — invoice & receipt view + PDF, gated view_clients (P3).
+    Route::middleware('can:view_clients')->group(function () {
+        Route::get('documents/invoice/{transaction}', [DocumentController::class, 'invoice'])->name('documents.invoice');
+        Route::get('documents/invoice/{transaction}/pdf', [DocumentController::class, 'invoicePdf'])->name('documents.invoice.pdf');
+        Route::get('documents/receipt/{transaction}', [DocumentController::class, 'receipt'])->name('documents.receipt');
+        Route::get('documents/receipt/{transaction}/pdf', [DocumentController::class, 'receiptPdf'])->name('documents.receipt.pdf');
+    });
 });
 
 // Stub gateway hosted page — only when the fake driver is active.
