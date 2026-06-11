@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\ServiceVisitController;
@@ -51,8 +53,17 @@ Route::middleware('auth')->group(function () {
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
     });
+
+    // Payments (module 5) — collection gated by collect_payment (P3)
+    Route::get('payments/{transaction}', [PaymentController::class, 'show'])->middleware('can:collect_payment')->name('payments.show');
+    Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
+    Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
+    Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->name('payments.return');
 });
 
 Route::get('dev/bayarcash/{ref}', [\App\Http\Controllers\StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
+
+// Payment gateway callback — public, CSRF-exempt, signature-verified.
+Route::post('webhooks/bayarcash', [PaymentWebhookController::class, 'handle'])->name('webhooks.bayarcash');
 
 require __DIR__.'/auth.php';
