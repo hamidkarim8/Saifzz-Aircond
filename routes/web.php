@@ -61,7 +61,11 @@ Route::middleware('auth')->group(function () {
     Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->name('payments.return');
 });
 
-Route::get('dev/bayarcash/{ref}', [\App\Http\Controllers\StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
+// Stub gateway hosted page — only when the fake driver is active.
+if (config('services.bayarcash.driver') === 'fake') {
+    Route::get('dev/bayarcash/{ref}', [\App\Http\Controllers\StubGatewayController::class, 'show'])->name('dev.bayarcash.show');
+    Route::post('dev/bayarcash/{ref}/simulate', [\App\Http\Controllers\StubGatewayController::class, 'simulate'])->name('dev.bayarcash.simulate');
+}
 
 // Payment gateway callback — public, CSRF-exempt, signature-verified.
 Route::post('webhooks/bayarcash', [PaymentWebhookController::class, 'handle'])->name('webhooks.bayarcash');
