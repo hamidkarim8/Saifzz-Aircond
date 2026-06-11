@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({ visit: Object });
@@ -20,6 +20,8 @@ const warranty = computed(() => {
 });
 
 const lineLabel = (l) => [l.unit_type, l.gas_option].filter(Boolean).join(' ') || (l.service_type === 'Repair' ? 'Flat job' : '');
+
+const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? false);
 </script>
 
 <template>
@@ -77,9 +79,20 @@ const lineLabel = (l) => [l.unit_type, l.gas_option].filter(Boolean).join(' ') |
                 </div>
             </div>
 
-            <!-- Payment status (collection handled by the Payments module) -->
-            <div v-if="txn && txn.status === 'pending'" class="rounded-ral border border-warn/30 bg-warn-bg px-5 py-4 text-sm text-warn">
-                Payment pending via {{ txn.method }}. Collection &amp; receipt come from the Payments module.
+            <!-- Payment collection (module 5) -->
+            <div v-if="txn && txn.status === 'pending'" class="flex flex-col gap-3 rounded-ral border border-warn/30 bg-warn-bg px-5 py-4 text-sm text-warn sm:flex-row sm:items-center sm:justify-between">
+                <span>Payment pending via {{ txn.method }}.</span>
+                <Link
+                    v-if="canCollect"
+                    :href="route('payments.show', txn.id)"
+                    class="inline-block rounded-ral bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-600"
+                >
+                    Collect payment
+                </Link>
+            </div>
+            <div v-else-if="txn && txn.status === 'paid'" class="rounded-ral border border-ok/30 bg-ok-bg px-5 py-4 text-sm text-ok">
+                Paid via {{ txn.method }}.
+                <Link :href="route('payments.return', txn.id)" class="font-semibold underline">View receipt</Link>
             </div>
         </div>
     </AdminLayout>
