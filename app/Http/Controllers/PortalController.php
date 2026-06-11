@@ -39,6 +39,9 @@ class PortalController extends Controller
             ]);
         }
 
+        // Elevating an anonymous session to an authenticated one — regenerate the
+        // session id to defend against session fixation (mirrors Laravel Auth login).
+        $request->session()->regenerate();
         $request->session()->put('portal_client_id', $client->id);
 
         return redirect()->route('portal.account');
