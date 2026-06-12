@@ -81,7 +81,7 @@ class DashboardTest extends TestCase
     {
         $this->paidTransaction();
 
-        $response = $this->actingAs($this->user(['export_data']))
+        $response = $this->actingAs($this->user(['export_data', 'view_all_data']))
             ->get(route('reports.transactions.export', ['period' => 'all']));
 
         $response->assertOk();
@@ -97,7 +97,7 @@ class DashboardTest extends TestCase
     {
         $this->paidTransaction(); // dated 2026-06-10
 
-        $csv = $this->actingAs($this->user(['export_data']))
+        $csv = $this->actingAs($this->user(['export_data', 'view_all_data']))
             ->get(route('reports.transactions.export', ['period' => 'today']))
             ->streamedContent();
 
