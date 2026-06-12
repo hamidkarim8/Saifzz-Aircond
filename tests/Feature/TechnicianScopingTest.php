@@ -112,4 +112,84 @@ class TechnicianScopingTest extends TestCase
 
         $this->assertSame(2, Appointment::visibleTo($admin)->count());
     }
+
+    private function tech(array $perms = ['view_clients', 'record_service']): User
+    {
+        return User::factory()->technician()->create(['permissions' => $perms]);
+    }
+
+    public function test_store_forces_scoped_technician_to_self_ignoring_payload(): void
+    {
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $alice = $this->tech();
+        $bob = $this->tech();
+        $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
+
+        $this->actingAs($alice)->post(route('service-records.store'), [
+            'client_mode' => 'existing',
+            'client_id' => $client->id,
+            'visit_date' => '2026-06-11',
+            'warranty_months' => 0,
+            'payment_method' => 'Cash',
+            'technician_id' => $bob->id, // forged — must be ignored
+            'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
+        ])->assertRedirect();
+
+        $this->assertSame($alice->id, ServiceVisit::latest('id')->first()->technician_id);
+    }
+
+    public function test_admin_store_honors_chosen_technician(): void
+    {
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $admin = User::factory()->admin()->create();
+        $bob = $this->tech();
+        $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
+
+        $this->actingAs($admin)->post(route('service-records.store'), [
+            'client_mode' => 'existing',
+            'client_id' => $client->id,
+            'visit_date' => '2026-06-11',
+            'warranty_months' => 0,
+            'payment_method' => 'Cash',
+            'technician_id' => $bob->id,
+            'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
+        ])->assertRedirect();
+
+        $this->assertSame($bob->id, ServiceVisit::latest('id')->first()->technician_id);
+    }
+
+    public function test_show_forbidden_for_non_owner_technician(): void
+    {
+        $alice = $this->tech();
+        $bob = $this->tech();
+        $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
+        $visit = $client->visits()->create([
+            'visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => 100,
+            'created_by' => $bob->id, 'technician_id' => $bob->id,
+        ]);
+
+        $this->actingAs($alice)->get(route('service-records.show', $visit))->assertForbidden();
+        $this->actingAs($bob)->get(route('service-records.show', $visit))->assertOk();
+    }
+
+    public function test_index_lists_only_own_visits_for_scoped_tech(): void
+    {
+        $alice = $this->tech();
+        $bob = $this->tech();
+        foreach ([$alice->id, $bob->id, $alice->id] as $tid) {
+            $client = Client::create(['name' => 'C'.$tid, 'phone' => '011-0000000', 'address' => 'KL']);
+            $client->visits()->create([
+                'visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => 100,
+                'created_by' => $tid, 'technician_id' => $tid,
+            ]);
+        }
+
+        $this->actingAs($alice)->get(route('service-records.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('visits.total', 2));
+    }
 }

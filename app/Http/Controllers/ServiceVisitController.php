@@ -23,6 +23,7 @@ class ServiceVisitController extends Controller
         $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
 
         $query = ServiceVisit::query()
+            ->visibleTo(request()->user())
             ->with([
                 'client:id,serial_no,name',
                 'transaction:id,visit_id,status,method,txn_id',
@@ -64,6 +65,10 @@ class ServiceVisitController extends Controller
             'presetClient' => request('client')
                 ? Client::where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
                 : null,
+            'technicians' => request()->user()->seesAllData()
+                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                : null,
         ]);
     }
 
@@ -76,10 +81,17 @@ class ServiceVisitController extends Controller
                 ? Client::findOrFail($data['client_id'])
                 : Client::create($data['new_client']);
 
+            $user = $request->user();
+            // Scoped techs always own their own jobs; all-data users may assign.
+            $technicianId = $user->seesAllData()
+                ? ($data['technician_id'] ?? $user->id)
+                : $user->id;
+
             $visit = $client->visits()->create([
                 'visit_date' => $data['visit_date'],
                 'warranty_months' => $data['warranty_months'],
-                'created_by' => $request->user()->id,
+                'created_by' => $user->id,
+                'technician_id' => $technicianId,
             ]);
 
             foreach ($data['lines'] as $line) {
@@ -106,6 +118,11 @@ class ServiceVisitController extends Controller
 
     public function show(ServiceVisit $serviceRecord): Response
     {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+
         $serviceRecord->load(['client', 'lines', 'transaction', 'creator:id,name']);
 
         return Inertia::render('ServiceRecords/Show', [
