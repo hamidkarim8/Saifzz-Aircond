@@ -29,11 +29,11 @@ const columns = [
 </script>
 
 <template>
-    <Head title="Service Records" />
+    <Head :title="pageTitle" />
 
     <AdminLayout>
         <template #header>
-            <h1 class="text-lg font-bold tracking-tight text-navy-800">Service Records</h1>
+            <h1 class="text-lg font-bold tracking-tight text-navy-800">{{ pageTitle }}</h1>
         </template>
 
         <PageHeader :title="pageTitle" :subtitle="pageSubtitle">
