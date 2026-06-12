@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\StubGatewayController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -64,6 +65,14 @@ Route::middleware('auth')->group(function () {
         Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
+    });
+
+    // Users (module 1) — staff management; manage_users is admin-only (P1), so only admins reach these.
+    Route::middleware('can:manage_users')->group(function () {
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::patch('users/{user}/active', [UserController::class, 'toggleActive'])->name('users.active');
     });
 
     // Payments (module 5) — collection gated by collect_payment (P3)
