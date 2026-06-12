@@ -21,6 +21,14 @@ class ServiceVisitTest extends TestCase
         ]);
     }
 
+    private function allDataRecorder(): User
+    {
+        return User::factory()->create([
+            'role' => User::ROLE_TECHNICIAN,
+            'permissions' => ['view_clients', 'record_service', 'view_all_data'],
+        ]);
+    }
+
     private function seedFees(): void
     {
         ServiceFee::insert([
@@ -200,7 +208,7 @@ class ServiceVisitTest extends TestCase
         $this->makeVisit('Beta Client', '2026-03-01', 150.00);
         $this->makeVisit('Gamma Client', '2026-02-01', 100.00);
 
-        $this->actingAs($this->recorder())
+        $this->actingAs($this->allDataRecorder())
             ->get(route('service-records.index', ['sort' => 'visit_date', 'dir' => 'desc', 'per_page' => 5]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -217,7 +225,7 @@ class ServiceVisitTest extends TestCase
         $this->makeVisit('Beta Client', '2026-03-01', 150.00);
         $this->makeVisit('Gamma Client', '2026-02-01', 100.00);
 
-        $this->actingAs($this->recorder())
+        $this->actingAs($this->allDataRecorder())
             ->get(route('service-records.index', ['sort' => 'total', 'dir' => 'asc', 'per_page' => 10]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -232,7 +240,7 @@ class ServiceVisitTest extends TestCase
         $this->makeVisit('Hamid Karim', '2026-01-01', 80.00);
         $this->makeVisit('Zainab Abdullah', '2026-01-02', 90.00);
 
-        $this->actingAs($this->recorder())
+        $this->actingAs($this->allDataRecorder())
             ->get(route('service-records.index', ['search' => 'hamid', 'per_page' => 10]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -246,7 +254,7 @@ class ServiceVisitTest extends TestCase
         $this->makeVisit('Client Two', '2026-01-02', 90.00);
         $txnId = $visit1->transaction->txn_id;
 
-        $this->actingAs($this->recorder())
+        $this->actingAs($this->allDataRecorder())
             ->get(route('service-records.index', ['search' => $txnId, 'per_page' => 10]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
