@@ -1,13 +1,26 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import DataTable from '@/Components/DataTable.vue';
+import Badge from '@/Components/Badge.vue';
+import { serviceVariant, statusVariant } from '@/lib/badges';
 
 defineProps({ visits: Object });
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) : '';
 
-const txnStatus = { paid: 'bg-ok-bg text-ok', pending: 'bg-warn-bg text-warn', failed: 'bg-danger-bg text-danger' };
+const columns = [
+    { key: 'visit_date', label: 'Date / Time', sortable: true },
+    { key: 'client',     label: 'Client' },
+    { key: 'serial',     label: 'Serial', headerClass: 'font-mono' },
+    { key: 'lines',      label: 'Services' },
+    { key: 'total_amount', label: 'Amount', sortable: true, align: 'right' },
+    { key: 'status',     label: 'Status', align: 'center' },
+    { key: 'actions',    label: '',        align: 'right' },
+];
 </script>
 
 <template>
@@ -18,65 +31,103 @@ const txnStatus = { paid: 'bg-ok-bg text-ok', pending: 'bg-warn-bg text-warn', f
             <h1 class="text-lg font-bold tracking-tight text-navy-800">Service Records</h1>
         </template>
 
-        <div class="mb-5 flex items-center justify-between">
-            <p class="text-sm text-ink-soft">Recorded visits, newest first.</p>
-            <Link :href="route('service-records.create')" class="inline-flex items-center gap-2 rounded-ra bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
-                New record
-            </Link>
-        </div>
+        <PageHeader title="Service Records" subtitle="Recorded visits, newest first.">
+            <template #actions>
+                <Link
+                    :href="route('service-records.create')"
+                    class="inline-flex items-center gap-2 rounded-ra bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover"
+                >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
+                    New record
+                </Link>
+            </template>
+        </PageHeader>
 
-        <!-- Desktop -->
-        <div class="hidden overflow-hidden rounded-ral border border-line bg-surface shadow-card md:block">
-            <table class="w-full text-sm">
-                <thead class="border-b border-line bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-soft">
-                    <tr>
-                        <th class="px-5 py-3 font-semibold">Date</th>
-                        <th class="px-5 py-3 font-semibold">Client</th>
-                        <th class="px-5 py-3 font-semibold">Services</th>
-                        <th class="px-5 py-3 font-semibold">Total</th>
-                        <th class="px-5 py-3 font-semibold">Payment</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    <tr v-for="v in visits.data" :key="v.id" class="cursor-pointer hover:bg-surface-muted" @click="$inertia.visit(route('service-records.show', v.id))">
-                        <td class="px-5 py-3 font-medium text-ink">{{ fmtDate(v.visit_date) }}</td>
-                        <td class="px-5 py-3">
-                            <span class="font-medium text-ink">{{ v.client?.name }}</span>
-                            <span class="ml-1 font-mono text-xs text-primary">#{{ v.client?.serial_no }}</span>
-                        </td>
-                        <td class="px-5 py-3 text-ink-soft">{{ v.lines_count }}</td>
-                        <td class="px-5 py-3 font-mono font-semibold text-navy-800">{{ money(v.total_amount) }}</td>
-                        <td class="px-5 py-3">
-                            <span v-if="v.transaction" class="rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize" :class="txnStatus[v.transaction.status]">{{ v.transaction.status }}</span>
-                            <span class="ml-1 text-xs text-ink-muted">{{ v.transaction?.method }}</span>
-                        </td>
-                    </tr>
-                    <tr v-if="!visits.data.length"><td colspan="5" class="px-5 py-12 text-center text-ink-soft">No service records yet.</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <DataTable
+            mode="server"
+            route-name="service-records.index"
+            :rows="visits.data"
+            :pagination="visits"
+            :columns="columns"
+            searchable
+            search-placeholder="Search client, serial or txn…"
+        >
+            <!-- Date / Time -->
+            <template #cell-visit_date="{ row }">
+                <span class="font-medium text-ink">{{ fmtDate(row.visit_date) }}</span>
+                <span v-if="fmtTime(row.visit_date)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.visit_date) }}</span>
+            </template>
 
-        <!-- Mobile cards -->
-        <div class="space-y-3 md:hidden">
-            <Link v-for="v in visits.data" :key="v.id" :href="route('service-records.show', v.id)" class="block rounded-ral border border-line bg-surface p-4 shadow-card">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="font-semibold text-ink">{{ v.client?.name }}</div>
-                        <div class="mt-0.5 text-sm text-ink-soft">{{ fmtDate(v.visit_date) }} · {{ v.lines_count }} service(s)</div>
+            <!-- Client name -->
+            <template #cell-client="{ row }">
+                <span class="font-medium text-ink">{{ row.client?.name ?? '—' }}</span>
+            </template>
+
+            <!-- Serial (mono) -->
+            <template #cell-serial="{ row }">
+                <span class="font-mono text-xs text-primary">#{{ row.client?.serial_no }}</span>
+            </template>
+
+            <!-- Service badges -->
+            <template #cell-lines="{ row }">
+                <span v-if="row.lines && row.lines.length" class="flex flex-wrap gap-1">
+                    <Badge v-for="(line, i) in row.lines" :key="i" :variant="serviceVariant(line.service_type)">
+                        {{ line.service_type }}
+                    </Badge>
+                </span>
+                <span v-else-if="row.lines_count" class="text-ink-soft text-xs">{{ row.lines_count }} service(s)</span>
+                <span v-else class="text-ink-muted text-xs">—</span>
+            </template>
+
+            <!-- Amount -->
+            <template #cell-total_amount="{ row }">
+                <span class="font-mono font-semibold text-navy-800">{{ money(row.total_amount) }}</span>
+            </template>
+
+            <!-- Status badge -->
+            <template #cell-status="{ row }">
+                <span v-if="row.transaction" class="flex flex-col items-center gap-0.5">
+                    <Badge :variant="statusVariant(row.transaction.status)" class="capitalize">{{ row.transaction.status }}</Badge>
+                    <span class="text-[10px] text-ink-muted">{{ row.transaction.method }}</span>
+                </span>
+                <span v-else class="text-ink-muted text-xs">—</span>
+            </template>
+
+            <!-- Actions -->
+            <template #cell-actions="{ row }">
+                <Link
+                    :href="route('service-records.show', row.id)"
+                    class="rounded-ra px-3 py-1.5 text-xs font-medium text-primary shadow-card hover:bg-surface-muted transition"
+                >
+                    View
+                </Link>
+            </template>
+
+            <!-- Mobile card slot -->
+            <template #card="{ row }">
+                <Link :href="route('service-records.show', row.id)" class="block rounded-ral border border-line bg-surface p-4 shadow-card">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="font-semibold text-ink">{{ row.client?.name }}</div>
+                            <div class="mt-0.5 text-sm text-ink-soft">
+                                {{ fmtDate(row.visit_date) }}
+                                <span class="font-mono text-xs text-primary ml-1">#{{ row.client?.serial_no }}</span>
+                            </div>
+                            <div v-if="row.lines && row.lines.length" class="mt-1 flex flex-wrap gap-1">
+                                <Badge v-for="(line, i) in row.lines" :key="i" :variant="serviceVariant(line.service_type)">
+                                    {{ line.service_type }}
+                                </Badge>
+                            </div>
+                        </div>
+                        <Badge v-if="row.transaction" :variant="statusVariant(row.transaction.status)" class="capitalize">
+                            {{ row.transaction.status }}
+                        </Badge>
                     </div>
-                    <span v-if="v.transaction" class="rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize" :class="txnStatus[v.transaction.status]">{{ v.transaction.status }}</span>
-                </div>
-                <div class="mt-2 font-mono font-bold text-navy-800">{{ money(v.total_amount) }}</div>
-            </Link>
-            <p v-if="!visits.data.length" class="rounded-ral border border-line bg-surface py-12 text-center text-ink-soft shadow-card">No service records yet.</p>
-        </div>
+                    <div class="mt-2 font-mono font-bold text-navy-800">{{ money(row.total_amount) }}</div>
+                </Link>
+            </template>
 
-        <div v-if="visits.links.length > 3" class="mt-5 flex flex-wrap justify-center gap-1">
-            <component :is="link.url ? Link : 'span'" v-for="link in visits.links" :key="link.label" :href="link.url" preserve-scroll
-                class="min-w-9 rounded-ra px-3 py-2 text-center text-sm transition"
-                :class="[link.active ? 'bg-primary text-white' : 'bg-surface text-ink-soft shadow-card hover:text-ink', !link.url && 'opacity-40']"
-                v-html="link.label" />
-        </div>
+            <template #empty>No service records yet.</template>
+        </DataTable>
     </AdminLayout>
 </template>

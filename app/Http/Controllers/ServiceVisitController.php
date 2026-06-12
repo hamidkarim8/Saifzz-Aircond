@@ -16,12 +16,36 @@ class ServiceVisitController extends Controller
 {
     public function index(): Response
     {
-        $visits = ServiceVisit::query()
-            ->with(['client:id,serial_no,name', 'transaction:id,visit_id,status,method'])
-            ->withCount('lines')
-            ->latest('visit_date')
-            ->latest('id')
-            ->paginate(15);
+        $search  = request()->string('search')->trim()->value();
+        $sortMap = ['visit_date' => 'visit_date', 'total' => 'total_amount', 'serial' => null];
+        $sortKey = request()->input('sort');
+        $dir     = strtolower(request()->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
+
+        $query = ServiceVisit::query()
+            ->with([
+                'client:id,serial_no,name',
+                'transaction:id,visit_id,status,method,txn_id',
+                'lines:id,visit_id,service_type',
+            ]);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('client', fn ($c) => $c
+                    ->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('serial_no', 'ilike', "%{$search}%"))
+                  ->orWhereHas('transaction', fn ($t) => $t
+                    ->where('txn_id', 'ilike', "%{$search}%"));
+            });
+        }
+
+        if ($sortKey && array_key_exists($sortKey, $sortMap) && $sortMap[$sortKey] !== null) {
+            $query->orderBy($sortMap[$sortKey], $dir)->orderBy('id', $dir);
+        } else {
+            $query->latest('visit_date')->latest('id');
+        }
+
+        $visits = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('ServiceRecords/Index', [
             'visits' => $visits,

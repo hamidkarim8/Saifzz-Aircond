@@ -172,4 +172,94 @@ class ServiceVisitTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['name' => 'Findable']);
     }
+
+    // ---- index sort/search/per_page tests ----
+
+    private function makeVisit(string $clientName, string $visitDate, float $total = 100.0): ServiceVisit
+    {
+        $client = Client::create(['name' => $clientName, 'phone' => '011-0000001', 'address' => 'KL']);
+        $visit = $client->visits()->create([
+            'visit_date' => $visitDate,
+            'warranty_months' => 0,
+            'total_amount' => $total,
+            'created_by' => null,
+        ]);
+        $visit->transaction()->create([
+            'txn_id' => 'TXN-' . str_replace('-', '', $visitDate) . '-' . str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount' => $total,
+            'method' => 'Cash',
+            'status' => 'pending',
+        ]);
+
+        return $visit;
+    }
+
+    public function test_index_returns_paginated_visits_sorted_by_visit_date_desc_with_per_page(): void
+    {
+        $this->makeVisit('Alpha Client', '2026-01-01', 50.00);
+        $this->makeVisit('Beta Client', '2026-03-01', 150.00);
+        $this->makeVisit('Gamma Client', '2026-02-01', 100.00);
+
+        $this->actingAs($this->recorder())
+            ->get(route('service-records.index', ['sort' => 'visit_date', 'dir' => 'desc', 'per_page' => 5]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visits.per_page', 5)
+                ->where('visits.total', 3)
+                ->has('visits.data.0', fn ($row) => $row->where('client.name', 'Beta Client')->etc())
+                ->has('visits.data.1', fn ($row) => $row->where('client.name', 'Gamma Client')->etc())
+                ->has('visits.data.2', fn ($row) => $row->where('client.name', 'Alpha Client')->etc()));
+    }
+
+    public function test_index_sorts_by_total_amount_asc(): void
+    {
+        $this->makeVisit('Alpha Client', '2026-01-01', 50.00);
+        $this->makeVisit('Beta Client', '2026-03-01', 150.00);
+        $this->makeVisit('Gamma Client', '2026-02-01', 100.00);
+
+        $this->actingAs($this->recorder())
+            ->get(route('service-records.index', ['sort' => 'total', 'dir' => 'asc', 'per_page' => 10]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visits.total', 3)
+                ->where('visits.data.0.total_amount', '50.00')
+                ->where('visits.data.1.total_amount', '100.00')
+                ->where('visits.data.2.total_amount', '150.00'));
+    }
+
+    public function test_index_search_by_client_name(): void
+    {
+        $this->makeVisit('Hamid Karim', '2026-01-01', 80.00);
+        $this->makeVisit('Zainab Abdullah', '2026-01-02', 90.00);
+
+        $this->actingAs($this->recorder())
+            ->get(route('service-records.index', ['search' => 'hamid', 'per_page' => 10]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visits.total', 1)
+                ->where('visits.data.0.client.name', 'Hamid Karim'));
+    }
+
+    public function test_index_search_by_txn_id(): void
+    {
+        $visit1 = $this->makeVisit('Client One', '2026-01-01', 80.00);
+        $this->makeVisit('Client Two', '2026-01-02', 90.00);
+        $txnId = $visit1->transaction->txn_id;
+
+        $this->actingAs($this->recorder())
+            ->get(route('service-records.index', ['search' => $txnId, 'per_page' => 10]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('visits.total', 1)
+                ->where('visits.data.0.transaction.txn_id', $txnId));
+    }
+
+    public function test_index_ignores_unknown_sort_column(): void
+    {
+        $this->makeVisit('Client A', '2026-01-01', 50.00);
+
+        $this->actingAs($this->recorder())
+            ->get(route('service-records.index', ['sort' => 'injected_col', 'dir' => 'asc']))
+            ->assertOk();
+    }
 }
