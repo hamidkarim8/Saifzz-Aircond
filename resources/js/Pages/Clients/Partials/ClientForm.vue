@@ -1,5 +1,7 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3';
+import FormErrorSummary from '@/Components/FormErrorSummary.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     client: { type: Object, default: null },
@@ -24,15 +26,17 @@ const submit = () => {
 
 <template>
     <form class="space-y-6" @submit.prevent="submit">
+        <FormErrorSummary :errors="form.errors" />
+
         <div>
             <label class="mb-1.5 block text-sm font-semibold text-ink">Full name</label>
             <input
                 v-model="form.name"
                 type="text"
-                class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
+                class="w-full rounded-ra border border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
                 placeholder="e.g. Zainab binti Ahmad"
             />
-            <p v-if="form.errors.name" class="mt-1 text-sm text-danger">{{ form.errors.name }}</p>
+            <InputError :message="form.errors.name" />
         </div>
 
         <div>
@@ -41,10 +45,10 @@ const submit = () => {
                 v-model="form.phone"
                 type="tel"
                 inputmode="tel"
-                class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary"
+                class="w-full rounded-ra border border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary"
                 placeholder="012-3456789"
             />
-            <p v-if="form.errors.phone" class="mt-1 text-sm text-danger">{{ form.errors.phone }}</p>
+            <InputError :message="form.errors.phone" />
         </div>
 
         <div>
@@ -52,10 +56,10 @@ const submit = () => {
             <textarea
                 v-model="form.address"
                 rows="3"
-                class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
+                class="w-full rounded-ra border border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
                 placeholder="Unit / street / city / postcode"
             />
-            <p v-if="form.errors.address" class="mt-1 text-sm text-danger">{{ form.errors.address }}</p>
+            <InputError :message="form.errors.address" />
         </div>
 
         <div v-if="isEdit" class="rounded-ra bg-surface-muted px-4 py-3 text-sm text-ink-soft">

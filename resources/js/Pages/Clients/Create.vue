@@ -1,6 +1,8 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import Card from '@/Components/Card.vue';
 import ClientForm from './Partials/ClientForm.vue';
 </script>
 
@@ -13,17 +15,15 @@ import ClientForm from './Partials/ClientForm.vue';
         </template>
 
         <div class="mx-auto max-w-2xl">
-            <p class="mb-6 text-sm text-ink-soft">
-                A unique 6-digit serial is assigned automatically on creation — it goes on the remote sticker.
-            </p>
+            <PageHeader title="New client" subtitle="A unique 6-digit serial is assigned automatically on creation — it goes on the remote sticker." />
 
-            <div class="rounded-ral border border-line bg-surface p-6 shadow-card sm:p-8">
+            <Card>
                 <ClientForm>
                     <template #cancel>
                         <Link :href="route('clients.index')" class="text-sm font-medium text-ink-soft hover:text-ink">Cancel</Link>
                     </template>
                 </ClientForm>
-            </div>
+            </Card>
         </div>
     </AdminLayout>
 </template>
