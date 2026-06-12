@@ -79,6 +79,21 @@ class UserManagementTest extends TestCase
         $this->assertEqualsCanonicalizing(['view_clients', 'edit_fees'], $user->permissions);
     }
 
+    public function test_store_with_empty_permissions_array_yields_no_permissions(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('users.store'), [
+                'name' => 'Empty Perm Tech',
+                'email' => 'emptyperm@example.com',
+                'password' => 'secret123',
+                'permissions' => [],
+            ])
+            ->assertRedirect();
+
+        $user = User::where('email', 'emptyperm@example.com')->firstOrFail();
+        $this->assertEmpty($user->permissions);
+    }
+
     public function test_admin_only_permission_in_store_payload_is_silently_dropped(): void
     {
         $this->actingAs($this->admin())
