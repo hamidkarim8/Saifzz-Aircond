@@ -1,6 +1,8 @@
 <script setup>
 import { watch, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import FormErrorSummary from '@/Components/FormErrorSummary.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     open: Boolean,
@@ -68,65 +70,100 @@ const submit = () => {
             @click.self="emit('close')"
         >
             <div class="w-full max-w-lg rounded-t-rax bg-surface p-6 shadow-lift sm:rounded-rax">
-                <h3 class="text-lg font-bold text-navy-800">{{ isEdit ? 'Edit user' : 'Add user' }}</h3>
+                <!-- Header -->
+                <div class="mb-5 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-navy-800">{{ isEdit ? 'Edit user' : 'Add user' }}</h3>
+                    <button
+                        type="button"
+                        class="rounded-ra p-1 text-ink-muted transition hover:bg-surface-muted hover:text-ink"
+                        @click="emit('close')"
+                        aria-label="Close"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                </div>
 
-                <form class="mt-5 space-y-4" @submit.prevent="submit">
+                <!-- Error summary -->
+                <FormErrorSummary :errors="form.errors" />
+
+                <form class="space-y-4" @submit.prevent="submit">
+                    <!-- Name -->
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Name</label>
                         <input
                             v-model="form.name"
                             type="text"
                             class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
+                            :class="{ 'border-danger focus:border-danger focus:ring-danger': form.errors.name }"
                             placeholder="Full name"
                         />
-                        <p v-if="form.errors.name" class="mt-1 text-sm text-danger">{{ form.errors.name }}</p>
+                        <InputError :message="form.errors.name" />
                     </div>
 
+                    <!-- Email (create only) -->
                     <div v-if="!isEdit">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Email</label>
                         <input
                             v-model="form.email"
                             type="email"
                             class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
+                            :class="{ 'border-danger focus:border-danger focus:ring-danger': form.errors.email }"
                             placeholder="staff@example.com"
                         />
-                        <p v-if="form.errors.email" class="mt-1 text-sm text-danger">{{ form.errors.email }}</p>
+                        <InputError :message="form.errors.email" />
                     </div>
 
+                    <!-- Password (create only) -->
                     <div v-if="!isEdit">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Password</label>
                         <input
                             v-model="form.password"
                             type="password"
                             class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary"
+                            :class="{ 'border-danger focus:border-danger focus:ring-danger': form.errors.password }"
                             placeholder="Min. 8 characters"
                         />
-                        <p v-if="form.errors.password" class="mt-1 text-sm text-danger">{{ form.errors.password }}</p>
+                        <InputError :message="form.errors.password" />
                     </div>
 
+                    <!-- Permissions -->
                     <div>
                         <p class="mb-2 text-sm font-semibold text-ink">Permissions</p>
                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <label
                                 v-for="perm in grantablePermissions"
                                 :key="perm"
-                                class="flex cursor-pointer items-start gap-2.5 rounded-ra border border-line p-3 hover:bg-surface-muted"
-                                :class="{ 'border-primary bg-primary-50': form.permissions.includes(perm) }"
+                                class="flex cursor-pointer items-start gap-3 rounded-ra border p-3 transition hover:bg-surface-muted"
+                                :class="form.permissions.includes(perm)
+                                    ? 'border-primary bg-primary-50'
+                                    : 'border-line'"
                             >
                                 <input
                                     type="checkbox"
                                     :value="perm"
                                     v-model="form.permissions"
-                                    class="mt-0.5 rounded border-line text-primary focus:ring-primary"
+                                    class="mt-0.5 shrink-0 rounded border-line text-primary focus:ring-primary"
                                 />
-                                <span class="text-sm text-ink">{{ permLabels[perm] ?? perm }}</span>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-ink leading-snug">{{ permLabels[perm] ?? perm }}</p>
+                                    <p class="text-xs text-ink-soft font-mono mt-0.5">{{ perm }}</p>
+                                </div>
                             </label>
                         </div>
-                        <p v-if="form.errors.permissions" class="mt-1 text-sm text-danger">{{ form.errors.permissions }}</p>
+                        <InputError :message="form.errors.permissions" />
                     </div>
 
+                    <!-- Footer actions -->
                     <div class="flex items-center justify-end gap-3 pt-2">
-                        <button type="button" class="text-sm font-medium text-ink-soft hover:text-ink" @click="emit('close')">Cancel</button>
+                        <button
+                            type="button"
+                            class="text-sm font-medium text-ink-soft hover:text-ink"
+                            @click="emit('close')"
+                        >
+                            Cancel
+                        </button>
                         <button
                             type="submit"
                             :disabled="form.processing"
