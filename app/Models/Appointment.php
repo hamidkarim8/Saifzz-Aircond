@@ -28,6 +28,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'client_id',
+        'technician_id',
         'datetime',
         'service_type',
         'units',
@@ -54,6 +55,11 @@ class Appointment extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function technician(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'technician_id');
+    }
+
     /**
      * Is moving to $status legal from the current state?
      */
@@ -70,5 +76,14 @@ class Appointment extends Model
         $start = Carbon::createFromFormat('Y-m-d', $month.'-01')->startOfMonth();
 
         return $query->whereBetween('datetime', [$start, $start->copy()->endOfMonth()]);
+    }
+
+    /**
+     * Restrict to appointments the user may see. Unassigned (null technician) are visible
+     * only to all-data users; scoped technicians see only appointments assigned to them.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $user->seesAllData() ? $query : $query->where('technician_id', $user->id);
     }
 }

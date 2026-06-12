@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceVisit;
 use App\Models\User;
@@ -79,5 +80,36 @@ class TechnicianScopingTest extends TestCase
         $this->visitFor(null);
 
         $this->assertSame(2, ServiceVisit::visibleTo($admin)->count());
+    }
+
+    private function appointmentFor(?int $technicianId): Appointment
+    {
+        $client = Client::create(['name' => 'C', 'phone' => '011-0000000', 'address' => 'KL']);
+        return $client->appointments()->create([
+            'datetime' => '2026-06-20 10:00:00',
+            'service_type' => 'Cleaning',
+            'units' => 1,
+            'status' => 'pending',
+            'technician_id' => $technicianId,
+        ]);
+    }
+
+    public function test_appointment_visible_to_scopes_to_own(): void
+    {
+        $alice = User::factory()->technician()->create();
+        $this->appointmentFor($alice->id);
+        $this->appointmentFor(null);
+
+        $this->assertSame(1, Appointment::visibleTo($alice)->count());
+    }
+
+    public function test_appointment_visible_to_returns_all_for_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $alice = User::factory()->technician()->create();
+        $this->appointmentFor($alice->id);
+        $this->appointmentFor(null);
+
+        $this->assertSame(2, Appointment::visibleTo($admin)->count());
     }
 }
