@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import FormErrorSummary from '@/Components/FormErrorSummary.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     open: Boolean,
@@ -35,6 +37,7 @@ watch(() => props.open, (open) => {
 });
 
 const isFlexible = computed(() => form.pricing_mode === 'flexible');
+const isRepair = computed(() => form.service_type === 'Repair');
 
 const submit = () => {
     if (isEdit.value) {
@@ -51,42 +54,92 @@ const modeLabel = { fixed_per_unit: 'Fixed per unit', tiered: 'Tiered', flexible
     <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0" leave-active-class="transition duration-150" leave-to-class="opacity-0">
         <div v-if="open" class="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" @click.self="emit('close')">
             <div class="w-full max-w-md rounded-t-rax bg-surface p-6 shadow-lift sm:rounded-rax">
-                <h3 class="text-lg font-bold text-navy-800">{{ isEdit ? 'Edit fee' : 'Add fee' }}</h3>
-                <p class="mt-1 text-sm text-ink-soft">Changes apply to future service lines only — past records keep their snapshot rate.</p>
 
-                <form class="mt-5 space-y-4" @submit.prevent="submit">
+                <!-- Header -->
+                <div class="mb-5">
+                    <h3 class="text-lg font-bold text-navy-800">{{ isEdit ? 'Edit fee entry' : 'Add fee entry' }}</h3>
+                    <p class="mt-1 text-sm text-ink-soft">Changes apply to future service lines only — past records keep their snapshot rate.</p>
+                </div>
+
+                <!-- Error summary -->
+                <FormErrorSummary :errors="form.errors" />
+
+                <form class="space-y-4" @submit.prevent="submit">
+                    <!-- Service type -->
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Service type</label>
-                        <select v-model="form.service_type" :disabled="isEdit" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary disabled:bg-surface-muted disabled:text-ink-soft">
-                            <option value="" disabled>Choose…</option>
+                        <select
+                            v-model="form.service_type"
+                            :disabled="isEdit"
+                            class="w-full rounded-ra border border-line bg-surface px-3 py-2 text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-surface-muted disabled:text-ink-soft"
+                        >
+                            <option value="" disabled>Choose service type…</option>
                             <option v-for="t in serviceTypes" :key="t" :value="t">{{ t }}</option>
                         </select>
-                        <p v-if="form.errors.service_type" class="mt-1 text-sm text-danger">{{ form.errors.service_type }}</p>
+                        <InputError :message="form.errors.service_type" />
                     </div>
 
-                    <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Option <span class="font-normal text-ink-muted">(unit type / gas option — blank for Repair)</span></label>
-                        <input v-model="form.option" :disabled="isEdit" type="text" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary disabled:bg-surface-muted disabled:text-ink-soft" placeholder="e.g. Wall Mounted" />
-                        <p v-if="form.errors.option" class="mt-1 text-sm text-danger">{{ form.errors.option }}</p>
+                    <!-- Option / unit type — hidden for Repair -->
+                    <div v-if="!isRepair">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">
+                            Unit / option
+                            <span class="ml-1 font-normal text-ink-muted text-xs">(e.g. Wall Mounted, 1/2 HP, PSI level)</span>
+                        </label>
+                        <input
+                            v-model="form.option"
+                            :disabled="isEdit"
+                            type="text"
+                            class="w-full rounded-ra border border-line bg-surface px-3 py-2 text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-surface-muted disabled:text-ink-soft"
+                            placeholder="e.g. Wall Mounted"
+                        />
+                        <InputError :message="form.errors.option" />
                     </div>
 
-                    <div>
+                    <!-- Repair flexible pricing notice -->
+                    <div v-if="isRepair" class="flex gap-2.5 rounded-ra border border-warn/30 bg-warn-bg px-3.5 py-3 text-sm text-warn">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>
+                            <strong>Flexible pricing</strong> — Repair jobs do not use a fixed rate.
+                            The technician sets the price per job at the time of service.
+                        </span>
+                    </div>
+
+                    <!-- Pricing mode -->
+                    <div v-if="!isRepair">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Pricing mode</label>
-                        <select v-model="form.pricing_mode" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                        <select
+                            v-model="form.pricing_mode"
+                            class="w-full rounded-ra border border-line bg-surface px-3 py-2 text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
                             <option v-for="m in modes" :key="m" :value="m">{{ modeLabel[m] }}</option>
                         </select>
+                        <InputError :message="form.errors.pricing_mode" />
                     </div>
 
-                    <div v-if="!isFlexible">
+                    <!-- Rate — hidden when flexible or Repair -->
+                    <div v-if="!isFlexible && !isRepair">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Rate (RM)</label>
-                        <input v-model="form.rate" type="number" step="0.01" min="0" inputmode="decimal" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="0.00" />
-                        <p v-if="form.errors.rate" class="mt-1 text-sm text-danger">{{ form.errors.rate }}</p>
+                        <input
+                            v-model="form.rate"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            inputmode="decimal"
+                            class="w-full rounded-ra border border-line bg-surface px-3 py-2 font-mono text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="0.00"
+                        />
+                        <InputError :message="form.errors.rate" />
                     </div>
 
+                    <!-- Actions -->
                     <div class="flex items-center justify-end gap-3 pt-2">
                         <button type="button" class="text-sm font-medium text-ink-soft hover:text-ink" @click="emit('close')">Cancel</button>
-                        <button type="submit" :disabled="form.processing" class="rounded-ra bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60">
-                            {{ isEdit ? 'Save' : 'Add fee' }}
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="rounded-ra bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60"
+                        >
+                            {{ isEdit ? 'Save changes' : 'Add fee entry' }}
                         </button>
                     </div>
                 </form>
