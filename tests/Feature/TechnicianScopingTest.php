@@ -48,4 +48,36 @@ class TechnicianScopingTest extends TestCase
         $this->assertNotContains('view_all_data', User::DEFAULT_TECHNICIAN_PERMISSIONS);
         $this->assertNotContains('view_all_data', User::ADMIN_ONLY_PERMISSIONS);
     }
+
+    private function visitFor(?int $technicianId): ServiceVisit
+    {
+        $client = Client::create(['name' => 'C', 'phone' => '011-0000000', 'address' => 'KL']);
+        return $client->visits()->create([
+            'visit_date' => '2026-06-01',
+            'warranty_months' => 0,
+            'total_amount' => 100,
+            'created_by' => null,
+            'technician_id' => $technicianId,
+        ]);
+    }
+
+    public function test_visible_to_scopes_technician_to_own_visits(): void
+    {
+        $alice = User::factory()->technician()->create();
+        $bob = User::factory()->technician()->create();
+        $this->visitFor($alice->id);
+        $this->visitFor($bob->id);
+
+        $this->assertSame(1, ServiceVisit::visibleTo($alice)->count());
+    }
+
+    public function test_visible_to_returns_all_for_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $alice = User::factory()->technician()->create();
+        $this->visitFor($alice->id);
+        $this->visitFor(null);
+
+        $this->assertSame(2, ServiceVisit::visibleTo($admin)->count());
+    }
 }

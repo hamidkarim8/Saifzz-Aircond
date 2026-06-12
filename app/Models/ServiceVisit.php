@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -19,6 +20,7 @@ class ServiceVisit extends Model
         'warranty_end',
         'total_amount',
         'created_by',
+        'technician_id',
     ];
 
     protected function casts(): array
@@ -62,6 +64,11 @@ class ServiceVisit extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function technician(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'technician_id');
+    }
+
     public function lines(): HasMany
     {
         return $this->hasMany(ServiceLine::class, 'visit_id');
@@ -70,5 +77,14 @@ class ServiceVisit extends Model
     public function transaction(): HasOne
     {
         return $this->hasOne(Transaction::class, 'visit_id');
+    }
+
+    /**
+     * Restrict to rows the user may see. All-data users (admins + view_all_data) see everything;
+     * scoped technicians see only visits assigned to them.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $user->seesAllData() ? $query : $query->where('technician_id', $user->id);
     }
 }
