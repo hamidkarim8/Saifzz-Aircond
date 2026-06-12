@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\ServiceVisit;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends Model
@@ -35,6 +36,11 @@ class Client extends Model
     public function visits(): HasMany
     {
         return $this->hasMany(ServiceVisit::class);
+    }
+
+    public function latestVisit(): HasOne
+    {
+        return $this->hasOne(ServiceVisit::class)->latestOfMany('visit_date');
     }
 
     public function appointments(): HasMany

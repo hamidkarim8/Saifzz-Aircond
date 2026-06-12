@@ -139,6 +139,58 @@ class ClientTest extends TestCase
                     ->etc()));
     }
 
+    public function test_every_client_with_a_visit_is_enriched_on_index(): void
+    {
+        $admin = $this->admin();
+
+        $clientA = Client::create(['name' => 'Alpha', 'phone' => '011-11111111', 'address' => 'KL']);
+        $visitA = ServiceVisit::create([
+            'client_id' => $clientA->id,
+            'visit_date' => '2026-03-01',
+            'warranty_months' => 0,
+            'created_by' => $admin->id,
+        ]);
+        ServiceLine::create([
+            'visit_id' => $visitA->id,
+            'service_type' => 'Cleaning',
+            'units' => 1,
+            'rate' => 80,
+            'discount' => 0,
+            'next_service_date' => null,
+        ]);
+
+        $clientB = Client::create(['name' => 'Beta', 'phone' => '011-22222222', 'address' => 'PJ']);
+        $visitB = ServiceVisit::create([
+            'client_id' => $clientB->id,
+            'visit_date' => '2026-04-15',
+            'warranty_months' => 0,
+            'created_by' => $admin->id,
+        ]);
+        ServiceLine::create([
+            'visit_id' => $visitB->id,
+            'service_type' => 'Gas Top-Up',
+            'units' => 2,
+            'rate' => 120,
+            'discount' => 0,
+            'next_service_date' => null,
+        ]);
+
+        // Both clients must be enriched — the old limit(1) bug left one empty.
+        // Sort by last_service_date asc so order is deterministic: Alpha (Mar) → Beta (Apr).
+        $this->actingAs($admin)
+            ->get(route('clients.index', ['sort' => 'last_service_date', 'dir' => 'asc']))
+            ->assertInertia(fn ($page) => $page
+                ->where('clients.total', 2)
+                ->has('clients.data.0', fn ($row) => $row
+                    ->where('last_service_date', '2026-03-01')
+                    ->where('service_types', ['Cleaning'])
+                    ->etc())
+                ->has('clients.data.1', fn ($row) => $row
+                    ->where('last_service_date', '2026-04-15')
+                    ->where('service_types', ['Gas Top-Up'])
+                    ->etc()));
+    }
+
     public function test_index_sort_by_name_descending(): void
     {
         $admin = $this->admin();

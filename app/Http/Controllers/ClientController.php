@@ -30,10 +30,7 @@ class ClientController extends Controller
 
         $clients = Client::query()
             ->withCount('visits')
-            ->with([
-                'visits' => fn ($q) => $q->latest('visit_date')->limit(1),
-                'visits.lines',
-            ])
+            ->with(['latestVisit.lines'])
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('name', 'ilike', "%{$search}%")
@@ -78,7 +75,7 @@ class ClientController extends Controller
         // Enrich each client with computed fields from their latest visit.
         $today = Carbon::today();
         $clients->getCollection()->transform(function ($client) use ($today) {
-            $latestVisit = $client->visits->first(); // already sorted latest first
+            $latestVisit = $client->latestVisit;
 
             if ($latestVisit === null) {
                 $client->last_service_date = null;
@@ -125,7 +122,7 @@ class ClientController extends Controller
             }
 
             // Unset the loaded relation to keep the payload clean
-            unset($client->visits);
+            unset($client->latestVisit);
 
             return $client;
         });
