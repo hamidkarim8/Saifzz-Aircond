@@ -7,6 +7,7 @@ const props = defineProps({
     appointment: { type: Object, default: null }, // null = new
     serviceTypes: { type: Array, default: () => [] },
     presetClient: { type: Object, default: null },
+    technicians:  { type: Array, default: null },
 });
 const emit = defineEmits(['close']);
 
@@ -22,6 +23,7 @@ const form = useForm({
     phone: '',
     address: '',
     notes: '',
+    technician_id: null,
 });
 
 // Chosen existing client (display + prefill); appointments may also be booked client-less.
@@ -73,6 +75,7 @@ watch(() => props.open, (open) => {
         form.phone = a.phone ?? '';
         form.address = a.address ?? '';
         form.notes = a.notes ?? '';
+        form.technician_id = a.technician_id ?? null;
         chosen.value = a.client ?? null;
     } else {
         form.reset();
@@ -182,6 +185,16 @@ const submit = () => {
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Notes <span class="font-normal text-ink-muted">(optional)</span></label>
                         <textarea v-model="form.notes" rows="2" placeholder="Optional notes…" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                         <p v-if="form.errors.notes" class="mt-1 text-sm text-danger">{{ form.errors.notes }}</p>
+                    </div>
+
+                    <!-- Technician (all-data users only) -->
+                    <div v-if="technicians">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Technician</label>
+                        <select v-model="form.technician_id" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                            <option :value="null">— Unassigned —</option>
+                            <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                        <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-2">

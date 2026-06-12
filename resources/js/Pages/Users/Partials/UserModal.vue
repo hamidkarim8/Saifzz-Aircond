@@ -22,6 +22,7 @@ const permLabels = {
     view_reports: 'View reports dashboard',
     edit_fees: 'Manage price book',
     export_data: 'Export data to CSV',
+    view_all_data: 'See all data (not just own jobs)',
 };
 
 const form = useForm({

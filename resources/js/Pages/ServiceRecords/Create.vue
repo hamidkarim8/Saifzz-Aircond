@@ -15,6 +15,7 @@ const props = defineProps({
     gasOptions: Array,
     unitTypeServices: Array,
     presetClient: { type: Object, default: null },
+    technicians: { type: Array, default: null },
 });
 
 // Fee lookup map for client-side rate preview ("type|option" -> rate).
@@ -36,6 +37,7 @@ const form = useForm({
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
     payment_method: 'Cash',
+    technician_id: null,
     lines: [blankLine()],
 });
 
@@ -81,6 +83,14 @@ const submit = () => form.post(route('service-records.store'));
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Visit date</label>
                         <input v-model="form.visit_date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                         <p v-if="form.errors.visit_date" class="mt-1 text-sm text-danger">{{ form.errors.visit_date }}</p>
+                    </div>
+                    <div v-if="technicians">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Technician</label>
+                        <select v-model="form.technician_id" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                            <option :value="null">— Me —</option>
+                            <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                        <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Warranty (months)</label>

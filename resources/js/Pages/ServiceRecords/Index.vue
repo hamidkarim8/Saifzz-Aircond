@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import DataTable from '@/Components/DataTable.vue';
@@ -7,6 +8,10 @@ import Badge from '@/Components/Badge.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
 
 defineProps({ visits: Object });
+
+const seesAllData = computed(() => usePage().props.auth.can.view_all_data);
+const pageTitle    = computed(() => seesAllData.value ? 'Service Records' : 'My Jobs');
+const pageSubtitle = computed(() => seesAllData.value ? 'Recorded visits, newest first.' : 'Service visits you performed.');
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -31,7 +36,7 @@ const columns = [
             <h1 class="text-lg font-bold tracking-tight text-navy-800">Service Records</h1>
         </template>
 
-        <PageHeader title="Service Records" subtitle="Recorded visits, newest first.">
+        <PageHeader :title="pageTitle" :subtitle="pageSubtitle">
             <template #actions>
                 <Link
                     :href="route('service-records.create')"

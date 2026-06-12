@@ -20,6 +20,7 @@ const props = defineProps({
     serviceTypes: { type: Array, default: () => [] },
     transitions:  { type: Object, default: () => ({}) },
     presetClient: { type: Object, default: null },
+    technicians:  { type: Array, default: null },
 });
 
 const modalOpen  = ref(false);
@@ -303,6 +304,7 @@ const columns = [
             :appointment="editing"
             :service-types="serviceTypes"
             :preset-client="presetClient"
+            :technicians="technicians"
             @close="modalOpen = false"
         />
     </AdminLayout>
