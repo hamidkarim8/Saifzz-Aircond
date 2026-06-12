@@ -168,9 +168,9 @@ Clients and reminders stay global by design — no scoping there.
 - Per-client ownership/assignment.
 - Capability-URL portal token (tracked separately).
 
-## Open decisions for user review
+## Settled decisions
 
-1. **Appointment scoping in v1** — included here for a coherent "my jobs = visits + appointments"
-   story. Confirm, or defer appointments to v2 and scope only visits now.
-2. **Unassigned appointments** (`technician_id` null) — currently visible only to all-data users.
-   Acceptable, or should they surface to all techs as an "unclaimed" pool?
+1. **Appointments scoped in v1** — confirmed. Same `technician_id` pattern as visits; "my jobs" =
+   my completed visits + my assigned appointments.
+2. **Unassigned appointments** (`technician_id` null) — visible only to all-data users (admins).
+   No "unclaimed pool" for v1: the owner books and assigns; the assigned technician then sees it.
