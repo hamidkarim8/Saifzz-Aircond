@@ -127,4 +127,57 @@ class ReportServiceTest extends TestCase
 
         $this->assertCount(3, $this->service()->transactions('all'));
     }
+
+    // ── Technician scoping tests ────────────────────────────────────────────
+
+    private function paidVisitFor(int $techId, float $amount): void
+    {
+        $client = Client::create(['name' => 'C'.$techId.'-'.uniqid(), 'phone' => '011-0000000', 'address' => 'KL']);
+        $visit = $client->visits()->create([
+            'visit_date'       => now()->toDateString(),
+            'warranty_months'  => 0,
+            'total_amount'     => $amount,
+            'created_by'       => $techId,
+            'technician_id'    => $techId,
+        ]);
+        $visit->lines()->create([
+            'service_type' => 'Cleaning',
+            'units'        => 1,
+            'rate'         => $amount,
+            'discount'     => 0,
+        ]);
+        $visit->transaction()->create([
+            'txn_id'   => 'TXN-'.now()->format('Ymd').'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount'   => $amount,
+            'method'   => 'Cash',
+            'status'   => 'paid',
+            'paid_at'  => now(),
+        ]);
+    }
+
+    public function test_transactions_scoped_to_technician(): void
+    {
+        $alice = \App\Models\User::factory()->technician()->create();
+        $bob   = \App\Models\User::factory()->technician()->create();
+        $this->paidVisitFor($alice->id, 100);
+        $this->paidVisitFor($bob->id, 200);
+
+        $service = app(\App\Services\Reports\ReportService::class);
+        $rows = $service->transactions('all', null, $alice->id);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame(100.0, $rows[0]['amount']);
+    }
+
+    public function test_kpis_revenue_scoped_to_technician(): void
+    {
+        $alice = \App\Models\User::factory()->technician()->create();
+        $bob   = \App\Models\User::factory()->technician()->create();
+        $this->paidVisitFor($alice->id, 100);
+        $this->paidVisitFor($bob->id, 200);
+
+        $service = app(\App\Services\Reports\ReportService::class);
+        $this->assertSame(100.0, $service->kpis($alice->id)['revenue_all_time']);
+        $this->assertSame(300.0, $service->kpis(null)['revenue_all_time']);
+    }
 }

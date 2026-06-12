@@ -23,10 +23,12 @@ class ReportService
     /**
      * Four KPI cards. Revenue counts only paid transactions; the month card is the current
      * calendar month with a month-over-month delta. Pending reminders reuses module 8.
+     * When $technicianId is provided, revenue and client counts are scoped to that technician;
+     * pending_reminders is null (client-global, not meaningful per-technician in v1).
      *
      * @return array<string, int|float|null>
      */
-    public function kpis(): array
+    public function kpis(?int $technicianId = null): array
     {
         $now = Carbon::now();
         $monthStart = $now->copy()->startOfMonth();
@@ -34,34 +36,69 @@ class ReportService
         $lastStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
         $lastEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
 
-        $revenueMonth = (float) Transaction::where('status', 'paid')
-            ->whereBetween('paid_at', [$monthStart, $monthEnd])->sum('amount');
-        $revenueLast = (float) Transaction::where('status', 'paid')
-            ->whereBetween('paid_at', [$lastStart, $lastEnd])->sum('amount');
+        $paidRevenue = function (Carbon $start, Carbon $end) use ($technicianId): float {
+            $q = DB::table('transactions as t')
+                ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
+                ->where('t.status', 'paid')
+                ->whereBetween('t.paid_at', [$start, $end]);
+            if ($technicianId !== null) {
+                $q->where('sv.technician_id', $technicianId);
+            }
+            return (float) $q->sum('t.amount');
+        };
 
-        $reminderStats = $this->reminders->dueList()['stats'];
+        $revenueMonth = $paidRevenue($monthStart, $monthEnd);
+        $revenueLast  = $paidRevenue($lastStart, $lastEnd);
+
+        $allTimeQ = DB::table('transactions as t')
+            ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
+            ->where('t.status', 'paid');
+        if ($technicianId !== null) {
+            $allTimeQ->where('sv.technician_id', $technicianId);
+        }
+        $revenueAllTime = (float) $allTimeQ->sum('t.amount');
+
+        if ($technicianId === null) {
+            $totalClients      = Client::count();
+            $clientsThisMonth  = Client::whereBetween('created_at', [$monthStart, $monthEnd])->count();
+            $reminderStats     = $this->reminders->dueList()['stats'];
+            $pending           = $reminderStats['overdue'] + $reminderStats['due_this_month'];
+        } else {
+            $totalClients = (int) DB::table('service_visits')
+                ->where('technician_id', $technicianId)->distinct()->count('client_id');
+            $clientsThisMonth = (int) DB::table('service_visits')
+                ->where('technician_id', $technicianId)
+                ->whereBetween('visit_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->distinct()->count('client_id');
+            $pending = null; // reminders are client-global; omitted for scoped techs (v1)
+        }
 
         return [
-            'total_clients' => Client::count(),
-            'clients_this_month' => Client::whereBetween('created_at', [$monthStart, $monthEnd])->count(),
-            'revenue_month' => $revenueMonth,
-            'revenue_mom_pct' => $revenueLast > 0 ? (int) round((($revenueMonth - $revenueLast) / $revenueLast) * 100) : null,
-            'revenue_all_time' => (float) Transaction::where('status', 'paid')->sum('amount'),
-            'pending_reminders' => $reminderStats['overdue'] + $reminderStats['due_this_month'],
+            'total_clients'      => $totalClients,
+            'clients_this_month' => $clientsThisMonth,
+            'revenue_month'      => $revenueMonth,
+            'revenue_mom_pct'    => $revenueLast > 0 ? (int) round((($revenueMonth - $revenueLast) / $revenueLast) * 100) : null,
+            'revenue_all_time'   => $revenueAllTime,
+            'pending_reminders'  => $pending,
         ];
     }
 
     /**
      * Count of service lines grouped by service type, scoped to the period by visit_date.
+     * When $technicianId is provided, only visits assigned to that technician are counted.
      *
      * @return list<array{type: string, count: int}>
      */
-    public function servicesByType(string $period): array
+    public function servicesByType(string $period, ?int $technicianId = null): array
     {
         [$from, $to] = $this->range($period);
 
         $q = DB::table('service_lines as sl')
             ->join('service_visits as sv', 'sv.id', '=', 'sl.visit_id');
+
+        if ($technicianId !== null) {
+            $q->where('sv.technician_id', $technicianId);
+        }
 
         if ($from) {
             $q->whereBetween('sv.visit_date', [$from->toDateString(), $to->toDateString()]);
@@ -77,10 +114,11 @@ class ReportService
 
     /**
      * Transactions within the period (by COALESCE(paid_at, created_at)), newest first.
+     * When $technicianId is provided, only transactions for visits assigned to that technician are returned.
      *
      * @return list<array<string, mixed>>
      */
-    public function transactions(string $period, ?int $limit = 50): array
+    public function transactions(string $period, ?int $limit = 50, ?int $technicianId = null): array
     {
         [$from, $to] = $this->range($period);
 
@@ -96,6 +134,10 @@ class ReportService
                 'c.serial_no',
                 DB::raw('COALESCE(t.paid_at, t.created_at) as occurred_at'),
             );
+
+        if ($technicianId !== null) {
+            $q->where('sv.technician_id', $technicianId);
+        }
 
         if ($from) {
             $q->whereRaw('COALESCE(t.paid_at, t.created_at) between ? and ?', [$from, $to]);
