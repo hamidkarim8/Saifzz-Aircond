@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\ServiceLine;
+use App\Models\ServiceVisit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ClientTest extends TestCase
@@ -100,5 +103,51 @@ class ClientTest extends TestCase
             ->assertRedirect(route('clients.index'));
 
         $this->assertSoftDeleted($client); // R7
+    }
+
+    public function test_index_includes_enriched_table_fields(): void
+    {
+        $admin = $this->admin();
+        $client = Client::create(['name' => 'Enriched', 'phone' => '011-11223344', 'address' => 'KL']);
+
+        $visit = ServiceVisit::create([
+            'client_id' => $client->id,
+            'visit_date' => '2026-01-10',
+            'warranty_months' => 3,
+            'created_by' => $admin->id,
+        ]);
+
+        ServiceLine::create([
+            'visit_id' => $visit->id,
+            'service_type' => 'Cleaning',
+            'units' => 2,
+            'rate' => 60,
+            'discount' => 0,
+            'next_service_date' => '2026-07-10',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('clients.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('clients.data.0', fn ($row) => $row
+                    ->hasAll(['serial_no', 'name', 'phone', 'last_service_date', 'service_types', 'next_service_date', 'warranty_state'])
+                    ->where('last_service_date', '2026-01-10')
+                    ->where('service_types', ['Cleaning'])
+                    ->where('units', 2)
+                    ->where('next_service_date', '2026-07-10')
+                    ->where('warranty_state', 'expired')
+                    ->etc()));
+    }
+
+    public function test_index_sort_by_name_descending(): void
+    {
+        $admin = $this->admin();
+        Client::create(['name' => 'Ahmad', 'phone' => '012-1112222', 'address' => 'A']);
+        Client::create(['name' => 'Zara', 'phone' => '013-3334444', 'address' => 'B']);
+
+        $this->actingAs($admin)
+            ->get(route('clients.index', ['sort' => 'name', 'dir' => 'desc']))
+            ->assertInertia(fn ($page) => $page
+                ->where('clients.data.0.name', 'Zara'));
     }
 }

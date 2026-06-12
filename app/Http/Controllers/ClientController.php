@@ -8,6 +8,7 @@ use App\Models\Client;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,14 +16,24 @@ class ClientController extends Controller
 {
     /**
      * Client registry — search by name / serial / phone, filter by service type.
+     * Enriches each row with latest-visit aggregates for the DataTable.
      */
     public function index(Request $request): Response
     {
-        $search = trim((string) $request->input('search', ''));
+        $search      = trim((string) $request->input('search', ''));
         $serviceType = $request->input('service_type');
+        $perPage     = (int) $request->input('per_page', 10);
+        $sort        = $request->input('sort', '');
+        $dir         = $request->input('dir', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $sortWhitelist = ['serial_no', 'name', 'last_service_date', 'next_service_date', 'last_amount'];
 
         $clients = Client::query()
             ->withCount('visits')
+            ->with([
+                'visits' => fn ($q) => $q->latest('visit_date')->limit(1),
+                'visits.lines',
+            ])
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('name', 'ilike', "%{$search}%")
@@ -33,13 +44,95 @@ class ClientController extends Controller
             ->when($serviceType, function ($q) use ($serviceType) {
                 $q->whereHas('visits.lines', fn ($q) => $q->where('service_type', $serviceType));
             })
-            ->orderByDesc('created_at')
-            ->paginate(15)
+            ->when(in_array($sort, $sortWhitelist, true), function ($q) use ($sort, $dir) {
+                match ($sort) {
+                    'last_service_date' => $q->orderBy(
+                        \App\Models\ServiceVisit::select('visit_date')
+                            ->whereColumn('client_id', 'clients.id')
+                            ->latest('visit_date')
+                            ->limit(1),
+                        $dir
+                    ),
+                    'next_service_date' => $q->orderBy(
+                        \App\Models\ServiceVisit::select('visit_date')
+                            ->whereColumn('client_id', 'clients.id')
+                            ->latest('visit_date')
+                            ->limit(1),
+                        $dir
+                    ),
+                    'last_amount' => $q->orderBy(
+                        \App\Models\ServiceVisit::select('total_amount')
+                            ->whereColumn('client_id', 'clients.id')
+                            ->latest('visit_date')
+                            ->limit(1),
+                        $dir
+                    ),
+                    default => $q->orderBy($sort, $dir),
+                };
+            }, function ($q) {
+                $q->orderByDesc('created_at');
+            })
+            ->paginate($perPage)
             ->withQueryString();
 
+        // Enrich each client with computed fields from their latest visit.
+        $today = Carbon::today();
+        $clients->getCollection()->transform(function ($client) use ($today) {
+            $latestVisit = $client->visits->first(); // already sorted latest first
+
+            if ($latestVisit === null) {
+                $client->last_service_date = null;
+                $client->service_types     = [];
+                $client->units             = 0;
+                $client->next_service_date = null;
+                $client->last_amount       = null;
+                $client->warranty_state    = 'none';
+                $client->warranty_label    = 'No warranty';
+            } else {
+                $lines = $latestVisit->lines;
+
+                $client->last_service_date = $latestVisit->visit_date?->toDateString();
+                $client->service_types     = $lines->pluck('service_type')->unique()->values()->all();
+                $client->units             = (int) $lines->sum('units');
+
+                // MAX next_service_date across lines (only lines that have one)
+                $nextDates = $lines->pluck('next_service_date')->filter();
+                $client->next_service_date = $nextDates->count()
+                    ? $nextDates->max(fn ($d) => $d instanceof \Illuminate\Support\Carbon ? $d->toDateString() : (string) $d)
+                    : null;
+                if ($client->next_service_date instanceof \Illuminate\Support\Carbon) {
+                    $client->next_service_date = $client->next_service_date->toDateString();
+                }
+
+                $client->last_amount = $latestVisit->total_amount;
+
+                // Warranty state
+                $warrantyEnd = $latestVisit->warranty_end;
+                if ($warrantyEnd === null) {
+                    $client->warranty_state = 'none';
+                    $client->warranty_label = 'No warranty';
+                } elseif ($warrantyEnd->lt($today)) {
+                    $client->warranty_state = 'expired';
+                    $client->warranty_label = 'Expired';
+                } elseif ($warrantyEnd->lte($today->copy()->addDays(30))) {
+                    $client->warranty_state = 'expiring';
+                    $client->warranty_label = 'Expires ' . $warrantyEnd->format('d M');
+                } else {
+                    $client->warranty_state = 'active';
+                    $months = (int) $today->diffInMonths($warrantyEnd);
+                    $client->warranty_label = $months > 0 ? "{$months} mos left" : 'Active';
+                }
+            }
+
+            // Unset the loaded relation to keep the payload clean
+            unset($client->visits);
+
+            return $client;
+        });
+
         return Inertia::render('Clients/Index', [
-            'clients' => $clients,
-            'filters' => ['search' => $search, 'service_type' => $serviceType],
+            'clients'      => $clients,
+            'filters'      => ['search' => $search, 'service_type' => $serviceType],
             'serviceTypes' => self::SERVICE_TYPES,
         ]);
     }
