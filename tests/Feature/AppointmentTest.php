@@ -169,4 +169,42 @@ class AppointmentTest extends TestCase
                 ->where('stats.month_pending', 1)
             );
     }
+
+    public function test_index_table_supports_search_sort_and_pagination(): void
+    {
+        $client = Client::create(['name' => 'Ahmad Zaki', 'phone' => '012-9998888', 'address' => 'Taman Maju']);
+
+        Appointment::create(['datetime' => '2026-06-05 09:00', 'service_type' => 'Cleaning', 'phone' => '011-11111111', 'address' => 'Alpha St', 'status' => 'confirmed', 'client_id' => $client->id]);
+        Appointment::create(['datetime' => '2026-06-10 10:00', 'service_type' => 'Repair',   'phone' => '011-22222222', 'address' => 'Beta Rd',  'status' => 'pending']);
+        Appointment::create(['datetime' => '2026-06-15 11:00', 'service_type' => 'Cleaning', 'phone' => '011-33333333', 'address' => 'Gamma Ave','status' => 'pending']);
+        Appointment::create(['datetime' => '2026-06-20 12:00', 'service_type' => 'Repair',   'phone' => '011-44444444', 'address' => 'Delta Blvd','status' => 'confirmed']);
+        Appointment::create(['datetime' => '2026-06-25 13:00', 'service_type' => 'Cleaning', 'phone' => '011-55555555', 'address' => 'Epsilon Ln','status' => 'pending']);
+
+        // Per-page 2 + sort desc should give 2 items in table, all 5 in calendar
+        $this->actingAs($this->setter())
+            ->get(route('appointments.index', [
+                'month'    => '2026-06',
+                'sort'     => 'datetime',
+                'dir'      => 'desc',
+                'per_page' => 2,
+            ]))
+            ->assertInertia(fn ($page) => $page
+                ->component('Appointments/Index')
+                ->has('appointments', 5)          // calendar always sees full month
+                ->has('table.data', 2)            // paginator limited to 2
+                ->where('table.per_page', 2)
+                ->where('table.total', 5)
+            );
+
+        // Search by client name should narrow table but not the calendar
+        $this->actingAs($this->setter())
+            ->get(route('appointments.index', [
+                'month'  => '2026-06',
+                'search' => 'Ahmad',
+            ]))
+            ->assertInertia(fn ($page) => $page
+                ->has('appointments', 5)          // calendar unchanged
+                ->has('table.data', 1)            // only the one with Ahmad Zaki
+            );
+    }
 }

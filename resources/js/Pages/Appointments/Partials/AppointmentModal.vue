@@ -99,6 +99,11 @@ const submit = () => {
                 <p class="mt-1 text-sm text-ink-soft">Pick an existing client to pre-fill details, or enter them manually for a new lead.</p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="submit">
+                    <!-- Form error summary -->
+                    <div v-if="Object.keys(form.errors).length" class="rounded-ra border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger">
+                        Please fix the errors below before saving.
+                    </div>
+
                     <!-- Client (optional) -->
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Client <span class="font-normal text-ink-muted">(optional)</span></label>

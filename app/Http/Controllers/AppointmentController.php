@@ -44,8 +44,32 @@ class AppointmentController extends Controller
             'today_total' => $today->count(),
         ];
 
+        // --- Table query (paginated, searchable, sortable) ---
+        $sortWhitelist = ['datetime', 'status'];
+        $sort = in_array($request->input('sort'), $sortWhitelist, true)
+            ? $request->input('sort')
+            : 'datetime';
+        $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+        $perPage = max(1, min(100, (int) $request->input('per_page', 10)));
+        $search = $request->input('search', '');
+
+        $tableQuery = Appointment::query()
+            ->with('client:id,serial_no,name')
+            ->forMonth($month);
+
+        if ($search) {
+            $tableQuery->where(function ($q) use ($search) {
+                $q->where('appointments.phone', 'like', '%'.$search.'%')
+                  ->orWhere('appointments.address', 'like', '%'.$search.'%')
+                  ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', '%'.$search.'%'));
+            });
+        }
+
+        $table = $tableQuery->orderBy($sort, $dir)->paginate($perPage)->withQueryString();
+
         return Inertia::render('Appointments/Index', [
             'appointments' => $appointments,
+            'table' => $table,
             'today' => $today,
             'month' => $month,
             'stats' => $stats,
