@@ -48,6 +48,19 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'reminderCount' => $this->reminderCount($request),
         ];
+    }
+
+    private function reminderCount(Request $request): int
+    {
+        $user = $request->user();
+        if (! $user || ! $user->can('view_clients')) {
+            return 0;
+        }
+        $list = app(\App\Services\Reminders\ReminderService::class)->dueList();
+
+        // dueList() returns keys: overdue, due_this_month, stats.
+        return count($list['overdue']) + count($list['due_this_month']);
     }
 }
