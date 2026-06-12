@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreServiceVisitRequest;
 use App\Models\Client;
 use App\Models\ServiceFee;
+use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
@@ -57,7 +58,7 @@ class ServiceVisitController extends Controller
     {
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => StoreServiceVisitRequest::SERVICE_TYPES,
+            'serviceTypes' => ServiceType::pluck('name')->all(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,

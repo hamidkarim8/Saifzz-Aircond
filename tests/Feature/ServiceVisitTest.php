@@ -13,6 +13,12 @@ class ServiceVisitTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+    }
+
     private function recorder(): User
     {
         return User::factory()->create([

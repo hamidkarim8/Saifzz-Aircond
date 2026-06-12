@@ -32,7 +32,7 @@ class StoreServiceVisitRequest extends FormRequest
             'technician_id' => ['nullable', 'integer', 'exists:users,id'],
 
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.service_type' => ['required', Rule::in(self::SERVICE_TYPES)],
+            'lines.*.service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
             'lines.*.unit_type' => ['nullable', Rule::in(self::UNIT_TYPES)],
             'lines.*.gas_option' => ['nullable', Rule::in(self::GAS_OPTIONS)],
             'lines.*.repair_desc' => ['nullable', 'string', 'max:1000'],
@@ -78,7 +78,6 @@ class StoreServiceVisitRequest extends FormRequest
         });
     }
 
-    public const SERVICE_TYPES = ['Cleaning', 'Gas Top-Up', 'Repair', 'Installation', 'Troubleshoot'];
     public const UNIT_TYPES = ['Wall Mounted', 'Cassette'];
     public const GAS_OPTIONS = ['20 PSI', 'Half Top-Up', 'Full Top-Up'];
 

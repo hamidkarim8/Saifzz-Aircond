@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\ServiceType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,6 +12,12 @@ use Tests\TestCase;
 class AppointmentTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+    }
 
     private function setter(array $permissions = ['view_clients', 'set_appointment']): User
     {

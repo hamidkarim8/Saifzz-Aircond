@@ -14,6 +14,12 @@ class TechnicianScopingTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+    }
+
     public function test_service_visits_have_technician_id_column(): void
     {
         $this->assertTrue(Schema::hasColumn('service_visits', 'technician_id'));

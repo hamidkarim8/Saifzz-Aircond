@@ -11,6 +11,12 @@ class ServiceFeeTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+    }
+
     private function admin(): User
     {
         return User::factory()->create(['role' => User::ROLE_ADMIN]);

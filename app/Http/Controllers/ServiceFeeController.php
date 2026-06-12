@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreServiceFeeRequest;
 use App\Http\Requests\UpdateServiceFeeRequest;
 use App\Models\ServiceFee;
+use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,7 +22,7 @@ class ServiceFeeController extends Controller
 
         return Inertia::render('Fees/Index', [
             'feeGroups' => $fees->groupBy('service_type'),
-            'serviceTypes' => StoreServiceFeeRequest::SERVICE_TYPES,
+            'serviceTypes' => ServiceType::pluck('name')->all(),
             'modes' => StoreServiceFeeRequest::MODES,
         ]);
     }

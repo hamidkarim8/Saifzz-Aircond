@@ -18,7 +18,7 @@ class StoreServiceFeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'service_type' => ['required', Rule::in(self::SERVICE_TYPES)],
+            'service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
             'option' => ['nullable', 'string', 'max:255'],
             'pricing_mode' => ['required', Rule::in(self::MODES)],
             // Flexible (Repair) carries no rate; everything else needs one.
@@ -38,6 +38,5 @@ class StoreServiceFeeRequest extends FormRequest
         });
     }
 
-    public const SERVICE_TYPES = ['Cleaning', 'Gas Top-Up', 'Repair', 'Installation', 'Troubleshoot'];
     public const MODES = ['fixed_per_unit', 'tiered', 'flexible'];
 }

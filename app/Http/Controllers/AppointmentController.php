@@ -6,6 +6,7 @@ use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -76,7 +77,7 @@ class AppointmentController extends Controller
             'today' => $today,
             'month' => $month,
             'stats' => $stats,
-            'serviceTypes' => Appointment::SERVICE_TYPES,
+            'serviceTypes' => ServiceType::pluck('name')->all(),
             'transitions' => Appointment::TRANSITIONS,
             // Optional pre-selected client (e.g. arriving from a client profile or reminder).
             'presetClient' => $request->filled('client')

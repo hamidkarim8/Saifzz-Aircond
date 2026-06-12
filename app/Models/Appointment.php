@@ -12,9 +12,6 @@ class Appointment extends Model
 {
     use HasFactory;
 
-    /** Service types an appointment can be booked for (mirrors the fee book). */
-    public const SERVICE_TYPES = ['Cleaning', 'Gas Top-Up', 'Repair', 'Installation', 'Troubleshoot'];
-
     /** Status lifecycle (docs/04 §7): pending → confirmed → done / cancelled. */
     public const STATUSES = ['pending', 'confirmed', 'done', 'cancelled'];
 

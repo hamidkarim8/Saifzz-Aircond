@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Appointment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +22,7 @@ class StoreAppointmentRequest extends FormRequest
             'client_id' => ['nullable', 'exists:clients,id'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
-            'service_type' => ['required', Rule::in(Appointment::SERVICE_TYPES)],
+            'service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
             'units' => ['nullable', 'integer', 'min:1'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'phone' => ['required', 'string', 'regex:/^01\d-?\d{7,8}$/'],
