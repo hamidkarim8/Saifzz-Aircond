@@ -106,7 +106,8 @@ class AppointmentTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->actingAs($this->setter())
+        // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
+        $this->actingAs(User::factory()->admin()->create())
             ->put(route('appointments.update', $a), $this->payload([
                 'service_type' => 'Repair',
                 'address' => 'New address',
@@ -128,7 +129,8 @@ class AppointmentTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->actingAs($this->setter())
+        // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
+        $this->actingAs(User::factory()->admin()->create())
             ->patch(route('appointments.status', $a), ['status' => 'confirmed'])
             ->assertRedirect();
 
@@ -145,7 +147,8 @@ class AppointmentTest extends TestCase
             'status' => 'done', // terminal
         ]);
 
-        $this->actingAs($this->setter())
+        // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
+        $this->actingAs(User::factory()->admin()->create())
             ->patch(route('appointments.status', $a), ['status' => 'pending'])
             ->assertStatus(422);
 

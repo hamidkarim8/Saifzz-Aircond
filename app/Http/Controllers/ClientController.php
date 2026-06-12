@@ -164,11 +164,12 @@ class ClientController extends Controller
 
     public function show(Client $client): Response
     {
+        $user = request()->user();
         $client->load([
-            'visits' => fn ($q) => $q->latest('visit_date'),
+            'visits' => fn ($q) => $q->visibleTo($user)->latest('visit_date'),
             'visits.lines',
             'visits.transaction',
-            'appointments' => fn ($q) => $q->latest('datetime'),
+            'appointments' => fn ($q) => $q->visibleTo($user)->latest('datetime'),
         ]);
 
         return Inertia::render('Clients/Show', [

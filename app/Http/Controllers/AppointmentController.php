@@ -107,8 +107,19 @@ class AppointmentController extends Controller
 
     public function update(UpdateAppointmentRequest $request, Appointment $appointment): RedirectResponse
     {
+        abort_unless(
+            Appointment::whereKey($appointment->getKey())->visibleTo($request->user())->exists(),
+            403,
+        );
+
+        $user = $request->user();
+        $data = $request->appointmentData();
+        $data['technician_id'] = $user->seesAllData()
+            ? $request->input('technician_id')
+            : $appointment->technician_id;
+
         // Status is owned by the lifecycle endpoint, not the edit form.
-        $appointment->update($request->appointmentData());
+        $appointment->update($data);
 
         return redirect()
             ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])
@@ -120,6 +131,11 @@ class AppointmentController extends Controller
      */
     public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
     {
+        abort_unless(
+            Appointment::whereKey($appointment->getKey())->visibleTo($request->user())->exists(),
+            403,
+        );
+
         $request->validate([
             'status' => ['required', Rule::in(Appointment::STATUSES)],
         ]);

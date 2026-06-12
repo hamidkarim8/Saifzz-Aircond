@@ -280,4 +280,82 @@ class TechnicianScopingTest extends TestCase
 
         $this->actingAs($alice)->get(route('documents.invoice', $txn))->assertForbidden();
     }
+
+    // ---- Issue 1: ClientController::show history scoping ----
+
+    public function test_client_show_scopes_visit_and_appointment_history(): void
+    {
+        $alice = $this->tech(['view_clients', 'record_service']);
+        $bob = $this->tech(['view_clients']);
+        $client = Client::create(['name' => 'Shared', 'phone' => '011-0000000', 'address' => 'KL']);
+        $client->visits()->create(['visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => 100, 'created_by' => $alice->id, 'technician_id' => $alice->id]);
+        $client->visits()->create(['visit_date' => '2026-06-02', 'warranty_months' => 0, 'total_amount' => 200, 'created_by' => $bob->id, 'technician_id' => $bob->id]);
+        $client->appointments()->create(['datetime' => '2026-06-20 10:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'technician_id' => $alice->id]);
+        $client->appointments()->create(['datetime' => '2026-06-21 10:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'technician_id' => $bob->id]);
+
+        // Alice (scoped) sees only her own visit + appointment on the profile.
+        $this->actingAs($alice)->get(route('clients.show', $client))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('client.visits', 1)
+                ->has('client.appointments', 1)
+                ->where('client.visits.0.technician_id', $alice->id));
+
+        // Admin sees both visits + both appointments.
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get(route('clients.show', $client))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('client.visits', 2)
+                ->has('client.appointments', 2));
+    }
+
+    // ---- Issue 2: AppointmentController update/updateStatus unscoped ----
+
+    private function aptTech(): User
+    {
+        return User::factory()->technician()->create(['permissions' => ['view_clients', 'set_appointment']]);
+    }
+
+    public function test_appointment_update_forbidden_for_non_owner(): void
+    {
+        $alice = $this->aptTech();
+        $bob = $this->aptTech();
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+
+        $this->actingAs($alice)->put(route('appointments.update', $appt), [
+            'client_id' => $client->id, 'date' => '2026-07-02', 'time' => '10:00',
+            'service_type' => 'Cleaning', 'units' => 1, 'phone' => '012-3456789', 'address' => 'KL',
+        ])->assertForbidden();
+    }
+
+    public function test_appointment_status_update_forbidden_for_non_owner(): void
+    {
+        $alice = $this->aptTech();
+        $bob = $this->aptTech();
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+
+        $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'confirmed'])
+            ->assertForbidden();
+    }
+
+    // ---- Issue 3: update() must honour technician_id for all-data users ----
+
+    public function test_admin_can_reassign_appointment_technician(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $bob = $this->aptTech();
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => null]);
+
+        $this->actingAs($admin)->put(route('appointments.update', $appt), [
+            'client_id' => $client->id, 'date' => '2026-07-01', 'time' => '09:00',
+            'service_type' => 'Cleaning', 'units' => 1, 'phone' => '012-3456789', 'address' => 'KL',
+            'technician_id' => $bob->id,
+        ])->assertRedirect();
+
+        $this->assertSame($bob->id, $appt->fresh()->technician_id);
+    }
 }
