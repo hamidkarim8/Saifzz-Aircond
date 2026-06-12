@@ -11,8 +11,19 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class PaymentController extends Controller
 {
+    private function authorizeVisitScope(\App\Models\Transaction $transaction): void
+    {
+        abort_unless(
+            \App\Models\ServiceVisit::whereKey($transaction->visit_id)
+                ->visibleTo(request()->user())->exists(),
+            403,
+        );
+    }
+
     public function show(Transaction $transaction): Response|RedirectResponse
     {
+        $this->authorizeVisitScope($transaction);
+
         if ($transaction->status === 'paid') {
             return redirect()->route('payments.return', $transaction);
         }
@@ -37,6 +48,8 @@ class PaymentController extends Controller
 
     public function cash(Transaction $transaction, PaymentService $payments): RedirectResponse
     {
+        $this->authorizeVisitScope($transaction);
+
         $payments->confirmCash($transaction);
 
         return redirect()->route('payments.return', $transaction)
@@ -45,6 +58,8 @@ class PaymentController extends Controller
 
     public function pay(Transaction $transaction, PaymentService $payments): HttpResponse
     {
+        $this->authorizeVisitScope($transaction);
+
         if ($transaction->status === 'paid') {
             return redirect()->route('payments.return', $transaction);
         }

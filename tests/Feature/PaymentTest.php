@@ -22,13 +22,14 @@ class PaymentTest extends TestCase
         ]);
     }
 
-    private function pendingTransaction(float $amount = 110.0): Transaction
+    private function pendingTransaction(float $amount = 110.0, ?int $technicianId = null): Transaction
     {
         $client = Client::create(['name' => 'Zainab', 'phone' => '012-3456789', 'address' => 'KL']);
         $visit = $client->visits()->create([
             'visit_date' => '2026-06-11',
             'warranty_months' => 0,
             'total_amount' => $amount,
+            'technician_id' => $technicianId,
         ]);
         $visit->lines()->create([
             'service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted',
@@ -45,9 +46,10 @@ class PaymentTest extends TestCase
 
     public function test_cash_confirm_marks_paid_and_creates_receipt(): void
     {
-        $txn = $this->pendingTransaction();
+        $collector = $this->collector();
+        $txn = $this->pendingTransaction(110.0, $collector->id);
 
-        $this->actingAs($this->collector())
+        $this->actingAs($collector)
             ->post(route('payments.cash', $txn))
             ->assertRedirect(route('payments.return', $txn));
 
@@ -65,8 +67,8 @@ class PaymentTest extends TestCase
 
     public function test_cash_confirm_is_idempotent(): void
     {
-        $txn = $this->pendingTransaction();
         $collector = $this->collector();
+        $txn = $this->pendingTransaction(110.0, $collector->id);
 
         $this->actingAs($collector)->post(route('payments.cash', $txn));
         $this->actingAs($collector)->post(route('payments.cash', $txn));
@@ -87,28 +89,31 @@ class PaymentTest extends TestCase
 
     public function test_payment_page_renders_for_collector(): void
     {
-        $txn = $this->pendingTransaction();
+        $collector = $this->collector();
+        $txn = $this->pendingTransaction(110.0, $collector->id);
 
-        $this->actingAs($this->collector())
+        $this->actingAs($collector)
             ->get(route('payments.show', $txn))
             ->assertOk();
     }
 
     public function test_paid_transaction_redirects_show_to_return(): void
     {
-        $txn = $this->pendingTransaction();
-        $this->actingAs($this->collector())->post(route('payments.cash', $txn));
+        $collector = $this->collector();
+        $txn = $this->pendingTransaction(110.0, $collector->id);
+        $this->actingAs($collector)->post(route('payments.cash', $txn));
 
-        $this->actingAs($this->collector())
+        $this->actingAs($collector)
             ->get(route('payments.show', $txn))
             ->assertRedirect(route('payments.return', $txn));
     }
 
     public function test_return_page_renders(): void
     {
-        $txn = $this->pendingTransaction();
+        $collector = $this->collector();
+        $txn = $this->pendingTransaction(110.0, $collector->id);
 
-        $this->actingAs($this->collector())
+        $this->actingAs($collector)
             ->get(route('payments.return', $txn))
             ->assertOk();
     }

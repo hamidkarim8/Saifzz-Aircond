@@ -21,10 +21,13 @@ class DocumentControllerTest extends TestCase
         ]);
     }
 
-    private function transaction(string $status = 'pending'): Transaction
+    private function transaction(string $status = 'pending', ?int $technicianId = null): Transaction
     {
         $client = Client::create(['name' => 'Zainab', 'phone' => '012-3456789', 'address' => 'No. 5, Jalan Maju, KL']);
-        $visit = $client->visits()->create(['visit_date' => '2026-06-08', 'warranty_months' => 3, 'total_amount' => 110]);
+        $visit = $client->visits()->create([
+            'visit_date' => '2026-06-08', 'warranty_months' => 3, 'total_amount' => 110,
+            'technician_id' => $technicianId,
+        ]);
         $visit->lines()->create([
             'service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted',
             'units' => 2, 'rate' => 60, 'discount' => 10, 'next_service_date' => '2026-09-05',
@@ -37,9 +40,10 @@ class DocumentControllerTest extends TestCase
 
     public function test_invoice_view_renders_html_with_number(): void
     {
-        $txn = $this->transaction();
+        $viewer = $this->viewer();
+        $txn = $this->transaction('pending', $viewer->id);
 
-        $res = $this->actingAs($this->viewer())->get(route('documents.invoice', $txn));
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
 
         $res->assertOk();
         $res->assertSee('INV-', false);
@@ -48,9 +52,10 @@ class DocumentControllerTest extends TestCase
 
     public function test_invoice_pdf_downloads(): void
     {
-        $txn = $this->transaction();
+        $viewer = $this->viewer();
+        $txn = $this->transaction('pending', $viewer->id);
 
-        $res = $this->actingAs($this->viewer())->get(route('documents.invoice.pdf', $txn));
+        $res = $this->actingAs($viewer)->get(route('documents.invoice.pdf', $txn));
 
         $res->assertOk();
         $this->assertSame('application/pdf', $res->headers->get('content-type'));
@@ -60,10 +65,11 @@ class DocumentControllerTest extends TestCase
 
     public function test_receipt_view_renders_for_paid_transaction(): void
     {
-        $txn = $this->transaction();
+        $viewer = $this->viewer();
+        $txn = $this->transaction('pending', $viewer->id);
         app(PaymentService::class)->confirmCash($txn); // issues a Receipt
 
-        $res = $this->actingAs($this->viewer())->get(route('documents.receipt', $txn->fresh()));
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
 
         $res->assertOk();
         $res->assertSee('RCP-', false);
@@ -71,19 +77,21 @@ class DocumentControllerTest extends TestCase
 
     public function test_receipt_returns_404_when_unpaid(): void
     {
-        $txn = $this->transaction();
+        $viewer = $this->viewer();
+        $txn = $this->transaction('pending', $viewer->id);
 
-        $this->actingAs($this->viewer())
+        $this->actingAs($viewer)
             ->get(route('documents.receipt', $txn))
             ->assertNotFound();
     }
 
     public function test_receipt_pdf_downloads_for_paid_transaction(): void
     {
-        $txn = $this->transaction();
+        $viewer = $this->viewer();
+        $txn = $this->transaction('pending', $viewer->id);
         app(PaymentService::class)->confirmCash($txn);
 
-        $res = $this->actingAs($this->viewer())->get(route('documents.receipt.pdf', $txn->fresh()));
+        $res = $this->actingAs($viewer)->get(route('documents.receipt.pdf', $txn->fresh()));
 
         $res->assertOk();
         $this->assertSame('application/pdf', $res->headers->get('content-type'));

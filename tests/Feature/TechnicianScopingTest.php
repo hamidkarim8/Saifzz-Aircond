@@ -248,4 +248,36 @@ class TechnicianScopingTest extends TestCase
         $this->assertStringContainsString('100.00', $csv);
         $this->assertStringNotContainsString('200.00', $csv);
     }
+
+    private function paidTxnFor(int $techId): \App\Models\Transaction
+    {
+        $client = Client::create(['name' => 'C'.$techId, 'phone' => '011-0000000', 'address' => 'KL']);
+        $visit = $client->visits()->create([
+            'visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => 100,
+            'created_by' => $techId, 'technician_id' => $techId,
+        ]);
+        return $visit->transaction()->create([
+            'txn_id' => 'TXN-20260601-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount' => 100, 'method' => 'Cash', 'status' => 'pending',
+        ]);
+    }
+
+    public function test_payment_show_forbidden_for_non_owner(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['collect_payment']]);
+        $bob = User::factory()->technician()->create(['permissions' => ['collect_payment']]);
+        $txn = $this->paidTxnFor($bob->id);
+
+        $this->actingAs($alice)->get(route('payments.show', $txn))->assertForbidden();
+        $this->actingAs($bob)->get(route('payments.show', $txn))->assertOk();
+    }
+
+    public function test_document_invoice_forbidden_for_non_owner(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['view_clients']]);
+        $bob = User::factory()->technician()->create(['permissions' => ['view_clients']]);
+        $txn = $this->paidTxnFor($bob->id);
+
+        $this->actingAs($alice)->get(route('documents.invoice', $txn))->assertForbidden();
+    }
 }

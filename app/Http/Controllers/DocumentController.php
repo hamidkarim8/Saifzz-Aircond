@@ -12,13 +12,26 @@ class DocumentController extends Controller
 {
     public function __construct(private readonly DocumentService $documents) {}
 
+    private function authorizeVisitScope(\App\Models\Transaction $transaction): void
+    {
+        abort_unless(
+            \App\Models\ServiceVisit::whereKey($transaction->visit_id)
+                ->visibleTo(request()->user())->exists(),
+            403,
+        );
+    }
+
     public function invoice(Transaction $transaction): Response
     {
+        $this->authorizeVisitScope($transaction);
+
         return response(view('documents.invoice', $this->invoiceData($transaction)));
     }
 
     public function invoicePdf(Transaction $transaction): Response
     {
+        $this->authorizeVisitScope($transaction);
+
         $data = $this->invoiceData($transaction);
 
         return Pdf::loadView('documents.invoice', $data)->download($data['number'].'.pdf');
@@ -26,11 +39,15 @@ class DocumentController extends Controller
 
     public function receipt(Transaction $transaction): Response
     {
+        $this->authorizeVisitScope($transaction);
+
         return response(view('documents.receipt', $this->receiptData($transaction)));
     }
 
     public function receiptPdf(Transaction $transaction): Response
     {
+        $this->authorizeVisitScope($transaction);
+
         $data = $this->receiptData($transaction);
 
         return Pdf::loadView('documents.receipt', $data)->download($data['number'].'.pdf');
