@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
+use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\StubGatewayController;
 use App\Http\Controllers\UserController;
@@ -65,6 +66,13 @@ Route::middleware('auth')->group(function () {
         Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
+    });
+
+    // Service Types (manage_service_types — admin + technician)
+    Route::middleware('can:manage_service_types')->group(function () {
+        Route::get('service-types', [ServiceTypeController::class, 'index'])->name('service-types.index');
+        Route::post('service-types', [ServiceTypeController::class, 'store'])->name('service-types.store');
+        Route::put('service-types/{serviceType}', [ServiceTypeController::class, 'update'])->name('service-types.update');
     });
 
     // Users (module 1) — staff management; manage_users is admin-only (P1), so only admins reach these.
