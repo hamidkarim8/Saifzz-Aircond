@@ -25,6 +25,7 @@ have only those granted.
 | `view_reports` | Dashboard revenue figures, reports, CSV export | ❌ |
 | `edit_fees` | Maintain the service-fee price book | ❌ |
 | `export_data` | Export transactions / data to CSV | ❌ |
+| `view_all_data` | See all technicians' jobs, revenue, and reports (not just own) | ❌ |
 | `manage_users` | Create staff, grant/revoke permissions | ❌ **admin-only — never grantable to technicians** |
 
 ### Default minimum (new technician)

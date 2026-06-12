@@ -45,6 +45,7 @@ One "Add Service Record" submission — a single visit that may bundle several s
 | `warranty_end` | **Derived** = `visit_date + warranty_months`. Null if 0. |
 | `total_amount` | **Derived** = sum of line subtotals |
 | `created_by` | FK → User (who recorded it) |
+| `technician_id` | FK → User (who performed it — may differ from recorder). Backfilled from `created_by` for legacy rows. Drives row-level scoping. |
 | `created_at` | |
 
 Has one or more ServiceLines (minimum 1). Has exactly one Transaction.
@@ -120,6 +121,7 @@ A planned future job. **Separate from ServiceVisit**, loosely linked to a client
 | Field | Notes |
 |-------|-------|
 | `client_serial` | FK → Client |
+| `technician_id` | FK → User (assigned technician). Drives row-level scoping. |
 | `datetime` | Date + time |
 | `service_type` | Intended service |
 | `units` | Estimated |

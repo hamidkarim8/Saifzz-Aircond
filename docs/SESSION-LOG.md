@@ -6,6 +6,58 @@
 
 ---
 
+## Session 18 — 2026-06-12 — Hot fixes (migration + soft-deleted client crash)
+
+**Goal:** Fix runtime errors found during first visual review of the live app after technician-scoping ship.
+
+**Problems hit & fixes**
+- `SQLSTATE[42703]: Undefined column sv.technician_id` — migration `2026_06_12_000110_add_technician_scoping` was pending in the live DB (had only run in the test DB). Fixed: `docker exec saifzz-aircond-laravel.test-1 php artisan migrate`.
+- `TypeError: Cannot read properties of null (reading 'id')` on `ServiceRecords/Show` — `visit.client` was null because the client referenced by some visits had been soft-deleted. `ServiceVisit::client()` and `Appointment::client()` relations both had plain `belongsTo` — added `->withTrashed()` so historical records always resolve their client.
+
+**Tests:** 187 passed / 727 assertions (unchanged — fixes were data/relation level, no new tests needed).
+
+**Next:** Owner visual review of scoping UI. Pending Round 1 polish: MonthCalendar dots, Fees Repair option-field, Reminders card fields.
+
+---
+
+## Session 17 — 2026-06-12 — Technician data scoping
+
+**Goal:** Row-level data ownership — technicians see only their own jobs/revenue/appointments; admins + `view_all_data`-granted users see everything. Brainstormed → spec'd → planned → implemented (subagent-driven TDD, 12 tasks).
+
+**Decisions**
+- **Hybrid design:** new `technician_id` owner column on `service_visits` + `appointments` (distinct from `created_by` = recorder). Single scoping seam: `scopeVisibleTo($q, $user)` on both models, applied at the query layer. Keeps client LIST global (techs need to find any client) but scopes visit/appointment history within client profiles.
+- **`view_all_data` permission** — grantable, non-default, NOT admin-only (admins implicit via `Gate::before`). `User::seesAllData()` = `hasPermission('view_all_data')`.
+- Write path: scoped techs are forced to self as `technician_id`; all-data users can assign another tech via selectors.
+- **`pending_reminders` KPI → null for scoped techs** (reminders are client-global — v1 decision).
+- Visits backfilled: `technician_id = created_by` for all existing rows.
+- Client list global; client-profile history scoped.
+- Spec: `docs/superpowers/specs/2026-06-12-technician-data-scoping-design.md`. Plan: `docs/superpowers/plans/2026-06-12-technician-data-scoping.md`.
+
+**Done**
+- Migration: `technician_id` nullable FK on `service_visits` (after `created_by`) + `appointments` (after `client_id`), with backfill.
+- `User`: `view_all_data` in `PERMISSIONS`; `seesAllData()` helper.
+- `ServiceVisit` + `Appointment`: `technician_id` fillable, `technician()` relation, `scopeVisibleTo`.
+- `ServiceVisitController`: index scoped; store forces self; show 403 guard; create passes `technicians` prop.
+- `AppointmentController`: all 3 index queries scoped; store + update + updateStatus scoped + guarded.
+- `DashboardController` + `ReportController`: scoped KPIs/chart/transactions via `$scopeId`.
+- `ReportService::kpis/servicesByType/transactions`: all accept `?int $technicianId` — null = global, non-null = filtered.
+- `PaymentController` + `DocumentController`: private `authorizeVisitScope` helper, 403 on each single-resource route.
+- `ClientController::show`: eager loads for visits + appointments get `->visibleTo($user)`.
+- Frontend: technician selector on `ServiceRecords/Create` + `AppointmentModal`; "My Jobs" / "Service Records" dynamic title on `ServiceRecords/Index`; `view_all_data` label in `UserModal`.
+- 23 new tests in `TechnicianScopingTest`; regressions fixed in ServiceVisit/Appointment/Payment/Document/Dashboard test files.
+
+**Tests:** 187 passed / 727 assertions.
+
+**Notes / bugs caught in review**
+- `AppointmentController::update` + `updateStatus` were unguarded — scoped tech could PATCH any appointment. Fixed with `abort_unless(...visibleTo()...exists(), 403)`.
+- `ClientController::show` leaked full visit + appointment history to scoped techs. Fixed with `->visibleTo($user)` in eager-load constraints.
+- `AppointmentController::update` dropped `technician_id` (not in `appointmentData()`). Fixed with explicit assignment (all-data = submitted, scoped = keep existing).
+- Real test runner discovery: agent shell is Git Bash (no PHP); tests only run via `docker exec saifzz-aircond-laravel.test-1 php artisan test`. Saved to memory.
+
+**Next:** Migration to live DB + owner visual review.
+
+---
+
 ## Session 16 — 2026-06-12 — UI/UX Upgrade Round 1
 
 **Goal:** Raise the live app from ~60% visual match with the mockup (`index.html`, Service System v4) to a close, consistent match across all admin pages + the client portal — responsive on phone/iPad/desktop, full-feature datatables, polished toast/confirm, proper error display.
