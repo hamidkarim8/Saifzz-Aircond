@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-12 (session 15)
+> **Last updated:** 2026-06-12 (session 16)
 
 ---
 
@@ -49,14 +49,16 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 
 - **Module 1 — Users Management** done (last feature module): admin-only screen to create staff accounts, toggle granular permissions (checkbox grid of 8 grantable permissions), enable/disable accounts. `UserController` (index/store/update/toggleActive), `StoreUserRequest` + `UpdateUserRequest` (validate against all `PERMISSIONS`; `grantPermission()` silently drops `manage_users` — P1), all routes gated `can:manage_users`. `UserFactory` `admin()`/`technician()` states added. `Pages/Users/Index.vue` (staff table, active toggle switch, edit button for technicians) + `UserModal.vue` (create/edit modal with permission checkboxes, permission descriptions). Users nav item in AdminLayout (admin-only via `manage_users` gate). Guard rails: cannot deactivate self (422), cannot edit another admin (403), no delete — deactivate only (preserves audit history). **Full suite: 151 passed / 458 assertions** (new: UserManagementTest ×13).
 
+- **UI/UX Upgrade Round 1** (session 16) done: live app brought to a close, consistent match with the mockup across all admin pages + portal, responsive on phone/iPad/desktop. New shared layer — `DataTable` (hybrid client/server: search+sort+paginate+filter on every table), SweetAlert2 toast+confirm (`lib/swal.js`, navy-themed, flash→toast bridge; native `confirm()` gone), Tabler icons, and primitives (`StatCard`/`Badge`/`WarrantyPill`/`Card`/`PageHeader`/`FormErrorSummary`/restyled `InputError`). `AdminLayout` rebuilt (sidebar sections, user block, Reminders badge via shared `reminderCount`). Backend (TDD): `ClientController@index` enriched per-row + **eager-load bug fixed** (`latestOfMany`); `ServiceVisitController`/`AppointmentController` index gained server sort/search/per_page. Every page refactored onto the shared layer; portal security behavior unchanged. **Full suite: 161 passed / 630 assertions** (+10). Spec/plan in `docs/superpowers/`. Owner visual review pending; dashboard/technician-scoping brainstorm deferred to a dedicated session.
 - **Auth UI rebrand** (session 14): staff `Login`/`Register` moved off default Breeze onto the design system (`GuestLayout` rebranded, native inputs + tokens); `Welcome.vue` replaced with a branded landing page exposing two entry points — **Customer portal** (`/portal`) and **Staff sign in** (`/login`). Login also links customers to the portal. Full UI/UX/cosmetics polish pass still deferred (owner will do a dedicated pass).
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
-2. Deployment doc (Dockerfile/compose for prod) + go-live checklist.
+1. Owner visual review of UI/UX Round 1 (`npm run dev`, phone/iPad/desktop); log fixups. Then **brainstorm dashboard logic + service-assignment + technician data scoping** (what figures a technician sees — e.g. revenue visibility, jobs-under-me) as a dedicated session.
+2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
+3. Deployment doc (Dockerfile/compose for prod) + go-live checklist.
 
 ## ⏸ On Hold
 - _(none)_

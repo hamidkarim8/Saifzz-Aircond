@@ -6,6 +6,35 @@
 
 ---
 
+## Session 16 — 2026-06-12 — UI/UX Upgrade Round 1
+
+**Goal:** Raise the live app from ~60% visual match with the mockup (`index.html`, Service System v4) to a close, consistent match across all admin pages + the client portal — responsive on phone/iPad/desktop, full-feature datatables, polished toast/confirm, proper error display.
+
+**Decisions**
+- Spec + plan: `docs/superpowers/specs/2026-06-12-ui-ux-upgrade-round-1-design.md`, `docs/superpowers/plans/2026-06-12-ui-ux-upgrade-round-1.md`.
+- Datatable: hybrid reusable `<DataTable>` — client-side sort/search/paginate by default, server mode (sort/dir/per_page/search params) for large/growing tables (service records, appointments).
+- Toast + confirm: **SweetAlert2** themed to the navy design system (`lib/swal.js`), flash→toast bridge composable; native `confirm()` removed.
+- Icons: adopted `@tabler/icons-vue` (mockup uses Tabler); hand-rolled SVG paths retired from the shell.
+- Mobile tables: adaptive — table on md+, stacked cards on phones (DataTable `#card` slot).
+- Execution: subagent-driven; foundation contracts written inline by the controller, page refactors delegated to per-task subagents with review.
+
+**Done**
+- Shared layer: `lib/swal.js` (toast + confirmDanger/confirmAction), `composables/useFlashToast.js`, `lib/badges.js`, `Components/DataTable.vue` (hybrid), `StatCard`, `Badge`, `WarrantyPill`, `Card`, `PageHeader`, `FormErrorSummary`, restyled `InputError`.
+- Shell: `AdminLayout` rebuilt — sidebar sections (Main/Management/Portal), Tabler icons, bottom user block, Reminders nav badge; `HandleInertiaRequests` shares `reminderCount` (gated `view_clients`).
+- Backend (TDD): `ClientController@index` enriched per-row (last service, service types, units, next service, amount, warranty state/label) + server sort/per_page — **fixed a latest-visit eager-load bug** (`->limit(1)` limited to one row globally) via a `latestVisit` `latestOfMany` relation; `ServiceVisitController@index` + `AppointmentController@index` gained server search/sort/per_page (calendar/stats stay full-month, table paginates).
+- Pages refactored onto the shared layer: Clients (Index rich DataTable, Show/Create/Edit), Users, Fees, ServiceRecords (Index server table, builder, Show), Appointments (calendar + server table), Reminders, Payments (Show/Return), Dashboard (KPIs/period/CSS bars/txn table, launcher fallback kept), Documents (invoice/receipt Blade), Portal (Login/Show/PortalLayout, mobile-first; security behavior unchanged).
+- Confirmations use SweetAlert; validation errors via restyled `InputError` + `FormErrorSummary`.
+
+**Tests:** 161 passed / 630 assertions (was 151/458 — +10 tests: reminderCount share, clients enrichment + eager-load regression, service-visit table params, appointment table params).
+
+**Notes / follow-ups**
+- Visual fidelity not yet eyeballed by a human — owner to review via `npm run dev` at phone/iPad/desktop widths.
+- Light spots to check in the visual pass: MonthCalendar dot polish, Fees Repair-option field hidden (form submit), Reminders card fields (`address`/`service_type`/`units`) render only if `ReminderService` provides them.
+
+**Next:** Owner visual review of Round 1; then brainstorm dashboard logic + service-assignment + technician data scoping (revenue visibility) as a dedicated session. BayarCash go-live + deployment still pending.
+
+---
+
 ## Session 15 — 2026-06-12 — Users Management (module 1, last feature module)
 
 **Goal:** Build module 1 — admin-only staff management screen; the final feature module.
