@@ -14,7 +14,6 @@ const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 const txn = computed(() => props.visit.transaction);
-const txnStatus = { paid: 'bg-ok-bg text-ok', pending: 'bg-warn-bg text-warn', failed: 'bg-danger-bg text-danger' };
 
 const warranty = computed(() => {
     if (!props.visit.warranty_end) return null;

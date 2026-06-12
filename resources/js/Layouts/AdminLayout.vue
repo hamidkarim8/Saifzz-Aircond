@@ -58,6 +58,9 @@ const initials = computed(() =>
 );
 
 const logout = () => router.post(route('logout'));
+
+// Close the user menu shortly after blur (allows a click on a menu item to register first).
+const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
 </script>
 
 <template>
@@ -131,7 +134,7 @@ const logout = () => router.post(route('logout'));
                     <button
                         class="flex items-center gap-2 rounded-ra py-1.5 pl-1.5 pr-3 hover:bg-surface-muted"
                         @click="userMenu = !userMenu"
-                        @blur="setTimeout(() => (userMenu = false), 150)"
+                        @blur="closeUserMenuSoon"
                     >
                         <span class="grid h-9 w-9 place-items-center rounded-ra bg-navy-800 text-sm font-semibold text-white">{{ initials }}</span>
                         <span class="hidden text-left sm:block">

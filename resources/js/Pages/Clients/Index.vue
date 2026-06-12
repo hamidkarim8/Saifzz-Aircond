@@ -56,7 +56,7 @@ const columns = [
     { key: 'last_service_date',label: 'Last Service', sortable: true,  formatter: formatDate },
     { key: 'service_types',    label: 'Services',     sortable: false },
     { key: 'units',            label: 'Units',        sortable: false, align: 'center' },
-    { key: 'next_service_date',label: 'Next Service', sortable: true,  formatter: formatDate },
+    { key: 'next_service_date',label: 'Next Service', sortable: false, formatter: formatDate },
     { key: 'last_amount',      label: 'Amount',       sortable: true,  align: 'right', formatter: formatRM },
     { key: 'warranty_state',   label: 'Warranty',     sortable: false },
     { key: '_actions',         label: '',             sortable: false, align: 'right' },

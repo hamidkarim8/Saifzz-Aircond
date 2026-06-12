@@ -2,7 +2,6 @@
 import { ref, computed, h } from 'vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import StatCard from '@/Components/StatCard.vue';
 import DataTable from '@/Components/DataTable.vue';
 import Badge from '@/Components/Badge.vue';

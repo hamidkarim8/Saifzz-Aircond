@@ -26,7 +26,8 @@ class ClientController extends Controller
         $sort        = $request->input('sort', '');
         $dir         = $request->input('dir', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $sortWhitelist = ['serial_no', 'name', 'last_service_date', 'next_service_date', 'last_amount'];
+        // next_service_date is a MAX-over-lines derived field — not server-sortable; omitted.
+        $sortWhitelist = ['serial_no', 'name', 'last_service_date', 'last_amount'];
 
         $clients = Client::query()
             ->withCount('visits')
@@ -44,13 +45,6 @@ class ClientController extends Controller
             ->when(in_array($sort, $sortWhitelist, true), function ($q) use ($sort, $dir) {
                 match ($sort) {
                     'last_service_date' => $q->orderBy(
-                        \App\Models\ServiceVisit::select('visit_date')
-                            ->whereColumn('client_id', 'clients.id')
-                            ->latest('visit_date')
-                            ->limit(1),
-                        $dir
-                    ),
-                    'next_service_date' => $q->orderBy(
                         \App\Models\ServiceVisit::select('visit_date')
                             ->whereColumn('client_id', 'clients.id')
                             ->latest('visit_date')

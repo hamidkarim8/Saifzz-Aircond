@@ -24,4 +24,10 @@ export const STATUS_VARIANT = {
 };
 
 export const serviceVariant = (t) => SERVICE_TYPE_VARIANT[t] ?? 'gray';
-export const statusVariant = (s) => STATUS_VARIANT[s] ?? 'gray';
+
+// Case-insensitive: statuses are stored lowercase ('paid'), the map is capitalized.
+export const statusVariant = (s) => {
+    if (s == null) return 'gray';
+    const cap = String(s).charAt(0).toUpperCase() + String(s).slice(1).toLowerCase();
+    return STATUS_VARIANT[s] ?? STATUS_VARIANT[cap] ?? 'gray';
+};
