@@ -223,4 +223,29 @@ class TechnicianScopingTest extends TestCase
 
         $this->assertSame($alice->id, Appointment::latest('id')->first()->technician_id);
     }
+
+    public function test_export_scoped_to_technician(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['export_data']]);
+        $bob = User::factory()->technician()->create();
+
+        foreach ([[$alice->id, 100.0], [$bob->id, 200.0]] as [$tid, $amt]) {
+            $client = Client::create(['name' => 'C'.$tid, 'phone' => '011-0000000', 'address' => 'KL']);
+            $visit = $client->visits()->create([
+                'visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => $amt,
+                'created_by' => $tid, 'technician_id' => $tid,
+            ]);
+            $visit->transaction()->create([
+                'txn_id' => 'TXN-20260601-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+                'amount' => $amt, 'method' => 'Cash', 'status' => 'paid', 'paid_at' => now(),
+            ]);
+        }
+
+        $res = $this->actingAs($alice)->get(route('reports.transactions.export', ['period' => 'all']));
+        $res->assertOk();
+        $csv = $res->streamedContent();
+
+        $this->assertStringContainsString('100.00', $csv);
+        $this->assertStringNotContainsString('200.00', $csv);
+    }
 }
