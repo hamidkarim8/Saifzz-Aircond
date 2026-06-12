@@ -9,7 +9,7 @@ import Badge from '@/Components/Badge.vue';
 import MonthCalendar from './Partials/MonthCalendar.vue';
 import AppointmentModal from './Partials/AppointmentModal.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
-import { confirmAction } from '@/lib/swal';
+import { confirmAction, toast } from '@/lib/swal';
 
 const props = defineProps({
     appointments: { type: Array, default: () => [] },   // full-month collection for calendar
@@ -59,7 +59,13 @@ const setStatus = async (a, status) => {
         confirmText: 'Update',
     });
     if (!ok) return;
-    router.patch(route('appointments.status', a.id), { status }, { preserveScroll: true });
+    router.patch(route('appointments.status', a.id), { status }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            const msg = errors?.status ?? errors?.message ?? 'Could not update appointment status.';
+            toast.error(msg);
+        },
+    });
 };
 
 // DataTable columns
