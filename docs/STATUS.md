@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-11 (session 14)
+> **Last updated:** 2026-06-12 (session 15)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | Feature modules underway — Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10), Notifications (11) done — only Users mgmt (1) left |
+| **Phase** | **All 11 feature modules complete** — Users mgmt (1), Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10), Notifications (11) done. Next: BayarCash go-live + deployment. |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; invoice + receipt **view + PDF (dompdf) done** |
@@ -47,14 +47,16 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 
 - **Module 11 — Notifications** done (v1, thin): one WhatsApp seam on each side instead of four inline `wa.me` builders. `App\Services\Notifications\WhatsApp` (`normalize` — digits-only, drop leading 0, prefix 60, keep existing 60; `link` — wa.me + `rawurlencode`d text); class docblock marks it as where the Meta Cloud API `send()` lands later, callers unchanged. JS mirror `resources/js/lib/whatsapp.js` (`waNumber`/`waLink`) — Reminders/Index, Clients/Show, Portal/Show refactored onto it; `PortalController::business()` delegates to the PHP service. Pure consolidation: no DB, no routes, no payload change. **Full suite: 138 passed / 427 assertions** (new: WhatsAppTest ×5).
 
+- **Module 1 — Users Management** done (last feature module): admin-only screen to create staff accounts, toggle granular permissions (checkbox grid of 8 grantable permissions), enable/disable accounts. `UserController` (index/store/update/toggleActive), `StoreUserRequest` + `UpdateUserRequest` (validate against all `PERMISSIONS`; `grantPermission()` silently drops `manage_users` — P1), all routes gated `can:manage_users`. `UserFactory` `admin()`/`technician()` states added. `Pages/Users/Index.vue` (staff table, active toggle switch, edit button for technicians) + `UserModal.vue` (create/edit modal with permission checkboxes, permission descriptions). Users nav item in AdminLayout (admin-only via `manage_users` gate). Guard rails: cannot deactivate self (422), cannot edit another admin (403), no delete — deactivate only (preserves audit history). **Full suite: 151 passed / 458 assertions** (new: UserManagementTest ×13).
+
 - **Auth UI rebrand** (session 14): staff `Login`/`Register` moved off default Breeze onto the design system (`GuestLayout` rebranded, native inputs + tokens); `Welcome.vue` replaced with a branded landing page exposing two entry points — **Customer portal** (`/portal`) and **Staff sign in** (`/login`). Login also links customers to the portal. Full UI/UX/cosmetics polish pass still deferred (owner will do a dedicated pass).
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. **Users mgmt screen (1)** ← next, last module. Draft spec ready: `docs/superpowers/specs/2026-06-11-users-mgmt-design.md` — review its 5 proposed decisions, then plan + build. (Registration hole already closed in session 14.)
-2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
+1. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
+2. Deployment doc (Dockerfile/compose for prod) + go-live checklist.
 
 ## ⏸ On Hold
 - _(none)_

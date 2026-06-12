@@ -6,6 +6,35 @@
 
 ---
 
+## Session 15 — 2026-06-12 — Users Management (module 1, last feature module)
+
+**Goal:** Build module 1 — admin-only staff management screen; the final feature module.
+
+**Decisions**
+- One page, modal CRUD (`Users/Index` + `UserModal`) — no separate show page (YAGNI).
+- New `UserController`; temp password set by admin at create, self-serve change via Profile.
+- Permission editing via checkbox grid of `User::PERMISSIONS` minus `ADMIN_ONLY_PERMISSIONS` (8 grantable permissions); server re-filters via `grantPermission()` — P1 silently drops `manage_users`.
+- Guard rails: cannot deactivate/demote self (422); cannot edit another admin (403); admins are immutable in this UI (single-admin assumption).
+- No delete — deactivate only (`active=false`); preserves `created_by` history on visits.
+- `abort_if(422)` used for self-deactivation (not `ValidationException`) — Inertia middleware conflict with the latter causes a PHP runtime error in non-JSON test context; `abort_if` returns a bare 422 which Inertia re-renders page state on (toggle snaps back — acceptable UX for this edge case).
+- Work directly on `main` — no feature branches (user preference).
+
+**Done**
+- `UserFactory` `admin()` and `technician()` states added.
+- `StoreUserRequest` + `UpdateUserRequest` (validate permissions against all `User::PERMISSIONS`; model layer filters admin-only at `grantPermission()`).
+- `UserController` — `index` (list all users + grantablePermissions prop), `store` (creates technician; re-grants explicit permissions through `grantPermission()` so admin-only entries are silently dropped, and empty array overwrites defaults), `update` (403 on admin target), `toggleActive` (422 on self-deactivation).
+- Routes under `can:manage_users` middleware group.
+- `Pages/Users/Index.vue` — staff table (name/email/role badge/permissions count/active toggle switch/edit button for technicians).
+- `Pages/Users/Partials/UserModal.vue` — create/edit modal; name + email + password (create only) + 8-permission checkbox grid with human labels; `useForm` pattern matching FeeModal.
+- Users nav item in AdminLayout (after Clients, gated `manage_users` — admin-only).
+- 13 feature tests: authorization (guest/technician-with-all-grantable → 403), index, store (default/custom/silently-dropped/dupe-email/empty-permissions), update (name+perms, cannot-update-admin), toggleActive (flip×2, self-deactivation 422), P4 regression (deactivated user login blocked).
+
+**Tests:** 151 passed / 458 assertions.
+
+**Next:** BayarCash go-live integration + deployment.
+
+---
+
 ## Session 14 — 2026-06-11 — History cleanup, auth UI rebrand, Notifications (module 11)
 
 **Goal:** Post-portal housekeeping (strip co-author trailer from git history), replace the default
