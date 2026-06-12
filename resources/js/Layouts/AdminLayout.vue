@@ -1,6 +1,12 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
+import { useFlashToast } from '@/composables/useFlashToast';
+import {
+    IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
+    IconCurrencyDollar, IconCalendarEvent, IconQrcode, IconUserCog,
+    IconAirConditioning, IconLogout, IconMenu2,
+} from '@tabler/icons-vue';
 
 const page = usePage();
 const can = computed(() => page.props.auth.can ?? {});
@@ -13,29 +19,33 @@ const userMenu = ref(false);
 // Close the mobile drawer on navigation.
 watch(() => page.url, () => { drawerOpen.value = false; });
 
-// Flash toast.
-const toast = ref(null);
-watch(
-    () => page.props.flash,
-    (flash) => {
-        const msg = flash?.success || flash?.error;
-        if (!msg) return;
-        toast.value = { type: flash.success ? 'ok' : 'error', msg };
-        setTimeout(() => (toast.value = null), 4000);
-    },
-    { immediate: true, deep: true },
-);
+// Wire the shared flash toast system.
+useFlashToast();
 
-// Nav model — each item gated by a permission key (null = always visible).
-const nav = computed(() => [
-    { label: 'Dashboard', route: 'dashboard', icon: 'grid', permission: null },
-    { label: 'Clients', route: 'clients.index', match: 'clients', icon: 'users', permission: 'view_clients' },
-    { label: 'Users', route: 'users.index', match: 'users', icon: 'users', permission: 'manage_users' },
-    { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: 'clipboard', permission: 'record_service' },
-    { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: 'calendar', permission: 'set_appointment' },
-    { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: 'bell', permission: 'view_clients' },
-    { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: 'tag', permission: 'edit_fees' },
-].filter((i) => i.permission === null || can.value[i.permission]));
+const reminderCount = computed(() => page.props.reminderCount ?? 0);
+
+// Grouped nav. Each item gated by a permission key (null = always).
+const sections = computed(() => {
+    const def = [
+        { title: 'Main', items: [
+            { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
+            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
+            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
+            { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
+        ]},
+        { title: 'Management', items: [
+            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees' },
+            { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users' },
+        ]},
+        { title: 'Portal', items: [
+            { label: 'Client Portal', route: 'portal.login', match: 'portal', icon: IconQrcode, permission: null },
+        ]},
+    ];
+    return def
+        .map((s) => ({ ...s, items: s.items.filter((i) => i.permission === null || can.value[i.permission]) }))
+        .filter((s) => s.items.length);
+});
 
 const isActive = (item) => {
     const current = page.url.replace(/^\//, '');
@@ -48,15 +58,6 @@ const initials = computed(() =>
 );
 
 const logout = () => router.post(route('logout'));
-
-const icons = {
-    grid: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z',
-    users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-    tag: 'M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01',
-    clipboard: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2',
-    calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
-    bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
-};
 </script>
 
 <template>
@@ -73,33 +74,39 @@ const icons = {
             class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-navy-900 text-white transition-transform duration-300 lg:translate-x-0"
             :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'"
         >
-            <div class="flex h-16 items-center gap-3 px-6">
-                <div class="flex h-9 w-9 items-center justify-center rounded-ra bg-primary font-bold">S</div>
+            <!-- Logo -->
+            <div class="flex h-16 items-center gap-3 px-5">
+                <div class="grid h-9 w-9 place-items-center rounded-ra bg-primary text-white"><IconAirConditioning :size="20" /></div>
                 <div class="leading-tight">
-                    <div class="font-bold tracking-tight">Saifzz</div>
-                    <div class="font-mono text-[10px] uppercase tracking-widest text-ink-muted">Aircond</div>
+                    <div class="text-sm font-bold text-white">Saifzz Aircond</div>
+                    <div class="font-mono text-[10px] uppercase tracking-widest text-primary-300/60">Service System</div>
                 </div>
             </div>
 
-            <nav class="flex-1 space-y-1 px-3 py-4">
-                <Link
-                    v-for="item in nav"
-                    :key="item.label"
-                    :href="route(item.route)"
-                    class="group flex items-center gap-3 rounded-ra px-3 py-2.5 text-sm font-medium transition-colors"
-                    :class="isActive(item)
-                        ? 'bg-primary text-white shadow-card'
-                        : 'text-primary-300 hover:bg-navy-800 hover:text-white'"
-                >
-                    <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path :d="icons[item.icon]" />
-                    </svg>
-                    {{ item.label }}
-                </Link>
+            <!-- Nav -->
+            <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                <template v-for="section in sections" :key="section.title">
+                    <div class="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-[0.12em] text-primary-300/40">{{ section.title }}</div>
+                    <Link v-for="item in section.items" :key="item.label" :href="route(item.route)"
+                        class="group flex items-center gap-3 rounded-ra px-3 py-2.5 text-sm font-medium transition-colors"
+                        :class="isActive(item) ? 'bg-primary text-white shadow-card' : 'text-primary-300 hover:bg-navy-800 hover:text-white'">
+                        <component :is="item.icon" :size="18" :stroke="2" class="shrink-0" />
+                        <span class="flex-1">{{ item.label }}</span>
+                        <span v-if="item.badge" class="rounded-full bg-danger px-1.5 text-[10px] font-bold leading-5 text-white">{{ item.badge }}</span>
+                    </Link>
+                </template>
             </nav>
 
-            <div class="border-t border-navy-700/60 p-3 text-[11px] text-ink-muted">
-                <span class="font-mono">{{ isAdmin ? 'ADMIN' : 'TECHNICIAN' }}</span>
+            <!-- User block -->
+            <div class="border-t border-navy-700/60 p-3">
+                <div class="flex items-center gap-3 rounded-ra px-2 py-2">
+                    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white">{{ initials }}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-white">{{ user?.name }}</div>
+                        <div class="text-[11px] text-primary-300/60">{{ isAdmin ? 'Administrator' : 'Technician' }}</div>
+                    </div>
+                    <button class="text-primary-300/50 hover:text-white" aria-label="Log out" @click="logout"><IconLogout :size="17" /></button>
+                </div>
             </div>
         </aside>
 
@@ -112,7 +119,7 @@ const icons = {
                     aria-label="Open menu"
                     @click="drawerOpen = true"
                 >
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" /></svg>
+                    <IconMenu2 :size="24" />
                 </button>
 
                 <div class="flex-1">
@@ -146,19 +153,5 @@ const icons = {
                 <slot />
             </main>
         </div>
-
-        <!-- Flash toast -->
-        <Transition
-            enter-active-class="transition duration-300" enter-from-class="translate-y-3 opacity-0"
-            leave-active-class="transition duration-200" leave-to-class="translate-y-3 opacity-0"
-        >
-            <div
-                v-if="toast"
-                class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-ral px-5 py-3 text-sm font-medium text-white shadow-lift"
-                :class="toast.type === 'ok' ? 'bg-ok' : 'bg-danger'"
-            >
-                {{ toast.msg }}
-            </div>
-        </Transition>
     </div>
 </template>
