@@ -105,4 +105,41 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('Txn ID', $csv);
         $this->assertStringNotContainsString('TXN-1', $csv);
     }
+
+    private function paidVisitFor(int $techId, float $amount): void
+    {
+        static $seq = 0;
+        $seq++;
+        $c = Client::create(['name' => "Client{$seq}", 'phone' => "011-{$seq}0000000", 'address' => 'X']);
+        $visit = ServiceVisit::create([
+            'client_id' => $c->id,
+            'visit_date' => now()->toDateString(),
+            'warranty_months' => 0,
+            'total_amount' => $amount,
+            'created_by' => $techId,
+            'technician_id' => $techId,
+        ]);
+        Transaction::create([
+            'txn_id' => "TXN-SCOPE-{$seq}",
+            'visit_id' => $visit->id,
+            'amount' => $amount,
+            'method' => 'Cash',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+    }
+
+    public function test_dashboard_revenue_scoped_for_technician(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['view_clients', 'view_reports']]);
+        $bob = User::factory()->technician()->create();
+        $this->paidVisitFor($alice->id, 100);
+        $this->paidVisitFor($bob->id, 200);
+
+        $this->actingAs($alice)->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('report.kpis.revenue_all_time', 100)
+                ->where('report.kpis.pending_reminders', null));
+    }
 }

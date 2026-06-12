@@ -30,16 +30,20 @@ class DashboardController extends Controller
             $month = now()->format('Y-m');
         }
 
+        $user = $request->user();
+        $scopeId = $user->seesAllData() ? null : $user->id;
+
         return Inertia::render('Dashboard', [
             'canReport' => true,
             'period' => $period,
             'month' => $month,
             'report' => [
-                'kpis' => $reports->kpis(),
-                'servicesByType' => $reports->servicesByType($period),
-                'transactions' => $reports->transactions($period),
+                'kpis' => $reports->kpis($scopeId),
+                'servicesByType' => $reports->servicesByType($period, $scopeId),
+                'transactions' => $reports->transactions($period, 50, $scopeId),
             ],
             'appointments' => Appointment::query()
+                ->visibleTo($user)
                 ->with('client:id,serial_no,name')
                 ->forMonth($month)
                 ->orderBy('datetime')
