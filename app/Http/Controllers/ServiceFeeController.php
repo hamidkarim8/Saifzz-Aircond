@@ -22,7 +22,7 @@ class ServiceFeeController extends Controller
 
         return Inertia::render('Fees/Index', [
             'feeGroups' => $fees->groupBy('service_type'),
-            'serviceTypes' => ServiceType::pluck('name')->all(),
+            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
             'modes' => StoreServiceFeeRequest::MODES,
         ]);
     }

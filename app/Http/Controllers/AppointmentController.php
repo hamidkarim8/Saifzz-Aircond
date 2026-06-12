@@ -77,7 +77,7 @@ class AppointmentController extends Controller
             'today' => $today,
             'month' => $month,
             'stats' => $stats,
-            'serviceTypes' => ServiceType::pluck('name')->all(),
+            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
             'transitions' => Appointment::TRANSITIONS,
             // Optional pre-selected client (e.g. arriving from a client profile or reminder).
             'presetClient' => $request->filled('client')
