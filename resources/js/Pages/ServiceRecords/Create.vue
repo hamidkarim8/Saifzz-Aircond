@@ -2,6 +2,9 @@
 import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import Card from '@/Components/Card.vue';
+import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
 
@@ -50,6 +53,9 @@ const warrantyEnd = computed(() => {
     return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
 });
 
+const totalServices = computed(() => form.lines.filter(l => l.service_type).length);
+const totalUnits = computed(() => form.lines.reduce((s, l) => s + (Number(l.units) || 0), 0));
+
 const submit = () => form.post(route('service-records.store'));
 </script>
 
@@ -58,31 +64,37 @@ const submit = () => form.post(route('service-records.store'));
 
     <AdminLayout>
         <template #header>
-            <h1 class="text-lg font-bold tracking-tight text-navy-800">Add service record</h1>
+            <PageHeader title="Add service record" subtitle="Fill in the details below to create a new service visit." />
         </template>
 
-        <form class="mx-auto max-w-3xl space-y-6 pb-28" @submit.prevent="submit">
+        <form class="mx-auto max-w-3xl space-y-5 pb-32" @submit.prevent="submit">
+
+            <FormErrorSummary :errors="form.errors" />
+
+            <!-- Client -->
             <ClientPicker :form="form" :preset-client="presetClient" />
 
             <!-- Visit meta -->
-            <div class="grid gap-4 rounded-ral border border-line bg-surface p-5 shadow-card sm:grid-cols-2 sm:p-6">
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Visit date</label>
-                    <input v-model="form.visit_date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
-                    <p v-if="form.errors.visit_date" class="mt-1 text-sm text-danger">{{ form.errors.visit_date }}</p>
+            <Card title="Visit details">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Visit date</label>
+                        <input v-model="form.visit_date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                        <p v-if="form.errors.visit_date" class="mt-1 text-sm text-danger">{{ form.errors.visit_date }}</p>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Warranty (months)</label>
+                        <select v-model.number="form.warranty_months" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                            <option v-for="m in [0,1,2,3,4,5,6]" :key="m" :value="m">{{ m === 0 ? 'No warranty' : m + ' month' + (m > 1 ? 's' : '') }}</option>
+                        </select>
+                        <p v-if="warrantyEnd" class="mt-1 text-xs text-ok">Covered until {{ warrantyEnd }}</p>
+                    </div>
                 </div>
-                <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Warranty (months)</label>
-                    <select v-model.number="form.warranty_months" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                        <option v-for="m in [0,1,2,3,4,5,6]" :key="m" :value="m">{{ m === 0 ? 'No warranty' : m + ' month' + (m > 1 ? 's' : '') }}</option>
-                    </select>
-                    <p v-if="warrantyEnd" class="mt-1 text-xs text-ok">Covered until {{ warrantyEnd }}</p>
-                </div>
-            </div>
+            </Card>
 
             <!-- Service lines -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
+            <div class="space-y-3">
+                <div class="flex items-center justify-between px-0.5">
                     <h2 class="text-sm font-bold uppercase tracking-wide text-ink-soft">Services</h2>
                     <span v-if="form.errors.lines" class="text-sm text-danger">{{ form.errors.lines }}</span>
                 </div>
@@ -100,38 +112,58 @@ const submit = () => form.post(route('service-records.store'));
                     :removable="form.lines.length > 1"
                     @remove="removeLine(i)"
                 />
-                <button type="button" class="flex w-full items-center justify-center gap-2 rounded-ral border-2 border-dashed border-line py-3 text-sm font-semibold text-ink-soft transition hover:border-primary hover:text-primary" @click="addLine">
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-center gap-2 rounded-ral border-2 border-dashed border-line py-3.5 text-sm font-semibold text-ink-soft transition hover:border-primary hover:bg-primary-50 hover:text-primary"
+                    @click="addLine"
+                >
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
                     Add another service
                 </button>
             </div>
 
             <!-- Payment method -->
-            <div class="rounded-ral border border-line bg-surface p-5 shadow-card sm:p-6">
-                <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-ink-soft">Payment method</h2>
+            <Card title="Payment method">
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition" :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50' : 'border-line'">
+                    <label
+                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
+                        :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
+                    >
                         <input v-model="form.payment_method" type="radio" value="Cash" class="text-primary focus:ring-primary" />
                         <span class="font-semibold text-ink">Cash</span>
                     </label>
-                    <label class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition" :class="form.payment_method === 'DuitNow QR' ? 'border-primary bg-primary-50' : 'border-line'">
+                    <label
+                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
+                        :class="form.payment_method === 'DuitNow QR' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
+                    >
                         <input v-model="form.payment_method" type="radio" value="DuitNow QR" class="text-primary focus:ring-primary" />
                         <span class="font-semibold text-ink">DuitNow QR</span>
                     </label>
                 </div>
-            </div>
+            </Card>
         </form>
 
-        <!-- Sticky total bar -->
-        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur-md lg:pl-64">
+        <!-- Sticky total bar (navy) -->
+        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-navy-900/60 bg-navy-800 lg:pl-64">
             <div class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-                <div>
-                    <div class="text-xs uppercase tracking-wide text-ink-soft">Grand total</div>
-                    <div class="font-mono text-2xl font-bold text-navy-800">{{ money(grandTotal) }}</div>
+                <div class="flex items-center gap-5">
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-navy-300">Grand total</div>
+                        <div class="font-mono text-2xl font-bold text-white">{{ money(grandTotal) }}</div>
+                    </div>
+                    <div v-if="totalServices > 0" class="hidden sm:block border-l border-navy-600 pl-5">
+                        <div class="text-xs text-navy-300">{{ totalServices }} service{{ totalServices !== 1 ? 's' : '' }}</div>
+                        <div class="text-xs text-navy-300">{{ totalUnits }} unit{{ totalUnits !== 1 ? 's' : '' }}</div>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <Link :href="route('service-records.index')" class="text-sm font-medium text-ink-soft hover:text-ink">Cancel</Link>
-                    <button type="button" :disabled="form.processing" class="rounded-ra bg-primary px-6 py-3 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60" @click="submit">
+                    <Link :href="route('service-records.index')" class="text-sm font-medium text-navy-300 hover:text-white transition">Cancel</Link>
+                    <button
+                        type="button"
+                        :disabled="form.processing"
+                        class="rounded-ra bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60"
+                        @click="submit"
+                    >
                         Create record
                     </button>
                 </div>
