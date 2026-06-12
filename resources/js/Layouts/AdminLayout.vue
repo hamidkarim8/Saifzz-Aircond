@@ -30,6 +30,7 @@ watch(
 const nav = computed(() => [
     { label: 'Dashboard', route: 'dashboard', icon: 'grid', permission: null },
     { label: 'Clients', route: 'clients.index', match: 'clients', icon: 'users', permission: 'view_clients' },
+    { label: 'Users', route: 'users.index', match: 'users', icon: 'users', permission: 'manage_users' },
     { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: 'clipboard', permission: 'record_service' },
     { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: 'calendar', permission: 'set_appointment' },
     { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: 'bell', permission: 'view_clients' },
