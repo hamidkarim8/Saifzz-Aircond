@@ -26,12 +26,14 @@ class AppointmentController extends Controller
         }
 
         $appointments = Appointment::query()
+            ->visibleTo($request->user())
             ->with('client:id,serial_no,name')
             ->forMonth($month)
             ->orderBy('datetime')
             ->get();
 
         $today = Appointment::query()
+            ->visibleTo($request->user())
             ->with('client:id,serial_no,name')
             ->whereDate('datetime', now()->toDateString())
             ->orderBy('datetime')
@@ -54,6 +56,7 @@ class AppointmentController extends Controller
         $search = $request->input('search', '');
 
         $tableQuery = Appointment::query()
+            ->visibleTo($request->user())
             ->with('client:id,serial_no,name')
             ->forMonth($month);
 
@@ -79,12 +82,23 @@ class AppointmentController extends Controller
             'presetClient' => $request->filled('client')
                 ? Client::where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
                 : null,
+            'technicians' => $request->user()->seesAllData()
+                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                : null,
         ]);
     }
 
     public function store(StoreAppointmentRequest $request): RedirectResponse
     {
-        Appointment::create($request->appointmentData() + ['status' => 'pending']);
+        $user = $request->user();
+        // Scoped techs always own their bookings; all-data users may assign.
+        $technicianId = $user->seesAllData() ? $request->input('technician_id') : $user->id;
+
+        Appointment::create($request->appointmentData() + [
+            'status' => 'pending',
+            'technician_id' => $technicianId,
+        ]);
 
         return redirect()
             ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])

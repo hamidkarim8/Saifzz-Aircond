@@ -29,6 +29,7 @@ class StoreAppointmentRequest extends FormRequest
             'phone' => ['required', 'string', 'regex:/^01\d-?\d{7,8}$/'],
             'address' => ['required', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
         ];
     }
 

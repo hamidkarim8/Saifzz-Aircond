@@ -158,7 +158,8 @@ class AppointmentTest extends TestCase
         Appointment::create(['datetime' => '2026-06-20 14:00', 'service_type' => 'Repair', 'phone' => '012-3334444', 'address' => 'B', 'status' => 'pending']);
         Appointment::create(['datetime' => '2026-07-01 09:00', 'service_type' => 'Cleaning', 'phone' => '012-5556666', 'address' => 'C', 'status' => 'pending']);
 
-        $this->actingAs($this->setter())
+        // Admin sees all data — needed because the seeded appointments have no technician_id.
+        $this->actingAs(User::factory()->admin()->create())
             ->get(route('appointments.index', ['month' => '2026-06']))
             ->assertInertia(fn ($page) => $page
                 ->component('Appointments/Index')
@@ -180,8 +181,11 @@ class AppointmentTest extends TestCase
         Appointment::create(['datetime' => '2026-06-20 12:00', 'service_type' => 'Repair',   'phone' => '011-44444444', 'address' => 'Delta Blvd','status' => 'confirmed']);
         Appointment::create(['datetime' => '2026-06-25 13:00', 'service_type' => 'Cleaning', 'phone' => '011-55555555', 'address' => 'Epsilon Ln','status' => 'pending']);
 
+        // Admin sees all data — needed because the seeded appointments have no technician_id.
+        $admin = User::factory()->admin()->create();
+
         // Per-page 2 + sort desc should give 2 items in table, all 5 in calendar
-        $this->actingAs($this->setter())
+        $this->actingAs($admin)
             ->get(route('appointments.index', [
                 'month'    => '2026-06',
                 'sort'     => 'datetime',
@@ -197,7 +201,7 @@ class AppointmentTest extends TestCase
             );
 
         // Search by client name should narrow table but not the calendar
-        $this->actingAs($this->setter())
+        $this->actingAs($admin)
             ->get(route('appointments.index', [
                 'month'  => '2026-06',
                 'search' => 'Ahmad',

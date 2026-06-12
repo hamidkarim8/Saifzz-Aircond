@@ -192,4 +192,35 @@ class TechnicianScopingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('visits.total', 2));
     }
+
+    public function test_appointment_index_scoped_to_own(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['view_clients', 'set_appointment']]);
+        $this->appointmentFor($alice->id);
+        $this->appointmentFor(null); // unassigned
+
+        $this->actingAs($alice)->get(route('appointments.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('table.total', 1));
+    }
+
+    public function test_store_appointment_forces_scoped_tech_to_self(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['view_clients', 'set_appointment']]);
+        $bob = User::factory()->technician()->create(['permissions' => ['set_appointment']]);
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+
+        $this->actingAs($alice)->post(route('appointments.store'), [
+            'client_id' => $client->id,
+            'date' => '2026-07-01',
+            'time' => '09:00',
+            'service_type' => 'Cleaning',
+            'units' => 1,
+            'phone' => '012-3456789',
+            'address' => 'KL',
+            'technician_id' => $bob->id, // forged
+        ])->assertRedirect();
+
+        $this->assertSame($alice->id, Appointment::latest('id')->first()->technician_id);
+    }
 }
