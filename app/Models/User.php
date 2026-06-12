@@ -33,6 +33,7 @@ class User extends Authenticatable
         'view_reports',
         'edit_fees',
         'export_data',
+        'view_all_data',
         'manage_users',
     ];
 
@@ -88,6 +89,15 @@ class User extends Authenticatable
         }
 
         return in_array($permission, $this->permissions ?? [], true);
+    }
+
+    /**
+     * True when the user sees every row (no per-technician scoping).
+     * Admins short-circuit to true via hasPermission().
+     */
+    public function seesAllData(): bool
+    {
+        return $this->hasPermission('view_all_data');
     }
 
     /**
