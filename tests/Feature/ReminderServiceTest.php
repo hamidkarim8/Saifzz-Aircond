@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\ClientUnit;
 use App\Models\ReminderContact;
 use App\Models\ServiceLine;
 use App\Models\ServiceVisit;
@@ -151,5 +152,83 @@ class ReminderServiceTest extends TestCase
 
         // Installation has the later next_service_date — should win
         $this->assertSame('Installation', $r['due_this_month'][0]['service_type']);
+    }
+
+    // ── client_units-based tests ─────────────────────────────────────────────
+
+    private function makeUnit(Client $client, string $type, ?string $nextDate, string $serviceType = 'Cleaning'): ClientUnit
+    {
+        return ClientUnit::create([
+            'client_id'         => $client->id,
+            'label'             => $type . ' 1',
+            'unit_type'         => $type,
+            'is_active'         => true,
+            'next_service_date' => $nextDate,
+            'next_service_type' => $nextDate ? $serviceType : null,
+        ]);
+    }
+
+    public function test_reminder_sources_from_client_units(): void
+    {
+        $client = $this->makeClient('Unit Client');
+        $this->makeUnit($client, 'Wall Mounted', '2026-06-20'); // due this month
+
+        $r = $this->dueList();
+
+        $this->assertCount(1, $r['due_this_month']);
+        $this->assertSame('Unit Client', $r['due_this_month'][0]['name']);
+        $this->assertSame('2026-06-20', $r['due_this_month'][0]['next_due']);
+    }
+
+    public function test_reminder_service_type_from_unit(): void
+    {
+        $client = $this->makeClient('Type Client');
+        $this->makeUnit($client, 'Wall Mounted', '2026-06-20', 'Installation');
+
+        $r = $this->dueList();
+
+        $this->assertSame('Installation', $r['due_this_month'][0]['service_type']);
+    }
+
+    public function test_reminder_units_count_active_units_due(): void
+    {
+        $client = $this->makeClient('Multi Client');
+        $this->makeUnit($client, 'Wall Mounted', '2026-06-20');
+        $this->makeUnit($client, 'Cassette', '2026-06-25');
+        $this->makeUnit($client, 'Wall Mounted', null); // no date — not due
+
+        $r = $this->dueList();
+
+        $this->assertSame(2, $r['due_this_month'][0]['units']);
+    }
+
+    public function test_inactive_unit_excluded_from_reminders(): void
+    {
+        $client = $this->makeClient('Inactive Client');
+        ClientUnit::create([
+            'client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted',
+            'is_active' => false, 'next_service_date' => '2026-06-20', 'next_service_type' => 'Cleaning',
+        ]);
+
+        $r = $this->dueList();
+
+        $this->assertCount(0, $r['due_this_month']);
+    }
+
+    public function test_fallback_to_service_lines_for_clients_without_units(): void
+    {
+        // Client with service_line next_service_date but no client_units records
+        $client = $this->makeClient('Legacy Client');
+        $visit = \App\Models\ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+        \App\Models\ServiceLine::create([
+            'visit_id' => $visit->id, 'service_type' => 'Cleaning',
+            'units' => 1, 'rate' => 80, 'discount' => 0, 'next_service_date' => '2026-06-20',
+        ]);
+
+        $r = $this->dueList();
+
+        // Legacy client still appears via service_line fallback
+        $this->assertCount(1, $r['due_this_month']);
+        $this->assertSame('Legacy Client', $r['due_this_month'][0]['name']);
     }
 }
