@@ -1,7 +1,7 @@
 FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache \
-    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev
+    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev nodejs npm
 
 RUN docker-php-ext-install \
     pdo_pgsql pgsql zip bcmath intl mbstring opcache \
@@ -14,7 +14,13 @@ WORKDIR /var/www/Saifzz-Aircond
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --optimize-autoloader
 
+COPY package.json ./
+RUN npm install
+
 COPY . .
+
+RUN npm run build && rm -rf node_modules
+
 RUN composer run-script post-autoload-dump 2>/dev/null || true
 
 RUN chown -R www-data:www-data /var/www/Saifzz-Aircond \

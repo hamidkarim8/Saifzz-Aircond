@@ -160,20 +160,15 @@ newgrp docker
 docker --version
 ```
 
-### 4.3 Node.js 20 LTS (build only — for Vite assets)
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-### 4.4 Firewall
+### 4.3 Firewall
 
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
 ```
+
+> Node.js is **not** needed on the server. Vite builds happen inside Docker where `vendor/` is available.
 
 ---
 
@@ -290,15 +285,15 @@ git clone git@github.com:YOUR_ORG/Saifzz-Aircond.git .
 cp .env.example .env
 nano .env
 
-# Build frontend assets on host (nginx serves these as static files)
-npm ci && npm run build && rm -rf node_modules
-
-# Create storage symlink for nginx (PHP-FPM is in Docker, can't run artisan here)
+# Create storage symlink for nginx
 ln -sfn /var/www/Saifzz-Aircond/storage/app/public /var/www/Saifzz-Aircond/public/storage
 
-# Build and start containers
+# Build and start containers (npm build happens inside Docker)
 docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
+
+# Copy built assets from container to host for nginx to serve
+docker compose -f docker-compose.prod.yml cp app:/var/www/Saifzz-Aircond/public/build ./public/build
 
 # Bootstrap Laravel
 docker compose -f docker-compose.prod.yml exec -T app php artisan key:generate

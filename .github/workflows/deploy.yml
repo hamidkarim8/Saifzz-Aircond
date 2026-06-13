@@ -32,14 +32,12 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "==> Building frontend"
-            npm ci
-            npm run build
-            rm -rf node_modules
-
-            echo "==> Rebuilding app containers"
+            echo "==> Rebuilding app containers (includes npm build inside Docker)"
             docker compose -f docker-compose.prod.yml build app worker
             docker compose -f docker-compose.prod.yml up -d --no-deps app worker
+
+            echo "==> Copying built assets from container to host for nginx"
+            docker compose -f docker-compose.prod.yml cp app:/var/www/Saifzz-Aircond/public/build ./public/build
 
             echo "==> Running migrations"
             docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
