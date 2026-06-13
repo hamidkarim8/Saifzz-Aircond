@@ -33,8 +33,8 @@ class ClientUnit extends Model
         return $this->hasMany(ServiceLine::class, 'unit_id');
     }
 
-    public function scopeActive($query): void
+    public function scopeActive(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
-        $query->where('is_active', true);
+        return $query->where('is_active', true);
     }
 }
