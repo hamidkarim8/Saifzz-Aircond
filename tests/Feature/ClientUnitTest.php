@@ -173,4 +173,52 @@ class ClientUnitTest extends TestCase
             ->postJson(route('clients.units.store', $client), ['label' => 'BR1', 'unit_type' => 'Wall Mounted'])
             ->assertForbidden();
     }
+
+    public function test_backfill_creates_units_from_service_lines(): void
+    {
+        $client = $this->makeClient();
+        $visit  = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+
+        // 3 wall-mounted, 1 cassette
+        \App\Models\ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Cleaning',
+            'unit_type' => 'Wall Mounted', 'units' => 3, 'rate' => 80, 'discount' => 0,
+            'next_service_date' => '2026-09-01']);
+        \App\Models\ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Installation',
+            'unit_type' => 'Cassette', 'units' => 1, 'rate' => 300, 'discount' => 0,
+            'next_service_date' => '2026-12-01']);
+
+        // Run the backfill directly (bypass migration tracker — RefreshDatabase already ran it on empty DB)
+        (require base_path('database/migrations/2026_06_13_000120_backfill_client_units.php'))->up();
+
+        $units = \App\Models\ClientUnit::where('client_id', $client->id)->orderBy('label')->get();
+        $this->assertCount(4, $units); // 3 Wall Mounted + 1 Cassette
+
+        $wallUnits = $units->where('unit_type', 'Wall Mounted')->values();
+        $this->assertCount(3, $wallUnits);
+        $this->assertSame('Wall Mounted 1', $wallUnits[0]->label);
+        $this->assertSame('2026-09-01', $wallUnits[0]->next_service_date?->toDateString());
+        $this->assertSame('Cleaning', $wallUnits[0]->next_service_type);
+        $this->assertNull($wallUnits[1]->next_service_date); // only first unit gets it
+
+        $cassette = $units->where('unit_type', 'Cassette')->first();
+        $this->assertSame('Cassette 1', $cassette->label);
+        $this->assertSame('2026-12-01', $cassette->next_service_date?->toDateString());
+        $this->assertSame('Installation', $cassette->next_service_type);
+    }
+
+    public function test_backfill_skips_clients_already_with_units(): void
+    {
+        $client = $this->makeClient();
+        $visit  = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+        \App\Models\ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Cleaning',
+            'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 80, 'discount' => 0]);
+
+        // Pre-existing unit
+        ClientUnit::create(['client_id' => $client->id, 'label' => 'Existing', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        (require base_path('database/migrations/2026_06_13_000120_backfill_client_units.php'))->up();
+
+        // Should still be 1 — backfill skips clients that already have units
+        $this->assertCount(1, ClientUnit::where('client_id', $client->id)->get());
+    }
 }
