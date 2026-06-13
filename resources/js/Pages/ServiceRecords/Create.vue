@@ -50,8 +50,8 @@ watch(() => form.client_id, (clientId) => {
     fetch(route('clients.units.index', clientId), {
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     })
-        .then(r => r.json())
-        .then(units => { clientUnits.value = units; })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(units => { clientUnits.value = Array.isArray(units) ? units : []; })
         .catch(() => { clientUnits.value = []; });
 });
 
@@ -75,7 +75,10 @@ const addLinesForAllUnits = () => {
     });
 };
 
-const lineSubtotal = (l) => Math.max(0, (Number(l.rate) || 0) * (Number(l.units) || 0) - (Number(l.discount) || 0));
+const lineSubtotal = (l) => {
+    const units = l.unit_id ? 1 : (Number(l.units) || 0);
+    return Math.max(0, (Number(l.rate) || 0) * units - (Number(l.discount) || 0));
+};
 const grandTotal = computed(() => form.lines.reduce((s, l) => s + lineSubtotal(l), 0));
 const money = (v) => 'RM ' + Number(v).toFixed(2);
 

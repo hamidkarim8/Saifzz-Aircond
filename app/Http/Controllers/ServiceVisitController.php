@@ -106,12 +106,15 @@ class ServiceVisitController extends Controller
             }
 
             // Sync next_service_date/type onto each unit that was referenced in this visit.
+            // Scoped to the visit's client to prevent cross-client data corruption.
             foreach ($data['lines'] as $line) {
                 if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
-                    \App\Models\ClientUnit::where('id', $line['unit_id'])->update([
-                        'next_service_date' => $line['next_service_date'],
-                        'next_service_type' => $line['service_type'],
-                    ]);
+                    \App\Models\ClientUnit::where('id', $line['unit_id'])
+                        ->where('client_id', $client->id)
+                        ->update([
+                            'next_service_date' => $line['next_service_date'],
+                            'next_service_type' => $line['service_type'],
+                        ]);
                 }
             }
 
