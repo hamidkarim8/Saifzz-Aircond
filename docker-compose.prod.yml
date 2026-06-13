@@ -7,7 +7,7 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - ./storage:/var/www/Saifzz-Aircond/storage
-      - ./.env:/var/www/Saifzz-Aircond/.env:ro
+      - ./.env:/var/www/Saifzz-Aircond/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,7 +22,7 @@ services:
     command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
     volumes:
       - ./storage:/var/www/Saifzz-Aircond/storage
-      - ./.env:/var/www/Saifzz-Aircond/.env:ro
+      - ./.env:/var/www/Saifzz-Aircond/.env
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,219 +1,181 @@
 # Deployment Guide — Saifzz Aircond
 
-**Target:** Google Cloud VM → `saifzz.mktechnologies.my`
-**Stack:** Docker Compose (PHP 8.5-FPM · PostgreSQL 16 · Redis) · Nginx (host, SSL)
-**Strategy:** Docker Compose on server. GitHub Actions CI/CD.
+Deploy the app to a fresh Ubuntu VM using Docker Compose. Tested end-to-end on GCP.
+
+**Architecture**
+- **Nginx** runs on the host — handles SSL and serves static files (`/build`, `/storage`).
+- **Docker Compose** runs everything else: PHP 8.5-FPM (`app`), queue `worker`, `postgres`, `redis`.
+- Nginx proxies PHP requests to the `app` container on `127.0.0.1:9000`.
+- **No PHP, Composer, or Node on the host** — all builds happen inside the Docker image.
+
+**These files are already in the repo** (no need to create them):
+`Dockerfile.prod`, `docker-compose.prod.yml`, `.dockerignore`, `.github/workflows/`.
 
 ---
 
-## 1. VM Spec
+## 1. Create the VM
 
-### Current (GCP Free Trial)
-| Resource | Spec |
+| Setting | Value |
 |---|---|
-| Machine | `e2-medium` (2 vCPU, 4 GB RAM) |
-| Region | `us-central1` / `us-east1` / `us-west1` |
-| OS | Ubuntu 22.04 LTS |
-| Boot disk | 30 GB standard HDD |
-| Network | 1 static external IP |
+| Machine | `e2-medium` (2 vCPU, 4 GB RAM) — min `e2-small` |
+| OS | Ubuntu 22.04 or 24.04 LTS |
+| Disk | 30 GB+ |
+| Firewall | **Tick "Allow HTTP traffic" and "Allow HTTPS traffic"** |
 
-### Recommended for production (ipserverone / next GCP account)
-| Resource | Spec |
-|---|---|
-| vCPU | 2 |
-| RAM | 4 GB |
-| Disk | 40 GB SSD |
-| Bandwidth | 100 GB/month sufficient |
+> The HTTP/HTTPS firewall ticks are critical. Without them, SSL setup (Step 7) fails with a connection timeout. To add later: Compute Engine → VM → Edit → Firewall.
+
+Note the VM's **external IP**.
 
 ---
 
-## 2. DNS Setup
+## 2. DNS
 
 At your DNS provider for `mktechnologies.my`:
 
 ```
 Type  Name    Value
-A     saifzz  <GCP_EXTERNAL_IP>
+A     saifzz  <VM_EXTERNAL_IP>
 ```
 
-Propagation takes 5–60 min. Verify: `nslookup saifzz.mktechnologies.my`
-
----
-
-## 3. Add production Docker files to repo
-
-Commit these files before first deploy.
-
-### `Dockerfile.prod`
-
-```dockerfile
-FROM php:8.3-fpm-alpine
-
-RUN apk add --no-cache \
-    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev
-
-RUN docker-php-ext-install \
-    pdo_pgsql pgsql zip bcmath intl mbstring opcache \
-    && pecl install redis && docker-php-ext-enable redis
-
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-WORKDIR /var/www/Saifzz-Aircond
-
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --optimize-autoloader
-
-COPY . .
-RUN composer run-script post-autoload-dump 2>/dev/null || true
-
-RUN chown -R www-data:www-data /var/www/Saifzz-Aircond \
-    && chmod -R 775 storage bootstrap/cache
-
-EXPOSE 9000
-CMD ["php-fpm"]
-```
-
-### `docker-compose.prod.yml`
-
-```yaml
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    ports:
-      - "127.0.0.1:9000:9000"
-    volumes:
-      - ./storage:/var/www/Saifzz-Aircond/storage
-      - ./.env:/var/www/Saifzz-Aircond/.env:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    restart: unless-stopped
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
-    volumes:
-      - ./storage:/var/www/Saifzz-Aircond/storage
-      - ./.env:/var/www/Saifzz-Aircond/.env:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
-    ports:
-      - "127.0.0.1:6379:6379"
-    restart: unless-stopped
-
-volumes:
-  pgdata:
-```
-
-Commit and push both to `main` before proceeding.
-
----
-
-## 4. Initial Server Setup
-
-SSH into the VM (GCP Console → SSH button, or add your SSH key at VM creation).
-
-### 4.1 System packages
+Verify before continuing (must return the VM IP):
 
 ```bash
+nslookup saifzz.mktechnologies.my
+```
+
+---
+
+## 3. Server Setup
+
+SSH into the VM (GCP Console → SSH button), then:
+
+```bash
+# Avoid interactive "restart services?" prompts during upgrades
+sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git curl nginx certbot python3-certbot-nginx ufw fail2ban
-```
+sudo apt install -y git nginx certbot python3-certbot-nginx ufw
 
-### 4.2 Docker
-
-```bash
+# Docker
 curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER
-newgrp docker
-docker --version
-```
 
-### 4.3 Firewall
-
-```bash
+# Firewall
 sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
-
-> Node.js is **not** needed on the server. Vite builds happen inside Docker where `vendor/` is available.
-
----
-
-## 5. App Directory
-
-```bash
-sudo mkdir -p /var/www/Saifzz-Aircond
-sudo chown -R $USER:www-data /var/www/Saifzz-Aircond
-sudo chmod -R 775 /var/www/Saifzz-Aircond
+sudo ufw --force enable
 ```
 
 ---
 
-## 6. Deploy User & SSH Key for GitHub Actions
+## 4. Deploy User & App Directory
+
+A dedicated `deploy` user owns the app and runs the containers.
 
 ```bash
 sudo useradd -m -s /bin/bash deploy
-sudo usermod -aG www-data deploy
 sudo usermod -aG docker deploy
 
-# Generate SSH key
+# Generate SSH key (used later by GitHub Actions)
 sudo -u deploy ssh-keygen -t ed25519 -C "github-actions-deploy" -f /home/deploy/.ssh/id_ed25519 -N ""
-
-# Authorize it
 sudo -u deploy cp /home/deploy/.ssh/id_ed25519.pub /home/deploy/.ssh/authorized_keys
 sudo chmod 600 /home/deploy/.ssh/authorized_keys
 
-# Sudo for nginx reload only
-echo 'deploy ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx' \
-  | sudo tee /etc/sudoers.d/deploy
+# Allow deploy to reload nginx without a password
+echo 'deploy ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx' | sudo tee /etc/sudoers.d/deploy
+
+# App directory
+sudo mkdir -p /var/www/Saifzz-Aircond
+sudo chown deploy:deploy /var/www/Saifzz-Aircond
 ```
 
-Copy private key for GitHub secret:
+Save the private key for GitHub Actions (Step 9):
 
 ```bash
 sudo cat /home/deploy/.ssh/id_ed25519
 ```
 
-Save as GitHub secret `DEPLOY_SSH_KEY`.
+---
+
+## 5. Clone & Configure
+
+```bash
+sudo -u deploy git clone https://github.com/hamidkarim8/Saifzz-Aircond.git /var/www/Saifzz-Aircond
+cd /var/www/Saifzz-Aircond
+sudo -u deploy cp .env.example .env
+sudo -u deploy nano .env
+```
+
+Set these values in `.env`. **`DB_HOST` and `REDIS_HOST` must be the Docker service names** (`postgres`, `redis`) — not `127.0.0.1`. Leave `APP_KEY` blank; Step 6 fills it.
+
+```dotenv
+APP_NAME="Saifzz Aircond"
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=https://saifzz.mktechnologies.my
+
+DB_CONNECTION=pgsql
+DB_HOST=postgres
+DB_PORT=5432
+DB_DATABASE=saifzz_prod
+DB_USERNAME=saifzz
+DB_PASSWORD=CHANGE_THIS_PASSWORD
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+# fill in SMTP credentials when ready
+
+LOG_CHANNEL=daily
+LOG_LEVEL=error
+```
+
+> In nano: paste with `Ctrl+Shift+V`, save with `Ctrl+X` → `Y` → `Enter`.
 
 ---
 
-## 7. Nginx Config
+## 6. Build & Launch
 
-Nginx runs on the host for SSL termination and static file serving. PHP requests proxy to the PHP-FPM container on port 9000.
+Run these as `deploy` from `/var/www/Saifzz-Aircond`. The first build takes a few minutes (compiles the image). All commands use `-f docker-compose.prod.yml`.
+
+```bash
+cd /var/www/Saifzz-Aircond
+DC="sudo -u deploy docker compose -f docker-compose.prod.yml"
+
+# 1. Build the image and start all containers
+$DC build
+$DC up -d
+
+# 2. Generate the app encryption key (writes it into .env)
+$DC exec -T app php artisan key:generate
+
+# 3. Let the container's php-fpm user (uid 82) write to mounted storage
+sudo chown -R 82:82 storage
+
+# 4. Database: run migrations, then seed once (creates the admin user)
+$DC exec -T app php artisan migrate --force
+$DC exec -T app php artisan db:seed --force
+
+# 5. Cache config/routes/views (reads the new APP_KEY)
+$DC exec -T app php artisan optimize
+
+# 6. Copy the built frontend assets out to the host (nginx serves these)
+$DC cp app:/var/www/Saifzz-Aircond/public/build ./public/build
+
+# 7. Storage symlink on the host (for uploaded files)
+sudo -u deploy ln -sfn /var/www/Saifzz-Aircond/storage/app/public public/storage
+
+# 8. Confirm all 4 containers are up (postgres should say "healthy")
+$DC ps
+```
+
+---
+
+## 7. Nginx + SSL
 
 ```bash
 sudo nano /etc/nginx/sites-available/saifzz
@@ -253,278 +215,103 @@ server {
 }
 ```
 
-Enable:
+Enable it, remove the default site, and add SSL:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/saifzz /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
-```
 
----
-
-## 8. SSL (Let's Encrypt)
-
-```bash
 sudo certbot --nginx -d saifzz.mktechnologies.my --non-interactive --agree-tos -m hamidkarim2002@gmail.com
 sudo systemctl enable certbot.timer
 ```
 
+Certbot rewrites the nginx config to HTTPS automatically.
+
 ---
 
-## 9. First Manual Deploy (bootstrap)
+## 8. Verify
 
 ```bash
-sudo -u deploy bash
-cd /var/www/Saifzz-Aircond
-
-# Clone repo
-git clone git@github.com:YOUR_ORG/Saifzz-Aircond.git .
-
-# .env — see Section 10
-cp .env.example .env
-nano .env
-
-# Create storage symlink for nginx
-ln -sfn /var/www/Saifzz-Aircond/storage/app/public /var/www/Saifzz-Aircond/public/storage
-
-# Build and start containers (npm build happens inside Docker)
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-
-# Copy built assets from container to host for nginx to serve
-docker compose -f docker-compose.prod.yml cp app:/var/www/Saifzz-Aircond/public/build ./public/build
-
-# Bootstrap Laravel
-docker compose -f docker-compose.prod.yml exec -T app php artisan key:generate
-docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
-
-# Fix storage permissions
-sudo chown -R deploy:www-data storage bootstrap/cache
-sudo chmod -R 775 storage bootstrap/cache
+curl -sS -o /dev/null -w "%{http_code}\n" https://saifzz.mktechnologies.my   # expect 200
 ```
 
----
+Open `https://saifzz.mktechnologies.my` and log in:
+- **Email:** `admin@saifzz.test`
+- **Password:** `password` → **change it immediately after first login.**
 
-## 10. Production `.env` Values
-
-```dotenv
-APP_NAME="Saifzz Aircond"
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://saifzz.mktechnologies.my
-
-DB_CONNECTION=pgsql
-DB_HOST=postgres
-DB_PORT=5432
-DB_DATABASE=saifzz_prod
-DB_USERNAME=saifzz
-DB_PASSWORD=CHANGE_THIS_PASSWORD
-
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-MAIL_MAILER=smtp
-# fill in SMTP credentials
-
-LOG_CHANNEL=daily
-LOG_LEVEL=error
-```
-
-> `DB_HOST=postgres` and `REDIS_HOST=redis` — Docker Compose service names, not `127.0.0.1`.
-
----
-
-## 11. GitHub Actions CI/CD
-
-### Repository Secrets (Settings → Secrets → Actions)
-
-| Secret | Value |
-|---|---|
-| `DEPLOY_SSH_KEY` | Private key from Section 6 |
-| `DEPLOY_HOST` | GCP external IP |
-| `DEPLOY_USER` | `deploy` |
-
-### `.github/workflows/ci.yml`
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [dev]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: saifzz_testing
-          POSTGRES_USER: saifzz
-          POSTGRES_PASSWORD: secret
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: pgsql, pdo_pgsql, redis, mbstring, xml, curl, zip, bcmath
-          coverage: none
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Copy .env
-        run: |
-          cp .env.example .env
-          sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_PORT=5432" >> .env
-          echo "DB_DATABASE=saifzz_testing" >> .env
-          echo "DB_USERNAME=saifzz" >> .env
-          echo "DB_PASSWORD=secret" >> .env
-
-      - name: Generate key
-        run: php artisan key:generate
-
-      - name: Run tests
-        run: php artisan test --parallel
-```
-
-### `.github/workflows/deploy.yml`
-
-```yaml
-name: Deploy
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  test:
-    uses: ./.github/workflows/ci.yml
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-
-      - name: Add host key
-        run: ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy
-        run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'bash -s' << 'ENDSSH'
-            set -e
-            cd /var/www/Saifzz-Aircond
-
-            git fetch origin main
-            git reset --hard origin/main
-
-            npm ci && npm run build && rm -rf node_modules
-
-            docker compose -f docker-compose.prod.yml build app worker
-            docker compose -f docker-compose.prod.yml up -d --no-deps app worker
-
-            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-            docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
-          ENDSSH
-
-      - name: Notify success
-        if: success()
-        run: echo "Deployed to https://saifzz.mktechnologies.my"
-```
-
-> **Why `git reset --hard`** — atomic, no merge conflicts. Server tracks `origin/main` exactly.
-
----
-
-## 12. Dev Workflow
-
-```bash
-# Daily dev loop
-git checkout dev
-# make changes, test locally
-git push origin dev        # triggers CI tests only
-
-# Ready to release
-git checkout main
-git merge dev
-git push origin main       # triggers CI + CD → auto deploys
-```
-
----
-
-## 13. Database Backup (deferred — set up before migrating to ipserverone)
-
-```bash
-docker compose -f docker-compose.prod.yml exec -T postgres \
-  pg_dump -U saifzz saifzz_prod | gzip > /backups/saifzz_$(date +%Y%m%d_%H%M).sql.gz
-```
-
-Will add: daily cron + GCS bucket upload + 7-day retention.
-
----
-
-## 14. Post-Deploy Checklist
-
-- [ ] `https://saifzz.mktechnologies.my` loads (green padlock)
-- [ ] Login works
-- [ ] Create a service record end-to-end
-- [ ] Containers running: `docker compose -f docker-compose.prod.yml ps`
-- [ ] Logs clean: `docker compose -f docker-compose.prod.yml logs -f app`
-
-### Laravel Scheduler (cron)
+Confirm the page is styled (proves the `/build` assets were copied). Add the Laravel scheduler to cron:
 
 ```bash
 sudo crontab -u deploy -e
-# Add:
-* * * * * docker compose -f /var/www/Saifzz-Aircond/docker-compose.prod.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+# Add this line:
+* * * * * cd /var/www/Saifzz-Aircond && docker compose -f docker-compose.prod.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+```
+
+Deployment complete.
+
+---
+
+## 9. Automated Deploys (GitHub Actions)
+
+Pushing to `main` runs tests, then deploys automatically. Set these in
+**GitHub → Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_SSH_KEY` | The private key printed in Step 4 |
+| `DEPLOY_HOST` | VM external IP |
+| `DEPLOY_USER` | `deploy` |
+
+The workflow (`.github/workflows/deploy.yml`) pulls latest, rebuilds the
+containers, copies assets to the host, and runs migrations.
+
+---
+
+## 10. Common Operations
+
+All commands assume `cd /var/www/Saifzz-Aircond` and use
+`docker compose -f docker-compose.prod.yml` (aliased `$DC` below).
+
+```bash
+$DC ps                                    # container status
+$DC logs -f app                           # tail app logs
+$DC exec -T app tail -50 storage/logs/laravel-$(date +%F).log   # Laravel error log
+$DC exec -T app php artisan optimize:clear # clear all caches
+$DC restart app worker                    # restart app + queue
+$DC exec postgres psql -U saifzz saifzz_prod   # database shell
+```
+
+Manual redeploy (the GitHub Action does this for you):
+
+```bash
+git fetch origin main && git reset --hard origin/main
+$DC build app worker
+$DC up -d --no-deps app worker
+rm -rf ./public/build && $DC cp app:/var/www/Saifzz-Aircond/public/build ./public/build
+$DC exec -T app php artisan migrate --force
+$DC exec -T app php artisan optimize
+```
+
+Database backup:
+
+```bash
+$DC exec -T postgres pg_dump -U saifzz saifzz_prod | gzip > saifzz_$(date +%Y%m%d_%H%M).sql.gz
 ```
 
 ---
 
-## 15. Quick Reference
+## 11. Troubleshooting
 
-```bash
-# Redeploy manually
-ssh deploy@<IP> 'cd /var/www/Saifzz-Aircond && git pull && npm ci && npm run build && rm -rf node_modules && docker compose -f docker-compose.prod.yml build && docker compose -f docker-compose.prod.yml up -d && docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force && docker compose -f docker-compose.prod.yml exec -T app php artisan optimize'
+| Symptom | Cause & Fix |
+|---|---|
+| `500` and no styling | Asset copy missing. Re-run `$DC cp app:/var/www/Saifzz-Aircond/public/build ./public/build`. |
+| `500`, log shows `MissingAppKeyException` | `APP_KEY` empty. `$DC exec -T app php artisan key:generate`, then `$DC exec -T app php artisan optimize`, then `$DC restart app`. |
+| `500`, log can't be written / no log file | Storage not writable by container. `sudo chown -R 82:82 storage`. |
+| `db:seed` → `undefined function fake()` | You're on old code; faker is dev-only. The current seeder uses `firstOrCreate` — pull latest and rebuild. |
+| SSL/certbot connection timeout | HTTP/HTTPS firewall not open. Tick both in GCP VM settings (Step 1), then re-run certbot. |
+| `curl localhost` hits wrong site | Default nginx site still enabled. `sudo rm /etc/nginx/sites-enabled/default && sudo systemctl reload nginx`. |
+| Changed `.env` but no effect | Config is cached. `$DC exec -T app php artisan optimize:clear && $DC exec -T app php artisan optimize`. |
 
-# Tail app logs
-ssh deploy@<IP> 'docker compose -f /var/www/Saifzz-Aircond/docker-compose.prod.yml logs -f app'
-
-# Clear all caches
-ssh deploy@<IP> 'docker compose -f /var/www/Saifzz-Aircond/docker-compose.prod.yml exec -T app php artisan optimize:clear'
-
-# Check containers
-ssh deploy@<IP> 'docker compose -f /var/www/Saifzz-Aircond/docker-compose.prod.yml ps'
-
-# psql shell
-ssh deploy@<IP> 'docker compose -f /var/www/Saifzz-Aircond/docker-compose.prod.yml exec postgres psql -U saifzz saifzz_prod'
-```
+> **Why the `82:82` storage owner?** The PHP-FPM process inside the Alpine image runs as `www-data` = uid 82. The mounted host `storage/` must be owned by that uid so the app can write logs, sessions, and cache.
