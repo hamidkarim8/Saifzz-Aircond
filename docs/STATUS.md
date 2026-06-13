@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-12 (session 18)
+> **Last updated:** 2026-06-13 (session 20)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **Phase** | **All 11 feature modules complete** — Users mgmt (1), Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10), Notifications (11) done. Next: BayarCash go-live + deployment. |
+| **Phase** | **All 11 feature modules complete + dynamic service types done** — Users mgmt (1), Clients (2), Fees (3), Service Records (4), Payments (5), Documents (6), Appointments (7), Reminders (8), Dashboard/Reports (9), Client Portal (10), Notifications (11) done. Next: BayarCash go-live + deployment. |
 | **Stack** | Laravel 13 · Inertia + Vue 3 · Tailwind · PostgreSQL · Redis · Sail (Docker) |
 | **Auth/RBAC** | Laravel Breeze + policies (not installed yet) |
 | **PDF / Pay** | Cash + BayarCash (DuitNow QR) stub behind swappable interface **done**; invoice + receipt **view + PDF (dompdf) done** |
@@ -52,7 +52,9 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - **UI/UX Upgrade Round 1** (session 16) done: live app brought to a close, consistent match with the mockup across all admin pages + portal, responsive on phone/iPad/desktop. New shared layer — `DataTable` (hybrid client/server: search+sort+paginate+filter on every table), SweetAlert2 toast+confirm (`lib/swal.js`, navy-themed, flash→toast bridge; native `confirm()` gone), Tabler icons, and primitives (`StatCard`/`Badge`/`WarrantyPill`/`Card`/`PageHeader`/`FormErrorSummary`/restyled `InputError`). `AdminLayout` rebuilt (sidebar sections, user block, Reminders badge via shared `reminderCount`). Backend (TDD): `ClientController@index` enriched per-row + **eager-load bug fixed** (`latestOfMany`); `ServiceVisitController`/`AppointmentController` index gained server sort/search/per_page. Every page refactored onto the shared layer; portal security behavior unchanged. **Full suite: 161 passed / 630 assertions** (+10). Spec/plan in `docs/superpowers/`. Owner visual review pending; dashboard/technician-scoping brainstorm deferred to a dedicated session.
 - **Technician data scoping** (session 17) done: row-level data ownership — techs see only their own jobs/revenue/reports; admins + `view_all_data`-granted users see everything. New permission `view_all_data` (grantable, non-default, NOT admin-only; admins implicit). `technician_id` owner column on `service_visits` + `appointments` (visits backfilled from `created_by`); `scopeVisibleTo($q,$user)` on both models = single scoping seam. All controllers scoped: service records, appointments, dashboard KPIs/chart/transactions, reports, payments (403 guards), documents (403 guards), client-profile history. Write path forces self for scoped techs; all-data users can assign via technician selectors (visit create form + appointment modal). "My Jobs" vs "Service Records" title. `view_all_data` label in user modal. Spec/plan in `docs/superpowers/`. **Full suite: 187 passed / 727 assertions**.
 - **Hot fixes** (session 18): migration was pending in the live DB — ran `php artisan migrate` (added `technician_id` columns + backfill). `ServiceVisit::client()` and `Appointment::client()` relations added `->withTrashed()` so visits and appointments referencing soft-deleted clients no longer return null (was crashing `Show.vue`). **Suite stays 187/187**.
+- **Dynamic service types** (session 20): service types moved from hardcoded PHP constants to a DB-backed service_types table. New ServiceTypeController (index/store/update, no delete) gated by new manage_service_types permission (default-on for technicians). Six initial types seeded. All three former SERVICE_TYPES constants removed; validators use Rule::exists; controllers use ServiceType::orderBy("name")->pluck. New Pages/ServiceTypes/Index.vue management page with inline-edit + add-row. Nav restructured: Appointments moved to Main; Management renamed to Settings (Service Types → Service Fees → Users). **Full suite: 197 passed / 755 assertions**. Spec + plan in docs/superpowers/.
 - **Auth UI rebrand** (session 14): staff `Login`/`Register` moved off default Breeze onto the design system (`GuestLayout` rebranded, native inputs + tokens); `Welcome.vue` replaced with a branded landing page exposing two entry points — **Customer portal** (`/portal`) and **Staff sign in** (`/login`). Login also links customers to the portal. Full UI/UX/cosmetics polish pass still deferred (owner will do a dedicated pass).
+- **Dynamic service types** (session 20): service types moved from hardcoded PHP constants to a DB-backed  table. New  (index/store/update, no delete) gated by new  permission (default-on for technicians). Six initial types seeded (Cleaning, Gas Top-Up, Repair, Installation, Troubleshoot, Dismantle). All three former  constants removed; validators now use ; controllers use . New  management page with inline-edit + add-row. Nav restructured: Appointments moved to Main; Management renamed to Settings with order Service Types → Service Fees → Users. **Full suite: 197 passed / 755 assertions**. Spec + plan in .
 
 ## 🔄 In Progress
 - _(none)_
