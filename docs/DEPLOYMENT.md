@@ -286,9 +286,12 @@ $DC exec postgres psql -U saifzz saifzz_prod   # database shell
 Manual redeploy (the GitHub Action does this for you):
 
 ```bash
+# storage is owned by uid 82 (php-fpm); hand it to deploy so git can reset, then hand it back
+docker run --rm -v "$PWD/storage:/s" alpine chown -R "$(id -u):$(id -g)" /s
 git fetch origin main && git reset --hard origin/main
 $DC build app worker
 $DC up -d --no-deps app worker
+docker run --rm -v "$PWD/storage:/s" alpine chown -R 82:82 /s
 rm -rf ./public/build && $DC cp app:/var/www/Saifzz-Aircond/public/build ./public/build
 $DC exec -T app php artisan migrate --force
 $DC exec -T app php artisan optimize
@@ -313,5 +316,6 @@ $DC exec -T postgres pg_dump -U saifzz saifzz_prod | gzip > saifzz_$(date +%Y%m%
 | SSL/certbot connection timeout | HTTP/HTTPS firewall not open. Tick both in GCP VM settings (Step 1), then re-run certbot. |
 | `curl localhost` hits wrong site | Default nginx site still enabled. `sudo rm /etc/nginx/sites-enabled/default && sudo systemctl reload nginx`. |
 | Changed `.env` but no effect | Config is cached. `$DC exec -T app php artisan optimize:clear && $DC exec -T app php artisan optimize`. |
+| Deploy `git reset` → `unlink ... storage/.gitignore: Permission denied` | `storage` is owned by uid 82, deploy can't reset it. Hand it over and back: `docker run --rm -v "$PWD/storage:/s" alpine chown -R "$(id -u):$(id -g)" /s` → git reset → `... chown -R 82:82 /s`. The deploy workflow does this automatically. |
 
 > **Why the `82:82` storage owner?** The PHP-FPM process inside the Alpine image runs as `www-data` = uid 82. The mounted host `storage/` must be owned by that uid so the app can write logs, sessions, and cache.
