@@ -190,4 +190,100 @@ class ReportServiceTest extends TestCase
         $this->assertSame(100.0, $service->kpis($alice->id)['revenue_all_time']);
         $this->assertSame(300.0, $service->kpis(null)['revenue_all_time']);
     }
+
+    // ── Receivables / Aging tests ───────────────────────────────────────────────
+
+    private function pendingVisit(Client $client, int $daysAgo, float $amount, string $txnId, ?int $technicianId = null): void
+    {
+        $visit = ServiceVisit::create([
+            'client_id'      => $client->id,
+            'visit_date'     => now()->subDays($daysAgo)->toDateString(),
+            'warranty_months'=> 0,
+            'technician_id'  => $technicianId,
+        ]);
+        Transaction::create([
+            'txn_id'   => $txnId,
+            'visit_id' => $visit->id,
+            'amount'   => $amount,
+            'method'   => 'Cash',
+            'status'   => 'pending',
+            'paid_at'  => null,
+        ]);
+    }
+
+    public function test_receivables_empty_when_no_pending_transactions(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+        // Only a paid transaction — must not appear in receivables
+        $visit = ServiceVisit::create(['client_id' => $c->id, 'visit_date' => now()->subDays(5)->toDateString(), 'warranty_months' => 0]);
+        Transaction::create([
+            'txn_id' => 'TXN-PAID', 'visit_id' => $visit->id, 'amount' => 100,
+            'method' => 'Cash', 'status' => 'paid', 'paid_at' => now(),
+        ]);
+
+        $result = $this->service()->receivables();
+
+        $this->assertEmpty($result['items']);
+        $this->assertSame(0.0, $result['total_outstanding']);
+        foreach ($result['buckets'] as $b) {
+            $this->assertSame(0, $b['count']);
+            $this->assertSame(0.0, $b['total']);
+        }
+    }
+
+    public function test_receivables_buckets_visits_by_age(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+        $this->pendingVisit($c, 10,  100.0, 'TXN-10');   // 10 days → Current  (0–30)
+        $this->pendingVisit($c, 45,  200.0, 'TXN-45');   // 45 days → Overdue  (31–60)
+        $this->pendingVisit($c, 75,  300.0, 'TXN-75');   // 75 days → Late     (61–90)
+        $this->pendingVisit($c, 120, 400.0, 'TXN-120');  // 120 days → Critical (91+)
+
+        $result = $this->service()->receivables();
+
+        $this->assertCount(4, $result['items']);
+        $this->assertSame(1000.0, $result['total_outstanding']);
+
+        [$current, $overdue, $late, $critical] = $result['buckets'];
+        $this->assertSame(1,     $current['count']);  $this->assertSame(100.0, $current['total']);
+        $this->assertSame(1,     $overdue['count']);  $this->assertSame(200.0, $overdue['total']);
+        $this->assertSame(1,     $late['count']);     $this->assertSame(300.0, $late['total']);
+        $this->assertSame(1,     $critical['count']); $this->assertSame(400.0, $critical['total']);
+
+        // Items sorted oldest first
+        $this->assertSame('TXN-120', $result['items'][0]['txn_id']);
+        $this->assertSame(120,       $result['items'][0]['days_outstanding']);
+        $this->assertSame('TXN-10',  $result['items'][3]['txn_id']);
+    }
+
+    public function test_receivables_scoped_to_technician(): void
+    {
+        $alice = \App\Models\User::factory()->technician()->create();
+        $bob   = \App\Models\User::factory()->technician()->create();
+        $c     = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+
+        $this->pendingVisit($c, 10, 100.0, 'TXN-ALICE', $alice->id);
+        $this->pendingVisit($c, 20, 200.0, 'TXN-BOB',   $bob->id);
+
+        $result = $this->service()->receivables($alice->id);
+
+        $this->assertCount(1, $result['items']);
+        $this->assertSame('TXN-ALICE', $result['items'][0]['txn_id']);
+        $this->assertSame(100.0, $result['total_outstanding']);
+    }
+
+    public function test_receivables_null_technician_id_returns_all(): void
+    {
+        $alice = \App\Models\User::factory()->technician()->create();
+        $bob   = \App\Models\User::factory()->technician()->create();
+        $c     = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+
+        $this->pendingVisit($c, 10, 100.0, 'TXN-1', $alice->id);
+        $this->pendingVisit($c, 20, 200.0, 'TXN-2', $bob->id);
+
+        $result = $this->service()->receivables(null);
+
+        $this->assertCount(2, $result['items']);
+        $this->assertSame(300.0, $result['total_outstanding']);
+    }
 }

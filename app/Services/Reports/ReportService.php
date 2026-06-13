@@ -170,6 +170,81 @@ class ReportService
     }
 
     /**
+     * Outstanding (pending) transactions grouped into 4 aging buckets.
+     * days_outstanding is computed from PHP's now() so tests using travelTo() work correctly.
+     * When $technicianId is provided, only visits assigned to that technician are returned.
+     *
+     * @return array{buckets: list<array{label:string,days_from:int,days_to:int|null,count:int,total:float}>, items: list<array<string,mixed>>, total_outstanding: float}
+     */
+    public function receivables(?int $technicianId = null): array
+    {
+        $today = now()->toDateString();
+
+        $rows = DB::table('transactions as t')
+            ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
+            ->join('clients as c', 'c.id', '=', 'sv.client_id')
+            ->whereNull('c.deleted_at')
+            ->where('t.status', 'pending')
+            ->when($technicianId !== null, fn ($q) => $q->where('sv.technician_id', $technicianId))
+            ->select([
+                'sv.id as visit_id',
+                't.txn_id',
+                'c.name as client_name',
+                'c.serial_no',
+                'sv.visit_date',
+                't.amount',
+                DB::raw("(DATE '{$today}' - sv.visit_date::date) AS days_outstanding"),
+            ])
+            ->orderByRaw("(DATE '{$today}' - sv.visit_date::date) DESC")
+            ->get();
+
+        $buckets = [
+            ['label' => 'Current',  'days_from' => 0,  'days_to' => 30,  'count' => 0, 'total' => 0.0],
+            ['label' => 'Overdue',  'days_from' => 31, 'days_to' => 60,  'count' => 0, 'total' => 0.0],
+            ['label' => 'Late',     'days_from' => 61, 'days_to' => 90,  'count' => 0, 'total' => 0.0],
+            ['label' => 'Critical', 'days_from' => 91, 'days_to' => null,'count' => 0, 'total' => 0.0],
+        ];
+        $items            = [];
+        $totalOutstanding = 0.0;
+
+        foreach ($rows as $r) {
+            $days             = (int) $r->days_outstanding;
+            $amount           = (float) $r->amount;
+            $totalOutstanding += $amount;
+
+            $idx = match (true) {
+                $days <= 30 => 0,
+                $days <= 60 => 1,
+                $days <= 90 => 2,
+                default     => 3,
+            };
+            $buckets[$idx]['count']++;
+            $buckets[$idx]['total'] += $amount;
+
+            $items[] = [
+                'visit_id'         => (int) $r->visit_id,
+                'txn_id'           => $r->txn_id,
+                'client_name'      => $r->client_name,
+                'serial_no'        => $r->serial_no,
+                'visit_date'       => substr((string) $r->visit_date, 0, 10),
+                'amount'           => $amount,
+                'days_outstanding' => $days,
+            ];
+        }
+
+        foreach ($buckets as &$bucket) {
+            $bucket['total'] = round($bucket['total'], 2);
+        }
+        unset($bucket);
+
+        return [
+            'buckets'           => $buckets,
+            'items'             => $items,
+            'total_outstanding' => round($totalOutstanding, 2),
+        ];
+    }
+
+    /**
      * Period → [from, to] Carbon bounds. 'all' → [null, null] (unbounded).
      *
      * @return array{0: ?Carbon, 1: ?Carbon}
