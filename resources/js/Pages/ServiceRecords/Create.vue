@@ -91,7 +91,7 @@ const warrantyEnd = computed(() => {
 });
 
 const totalServices = computed(() => form.lines.filter(l => l.service_type).length);
-const totalUnits = computed(() => form.lines.reduce((s, l) => s + (Number(l.units) || 0), 0));
+const totalUnits = computed(() => form.lines.reduce((s, l) => s + (l.unit_id ? 1 : (Number(l.units) || 0)), 0));
 
 const submit = () => form.post(route('service-records.store'));
 </script>
