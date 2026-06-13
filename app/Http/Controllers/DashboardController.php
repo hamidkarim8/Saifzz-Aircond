@@ -28,7 +28,8 @@ class DashboardController extends Controller
 
         $user      = $request->user();
         $scopeId   = $user->seesAllData() ? null : $user->id;
-        $canReport = $user->hasPermission('view_reports');
+        $canReport  = $user->hasPermission('view_reports');
+        $canCollect = $user->hasPermission('collect_payment');
 
         return Inertia::render('Dashboard', [
             'canReport'    => $canReport,
@@ -40,6 +41,9 @@ class DashboardController extends Controller
                 'transactions'   => $canReport
                     ? $reports->transactions($period, 50, $scopeId)
                     : [],
+                'receivables'    => $canCollect
+                    ? $reports->receivables($scopeId)
+                    : null,
             ],
             'appointments' => Appointment::query()
                 ->visibleTo($user)
