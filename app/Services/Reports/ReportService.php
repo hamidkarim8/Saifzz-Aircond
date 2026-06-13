@@ -125,6 +125,13 @@ class ReportService
         $q = DB::table('transactions as t')
             ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
             ->join('clients as c', 'c.id', '=', 'sv.client_id')
+            ->leftJoinSub(
+                DB::table('service_lines')->select('visit_id', DB::raw('MIN(service_type) as service_type'))->groupBy('visit_id'),
+                'sl',
+                'sl.visit_id',
+                '=',
+                'sv.id'
+            )
             ->select(
                 't.txn_id',
                 't.amount',
@@ -132,6 +139,7 @@ class ReportService
                 't.status',
                 'c.name as client_name',
                 'c.serial_no',
+                'sl.service_type',
                 DB::raw('COALESCE(t.paid_at, t.created_at) as occurred_at'),
             );
 
@@ -154,6 +162,7 @@ class ReportService
             'date' => substr((string) $r->occurred_at, 0, 10),
             'client_name' => $r->client_name,
             'serial_no' => $r->serial_no,
+            'service_type' => $r->service_type,
             'amount' => (float) $r->amount,
             'method' => $r->method,
             'status' => $r->status,

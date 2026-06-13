@@ -71,11 +71,18 @@ const isToday = (day) =>
                     @click="emit('select', day)"
                 >
                     {{ day }}
-                    <span
-                        v-if="byDay[day]"
-                        class="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full"
-                        :class="selectedDay === day ? 'bg-white' : 'bg-primary'"
-                    />
+                    <span v-if="byDay[day]" class="absolute bottom-1 left-1/2 -translate-x-1/2">
+                        <span
+                            v-if="byDay[day].length === 1"
+                            class="block h-1.5 w-1.5 rounded-full"
+                            :class="selectedDay === day ? 'bg-white' : 'bg-primary'"
+                        />
+                        <span
+                            v-else
+                            class="flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold leading-none tabular-nums"
+                            :class="selectedDay === day ? 'bg-white text-primary' : 'bg-primary text-white'"
+                        >{{ byDay[day].length }}</span>
+                    </span>
                 </button>
             </div>
         </div>

@@ -126,4 +126,30 @@ class ReminderServiceTest extends TestCase
 
         $this->assertSame('2026-05-10', $r['due_this_month'][0]['last_service_date']);
     }
+
+    public function test_service_type_and_units_are_included(): void
+    {
+        $client = $this->makeClient('Fields Fatimah');
+        $visit = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+        ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Cleaning', 'units' => 3, 'rate' => 100, 'discount' => 0, 'next_service_date' => '2026-06-20']);
+
+        $r = $this->dueList();
+
+        $item = $r['due_this_month'][0];
+        $this->assertSame('Cleaning', $item['service_type']);
+        $this->assertSame(3, $item['units']);
+    }
+
+    public function test_service_type_reflects_line_with_latest_next_service_date(): void
+    {
+        $client = $this->makeClient('Latest Laila');
+        $visit = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+        ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Cleaning', 'units' => 1, 'rate' => 100, 'discount' => 0, 'next_service_date' => '2026-06-10']);
+        ServiceLine::create(['visit_id' => $visit->id, 'service_type' => 'Installation', 'units' => 1, 'rate' => 200, 'discount' => 0, 'next_service_date' => '2026-06-25']);
+
+        $r = $this->dueList();
+
+        // Installation has the later next_service_date — should win
+        $this->assertSame('Installation', $r['due_this_month'][0]['service_type']);
+    }
 }

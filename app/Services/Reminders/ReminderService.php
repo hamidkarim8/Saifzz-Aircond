@@ -41,6 +41,8 @@ class ReminderService
                 DB::raw('MAX(sl.next_service_date) as next_due'),
                 DB::raw('MAX(sv.visit_date) as last_service_date'),
                 DB::raw('MAX(CASE WHEN rc.id IS NULL THEN 0 ELSE 1 END) as contacted_flag'),
+                DB::raw('SUM(sl.units) as units'),
+                DB::raw('(SELECT sl2.service_type FROM service_lines sl2 JOIN service_visits sv2 ON sv2.id = sl2.visit_id WHERE sv2.client_id = c.id AND sl2.next_service_date IS NOT NULL ORDER BY sl2.next_service_date DESC LIMIT 1) as service_type'),
             ]);
 
         $todayStr = $today->toDateString();
@@ -56,6 +58,8 @@ class ReminderService
                 'name' => $row->name,
                 'phone' => $row->phone,
                 'address' => $row->address,
+                'service_type' => $row->service_type,
+                'units' => (int) $row->units,
                 'next_due' => $nextDue,
                 'last_service_date' => $row->last_service_date ? substr((string) $row->last_service_date, 0, 10) : null,
                 'contacted' => (bool) $row->contacted_flag,

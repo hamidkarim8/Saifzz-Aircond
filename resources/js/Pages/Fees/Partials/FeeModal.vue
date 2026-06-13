@@ -39,6 +39,17 @@ watch(() => props.open, (open) => {
 const isFlexible = computed(() => form.pricing_mode === 'flexible');
 const isRepair = computed(() => form.service_type === 'Repair');
 
+// Auto-set pricing_mode when switching to/from Repair so form submits correct data.
+watch(() => form.service_type, (type) => {
+    if (type === 'Repair') {
+        form.pricing_mode = 'flexible';
+        form.option = '';
+        form.rate = '';
+    } else if (form.pricing_mode === 'flexible') {
+        form.pricing_mode = 'fixed_per_unit';
+    }
+});
+
 const submit = () => {
     if (isEdit.value) {
         form.put(route('fees.update', props.fee.id), { onSuccess: () => emit('close'), preserveScroll: true });

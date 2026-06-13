@@ -128,6 +128,16 @@ class ReportServiceTest extends TestCase
         $this->assertCount(3, $this->service()->transactions('all'));
     }
 
+    public function test_transactions_include_service_type(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+        $this->txn($this->visitFor($c, 'Gas Top-Up'), 80, 'paid', '2026-06-10 09:00:00', 'TXN-ST');
+
+        $rows = $this->service()->transactions('all');
+        $this->assertArrayHasKey('service_type', $rows[0]);
+        $this->assertSame('Gas Top-Up', $rows[0]['service_type']);
+    }
+
     // ── Technician scoping tests ────────────────────────────────────────────
 
     private function paidVisitFor(int $techId, float $amount): void
