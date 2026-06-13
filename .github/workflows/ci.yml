@@ -65,5 +65,10 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate
 
+      - name: Build frontend assets (Vite manifest needed by Inertia tests)
+        run: |
+          npm ci
+          npm run build
+
       - name: Run tests
-        run: php artisan test --parallel
+        run: php artisan test

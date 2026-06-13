@@ -119,7 +119,7 @@ const txnRows = computed(() =>
         <template #header>
             <div>
                 <h1 class="text-lg font-bold tracking-tight text-navy-800">Dashboard</h1>
-                <p class="text-xs text-ink-soft">Revenue, services and reminders at a glance.</p>
+                <p class="text-xs text-ink-soft">Your aircond business at a glance — revenue, services and reminders.</p>
             </div>
         </template>
 
