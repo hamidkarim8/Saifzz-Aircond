@@ -1,3 +1,10 @@
+# Cap container logs so they can't fill the disk (10 MB x 3 files per service)
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   app:
     build:
@@ -14,6 +21,7 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    logging: *default-logging
 
   worker:
     build:
@@ -29,6 +37,7 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    logging: *default-logging
 
   postgres:
     image: postgres:16-alpine
@@ -46,6 +55,7 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    logging: *default-logging
 
   redis:
     image: redis:7-alpine
@@ -53,6 +63,7 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   pgdata:

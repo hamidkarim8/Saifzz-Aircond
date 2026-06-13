@@ -305,7 +305,78 @@ $DC exec -T postgres pg_dump -U saifzz saifzz_prod | gzip > saifzz_$(date +%Y%m%
 
 ---
 
-## 11. Troubleshooting
+## 11. Production Operations
+
+### Survives reboot (verify once)
+
+Containers use `restart: unless-stopped` and SSL auto-renews via `certbot.timer`.
+For the VM to fully recover after a reboot, Docker and nginx must start on boot:
+
+```bash
+systemctl is-enabled docker nginx     # both should say "enabled"
+sudo systemctl enable docker nginx    # run if either says "disabled"
+```
+
+Prove it — reboot and confirm the site returns:
+
+```bash
+sudo reboot
+# reconnect after ~30s, then:
+curl -sS -o /dev/null -w "%{http_code}\n" https://saifzz.mktechnologies.my   # expect 200
+```
+
+### Log rotation
+
+Container logs are capped at 10 MB × 3 files per service via the `x-logging`
+anchor in `docker-compose.prod.yml`, so they can't fill the disk. This applies
+automatically on any fresh deploy. To apply it to an **already-running** server
+without a full deploy, recreate the containers:
+
+```bash
+cd /var/www/Saifzz-Aircond
+sudo -u deploy docker compose -f docker-compose.prod.yml up -d --force-recreate
+```
+
+### Database backups
+
+Create a backup script:
+
+```bash
+sudo -u deploy tee /home/deploy/backup.sh > /dev/null << 'EOF'
+#!/bin/bash
+set -e
+cd /var/www/Saifzz-Aircond
+mkdir -p /home/deploy/backups
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  pg_dump -U saifzz saifzz_prod | gzip > "/home/deploy/backups/saifzz_$(date +%Y%m%d_%H%M).sql.gz"
+# keep last 7 days
+find /home/deploy/backups -name 'saifzz_*.sql.gz' -mtime +7 -delete
+EOF
+sudo chmod +x /home/deploy/backup.sh
+```
+
+Schedule it daily at 02:00:
+
+```bash
+sudo crontab -u deploy -e
+# Add:
+0 2 * * * /home/deploy/backup.sh >> /home/deploy/backups/backup.log 2>&1
+```
+
+Restore from a backup:
+
+```bash
+gunzip -c /home/deploy/backups/saifzz_YYYYMMDD_HHMM.sql.gz | \
+  docker compose -f docker-compose.prod.yml exec -T postgres psql -U saifzz saifzz_prod
+```
+
+> **Deferred:** off-site copy (upload backups to a GCS bucket) and uptime
+> monitoring (e.g. UptimeRobot pinging the URL). Set both up on the real
+> production server.
+
+---
+
+## 12. Troubleshooting
 
 | Symptom | Cause & Fix |
 |---|---|
