@@ -12,6 +12,7 @@ class ServiceLine extends Model
 
     protected $fillable = [
         'visit_id',
+        'unit_id',
         'service_type',
         'unit_type',
         'gas_option',
@@ -48,5 +49,10 @@ class ServiceLine extends Model
     public function visit(): BelongsTo
     {
         return $this->belongsTo(ServiceVisit::class, 'visit_id');
+    }
+
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(ClientUnit::class, 'unit_id');
     }
 }

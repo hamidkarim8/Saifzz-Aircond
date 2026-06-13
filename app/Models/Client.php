@@ -52,4 +52,9 @@ class Client extends Model
     {
         return $this->hasOne(ReminderContact::class);
     }
+
+    public function units(): HasMany
+    {
+        return $this->hasMany(ClientUnit::class);
+    }
 }

@@ -36,6 +36,7 @@ class User extends Authenticatable
         'view_all_data',
         'manage_users',
         'manage_service_types',
+        'manage_units',
     ];
 
     /** A new technician starts with exactly these. */
@@ -44,6 +45,7 @@ class User extends Authenticatable
         'record_service',
         'set_appointment',
         'manage_service_types',
+        'manage_units',
     ];
 
     /**
