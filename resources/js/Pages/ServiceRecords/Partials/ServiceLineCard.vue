@@ -37,10 +37,13 @@ watch(() => props.line.service_type, () => {
 });
 
 // When a unit is selected, auto-fill unit_type from the unit record.
+// When deselected, clear unit_type so the user can choose manually.
 watch(() => props.line.unit_id, (unitId) => {
     if (unitId) {
         const unit = props.clientUnits.find(u => u.id === unitId);
         if (unit) props.line.unit_type = unit.unit_type;
+    } else {
+        props.line.unit_type = null;
     }
 });
 

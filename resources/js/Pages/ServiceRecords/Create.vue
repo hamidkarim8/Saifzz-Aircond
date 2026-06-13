@@ -60,6 +60,7 @@ const removeLine = (i) => form.lines.splice(i, 1);
 
 const addLinesForAllUnits = () => {
     clientUnits.value.forEach(unit => {
+        if (form.lines.some(l => l.unit_id === unit.id)) return;
         form.lines.push({
             unit_id: unit.id,
             service_type: '',

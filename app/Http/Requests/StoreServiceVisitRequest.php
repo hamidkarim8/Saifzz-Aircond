@@ -41,7 +41,7 @@ class StoreServiceVisitRequest extends FormRequest
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.next_service_date' => ['nullable', 'date'],
             'lines.*.notes' => ['nullable', 'string', 'max:1000'],
-            'lines.*.unit_id' => ['nullable', 'integer', 'exists:client_units,id'],
+            'lines.*.unit_id' => ['nullable', 'integer', Rule::exists('client_units', 'id')->where('client_id', $this->input('client_id'))],
         ];
     }
 
