@@ -1,0 +1,51 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server host key
+        run: ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'bash -s' << 'ENDSSH'
+            set -e
+            cd /var/www/Saifzz-Aircond
+
+            echo "==> Pulling latest main"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Building frontend"
+            npm ci
+            npm run build
+            rm -rf node_modules
+
+            echo "==> Rebuilding app containers"
+            docker compose -f docker-compose.prod.yml build app worker
+            docker compose -f docker-compose.prod.yml up -d --no-deps app worker
+
+            echo "==> Running migrations"
+            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
+
+            echo "==> Caching config/routes/views"
+            docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
+
+            echo "==> Deploy complete"
+          ENDSSH
