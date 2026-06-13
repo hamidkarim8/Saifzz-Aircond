@@ -241,15 +241,18 @@ Open `https://saifzz.mktechnologies.my` and log in:
 - **Email:** `admin@saifzz.test`
 - **Password:** `password` → **change it immediately after first login.**
 
-Confirm the page is styled (proves the `/build` assets were copied). Add the Laravel scheduler to cron:
-
-```bash
-sudo crontab -u deploy -e
-# Add this line:
-* * * * * cd /var/www/Saifzz-Aircond && docker compose -f docker-compose.prod.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
-```
+Confirm the page is styled (proves the `/build` assets were copied).
 
 Deployment complete.
+
+> **Laravel scheduler (only if/when needed):** the app currently defines no
+> scheduled tasks, so no cron is required. If you later add a scheduled command
+> (e.g. auto-emailing reminders), add this cron then:
+>
+> ```bash
+> sudo crontab -u deploy -e
+> # * * * * * cd /var/www/Saifzz-Aircond && docker compose -f docker-compose.prod.yml exec -T app php artisan schedule:run >> /dev/null 2>&1
+> ```
 
 ---
 
