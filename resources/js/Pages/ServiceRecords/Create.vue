@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -15,6 +15,7 @@ const props = defineProps({
     gasOptions: Array,
     unitTypeServices: Array,
     presetClient: { type: Object, default: null },
+    presetClientUnits: { type: Array, default: () => [] },
     technicians: { type: Array, default: null },
 });
 
@@ -25,8 +26,10 @@ const feeMap = computed(() => {
     return m;
 });
 
+const clientUnits = ref(props.presetClientUnits);
+
 const blankLine = () => ({
-    service_type: '', unit_type: null, gas_option: null, repair_desc: '',
+    unit_id: null, service_type: '', unit_type: null, gas_option: null, repair_desc: '',
     units: 1, rate: '', discount: 0, next_service_date: null, notes: '',
 });
 
@@ -41,8 +44,36 @@ const form = useForm({
     lines: [blankLine()],
 });
 
+// Fetch units when client changes.
+watch(() => form.client_id, (clientId) => {
+    if (!clientId) { clientUnits.value = []; return; }
+    fetch(route('clients.units.index', clientId), {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(r => r.json())
+        .then(units => { clientUnits.value = units; })
+        .catch(() => { clientUnits.value = []; });
+});
+
 const addLine = () => form.lines.push(blankLine());
 const removeLine = (i) => form.lines.splice(i, 1);
+
+const addLinesForAllUnits = () => {
+    clientUnits.value.forEach(unit => {
+        form.lines.push({
+            unit_id: unit.id,
+            service_type: '',
+            unit_type: unit.unit_type,
+            gas_option: null,
+            repair_desc: '',
+            units: 1,
+            rate: '',
+            discount: 0,
+            next_service_date: null,
+            notes: '',
+        });
+    });
+};
 
 const lineSubtotal = (l) => Math.max(0, (Number(l.rate) || 0) * (Number(l.units) || 0) - (Number(l.discount) || 0));
 const grandTotal = computed(() => form.lines.reduce((s, l) => s + lineSubtotal(l), 0));
@@ -118,6 +149,7 @@ const submit = () => form.post(route('service-records.store'));
                     :unit-types="unitTypes"
                     :gas-options="gasOptions"
                     :unit-type-services="unitTypeServices"
+                    :client-units="clientUnits"
                     :errors="form.errors"
                     :removable="form.lines.length > 1"
                     @remove="removeLine(i)"
@@ -129,6 +161,14 @@ const submit = () => form.post(route('service-records.store'));
                 >
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
                     Add another service
+                </button>
+                <button
+                    v-if="clientUnits.length"
+                    type="button"
+                    class="flex w-full items-center justify-center gap-2 rounded-ral border-2 border-dashed border-primary/40 py-3 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary-50"
+                    @click="addLinesForAllUnits"
+                >
+                    + Add line for each unit ({{ clientUnits.length }})
                 </button>
             </div>
 

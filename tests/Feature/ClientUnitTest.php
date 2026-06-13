@@ -221,4 +221,95 @@ class ClientUnitTest extends TestCase
         // Should still be 1 — backfill skips clients that already have units
         $this->assertCount(1, ClientUnit::where('client_id', $client->id)->get());
     }
+
+    private function seedFee(string $type, string $option, float $rate): void
+    {
+        \App\Models\ServiceType::firstOrCreate(['name' => $type]);
+        \App\Models\ServiceFee::create(['service_type' => $type, 'option' => $option, 'pricing_mode' => 'fixed_per_unit', 'rate' => $rate]);
+    }
+
+    public function test_service_line_stores_unit_id_when_provided(): void
+    {
+        $this->seedFee('Cleaning', 'Wall Mounted', 80);
+        $client = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->post(route('service-records.store'), [
+                'client_mode' => 'existing',
+                'client_id' => $client->id,
+                'visit_date' => '2026-06-14',
+                'warranty_months' => 0,
+                'payment_method' => 'Cash',
+                'lines' => [[
+                    'service_type' => 'Cleaning',
+                    'unit_type' => 'Wall Mounted',
+                    'unit_id' => $unit->id,
+                    'units' => 1,
+                    'rate' => 80,
+                    'discount' => 0,
+                    'next_service_date' => '2026-09-14',
+                    'notes' => null,
+                ]],
+            ])
+            ->assertRedirect();
+
+        $visit = \App\Models\ServiceVisit::latest()->first();
+        $line = \App\Models\ServiceLine::where('visit_id', $visit->id)->first();
+        $this->assertSame($unit->id, $line->unit_id);
+    }
+
+    public function test_unit_next_service_date_synced_after_visit_with_unit_id(): void
+    {
+        $this->seedFee('Cleaning', 'Wall Mounted', 80);
+        $client = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->post(route('service-records.store'), [
+                'client_mode' => 'existing',
+                'client_id' => $client->id,
+                'visit_date' => '2026-06-14',
+                'warranty_months' => 0,
+                'payment_method' => 'Cash',
+                'lines' => [[
+                    'service_type' => 'Cleaning',
+                    'unit_type' => 'Wall Mounted',
+                    'unit_id' => $unit->id,
+                    'units' => 1,
+                    'rate' => 80,
+                    'discount' => 0,
+                    'next_service_date' => '2026-09-14',
+                    'notes' => null,
+                ]],
+            ]);
+
+        $this->assertSame('2026-09-14', $unit->fresh()->next_service_date?->toDateString());
+        $this->assertSame('Cleaning', $unit->fresh()->next_service_type);
+    }
+
+    public function test_service_line_next_service_date_null_when_unit_id_set(): void
+    {
+        $this->seedFee('Cleaning', 'Wall Mounted', 80);
+        $client = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->post(route('service-records.store'), [
+                'client_mode' => 'existing',
+                'client_id' => $client->id,
+                'visit_date' => '2026-06-14',
+                'warranty_months' => 0,
+                'payment_method' => 'Cash',
+                'lines' => [[
+                    'service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted',
+                    'unit_id' => $unit->id, 'units' => 1, 'rate' => 80, 'discount' => 0,
+                    'next_service_date' => '2026-09-14', 'notes' => null,
+                ]],
+            ]);
+
+        $visit = \App\Models\ServiceVisit::latest()->first();
+        $line = \App\Models\ServiceLine::where('visit_id', $visit->id)->first();
+        $this->assertNull($line->next_service_date); // moved to unit
+    }
 }

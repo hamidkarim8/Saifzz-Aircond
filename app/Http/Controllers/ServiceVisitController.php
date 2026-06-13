@@ -56,16 +56,22 @@ class ServiceVisitController extends Controller
 
     public function create(): Response
     {
+        $presetClient = request('client')
+            ? Client::where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
+            : null;
+
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
             'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
-            // Optional pre-selected client (e.g. arriving from a client profile).
-            'presetClient' => request('client')
-                ? Client::where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
-                : null,
+            'presetClient' => $presetClient,
+            'presetClientUnits' => $presetClient
+                ? \App\Models\ClientUnit::where('client_id', $presetClient->id)
+                    ->where('is_active', true)->orderBy('label')
+                    ->get(['id', 'label', 'unit_type', 'hp'])
+                : [],
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
                     ->where('active', true)->orderBy('name')->get(['id', 'name'])
@@ -97,6 +103,16 @@ class ServiceVisitController extends Controller
 
             foreach ($data['lines'] as $line) {
                 $visit->lines()->create($this->normalizeLine($line));
+            }
+
+            // Sync next_service_date/type onto each unit that was referenced in this visit.
+            foreach ($data['lines'] as $line) {
+                if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
+                    \App\Models\ClientUnit::where('id', $line['unit_id'])->update([
+                        'next_service_date' => $line['next_service_date'],
+                        'next_service_type' => $line['service_type'],
+                    ]);
+                }
             }
 
             $visit->recalculateTotal(); // R8
@@ -141,6 +157,7 @@ class ServiceVisitController extends Controller
         $isRepair = $type === 'Repair';
         $isGas = $type === 'Gas Top-Up';
         $carriesUnitType = in_array($type, StoreServiceVisitRequest::UNIT_TYPE_SERVICES, true);
+        $hasUnit = !empty($line['unit_id']);
 
         $unitType = $carriesUnitType ? ($line['unit_type'] ?? null) : null;
         $gasOption = $isGas ? ($line['gas_option'] ?? null) : null;
@@ -154,18 +171,18 @@ class ServiceVisitController extends Controller
         }
 
         return [
-            'service_type' => $type,
-            'unit_type' => $unitType,
-            'gas_option' => $gasOption,
-            'units' => (int) $line['units'],
-            'rate' => $rate,
-            'repair_desc' => $isRepair ? ($line['repair_desc'] ?? null) : null,
-            'discount' => (float) ($line['discount'] ?? 0),
-            // R2 — next-service only for unit-type services.
-            'next_service_date' => $carriesUnitType ? ($line['next_service_date'] ?? null) : null,
+            'unit_id'          => $hasUnit ? (int) $line['unit_id'] : null,
+            'service_type'     => $type,
+            'unit_type'        => $unitType,
+            'gas_option'       => $gasOption,
+            'units'            => $hasUnit ? 1 : (int) $line['units'],
+            'rate'             => $rate,
+            'repair_desc'      => $isRepair ? ($line['repair_desc'] ?? null) : null,
+            'discount'         => (float) ($line['discount'] ?? 0),
+            // When unit_id is set, next_service_date lives on the unit — not the line.
+            'next_service_date' => ($carriesUnitType && !$hasUnit) ? ($line['next_service_date'] ?? null) : null,
             // R3 — no notes for Repair.
-            'notes' => $isRepair ? null : ($line['notes'] ?? null),
-            // subtotal derived in the model (R8).
+            'notes'            => $isRepair ? null : ($line['notes'] ?? null),
         ];
     }
 

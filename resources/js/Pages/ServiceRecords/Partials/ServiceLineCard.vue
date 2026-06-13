@@ -7,11 +7,12 @@ import { serviceVariant } from '@/lib/badges';
 const props = defineProps({
     line: { type: Object, required: true },
     index: { type: Number, required: true },
-    feeMap: { type: Object, required: true }, // "type|option" -> rate
+    feeMap: { type: Object, required: true },
     serviceTypes: Array,
     unitTypes: Array,
     gasOptions: Array,
     unitTypeServices: Array,
+    clientUnits: { type: Array, default: () => [] },
     errors: { type: Object, default: () => ({}) },
     removable: Boolean,
 });
@@ -20,12 +21,13 @@ const emit = defineEmits(['remove']);
 const isRepair = computed(() => props.line.service_type === 'Repair');
 const isGas = computed(() => props.line.service_type === 'Gas Top-Up');
 const carriesUnitType = computed(() => props.unitTypeServices.includes(props.line.service_type));
+const hasUnitSelected = computed(() => !!props.line.unit_id);
 
 const err = (field) => props.errors[`lines.${props.index}.${field}`];
 
-// Reset type-specific fields + auto-fill rate when the shape changes.
 watch(() => props.line.service_type, () => {
     props.line.unit_type = null;
+    props.line.unit_id = null;
     props.line.gas_option = null;
     props.line.repair_desc = '';
     props.line.next_service_date = null;
@@ -33,6 +35,15 @@ watch(() => props.line.service_type, () => {
     if (isRepair.value) props.line.rate = '';
     autofill();
 });
+
+// When a unit is selected, auto-fill unit_type from the unit record.
+watch(() => props.line.unit_id, (unitId) => {
+    if (unitId) {
+        const unit = props.clientUnits.find(u => u.id === unitId);
+        if (unit) props.line.unit_type = unit.unit_type;
+    }
+});
+
 watch([() => props.line.unit_type, () => props.line.gas_option], autofill);
 
 function autofill() {
@@ -44,7 +55,8 @@ function autofill() {
 }
 
 const subtotal = computed(() => {
-    const v = (Number(props.line.rate) || 0) * (Number(props.line.units) || 0) - (Number(props.line.discount) || 0);
+    const units = hasUnitSelected.value ? 1 : (Number(props.line.units) || 0);
+    const v = (Number(props.line.rate) || 0) * units - (Number(props.line.discount) || 0);
     return Math.max(0, v);
 });
 
@@ -55,17 +67,15 @@ const typeAccent = {
     Installation: 'border-l-ok', Troubleshoot: 'border-l-invoice',
 };
 
-// Fee badge: show auto-filled rate for fee-driven types, "Flexible" for Repair.
 const feeBadgeLabel = computed(() => {
     if (!props.line.service_type) return null;
     if (isRepair.value) return 'Flexible';
     if (props.line.rate !== '' && props.line.rate != null) return money(props.line.rate);
     return null;
 });
-const feeBadgeVariant = computed(() => {
-    if (isRepair.value) return 'amber';
-    return 'blue';
-});
+const feeBadgeVariant = computed(() => isRepair.value ? 'amber' : 'blue');
+
+const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.hp) + 'HP' : ''})`;
 </script>
 
 <template>
@@ -88,6 +98,16 @@ const feeBadgeVariant = computed(() => {
         <!-- Fields -->
         <div class="p-4 sm:p-5">
             <div class="grid gap-4 sm:grid-cols-2">
+                <!-- Unit selector (shown when client has units and service uses unit_type) -->
+                <div v-if="clientUnits.length && carriesUnitType" class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-semibold text-ink">Unit <span class="font-normal text-xs text-ink-muted">(optional — skip to use count mode)</span></label>
+                    <select v-model="line.unit_id"
+                            class="w-full rounded-ra border border-line bg-surface px-3 py-2 text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                        <option :value="null">— No specific unit —</option>
+                        <option v-for="u in clientUnits" :key="u.id" :value="u.id">{{ unitLabel(u) }}</option>
+                    </select>
+                </div>
+
                 <!-- Service type -->
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Service type</label>
@@ -125,8 +145,8 @@ const feeBadgeVariant = computed(() => {
                     <InputError :message="err('repair_desc')" />
                 </div>
 
-                <!-- Units -->
-                <div>
+                <!-- Units count — hidden when a specific unit is selected (always 1) -->
+                <div v-if="!hasUnitSelected">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Units</label>
                     <input v-model.number="line.units" type="number" min="1" inputmode="numeric" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" />
                     <InputError :message="err('units')" />
