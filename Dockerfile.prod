@@ -1,12 +1,14 @@
 FROM php:8.5-fpm-alpine
 
 RUN apk add --no-cache \
-    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev nodejs npm \
-    autoconf g++ make
+    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev nodejs npm
 
-RUN docker-php-ext-install \
-    pdo_pgsql pgsql zip bcmath intl mbstring opcache \
-    && pecl install redis && docker-php-ext-enable redis
+# install-php-extensions handles compile deps and version-compatible releases
+# (pecl's stable redis does not build on PHP 8.5)
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN chmod +x /usr/local/bin/install-php-extensions \
+    && install-php-extensions \
+       pdo_pgsql pgsql zip bcmath intl mbstring opcache redis
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
