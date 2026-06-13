@@ -12,7 +12,7 @@ const props = defineProps({
     canReport: { type: Boolean, default: false },
     period: { type: String, default: 'all' },
     month: { type: String, default: '' },
-    report: { type: Object, default: () => ({ kpis: {}, servicesByType: [], transactions: [] }) },
+    report: { type: Object, default: () => ({ kpis: {}, servicesByType: [], transactions: [], receivables: null }) },
     appointments: { type: Array, default: () => [] },
 });
 
@@ -71,6 +71,26 @@ const typeBarColor = {
 // ── KPIs ──
 const kpis = computed(() => props.report?.kpis ?? {});
 const exportUrl = computed(() => route('reports.transactions.export', { period: props.period }));
+
+// ── Aging color helpers ──
+const agingBucketClass = (daysFrom) => {
+    if (daysFrom === 0)  return 'border-green-200 bg-green-50';
+    if (daysFrom === 31) return 'border-yellow-200 bg-yellow-50';
+    if (daysFrom === 61) return 'border-orange-200 bg-orange-50';
+    return 'border-red-200 bg-red-50';
+};
+const agingTextClass = (daysFrom) => {
+    if (daysFrom === 0)  return 'text-green-700';
+    if (daysFrom === 31) return 'text-yellow-700';
+    if (daysFrom === 61) return 'text-orange-700';
+    return 'text-red-700';
+};
+const agingBadgeClass = (days) => {
+    if (days <= 30) return 'bg-green-100 text-green-700';
+    if (days <= 60) return 'bg-yellow-100 text-yellow-700';
+    if (days <= 90) return 'bg-orange-100 text-orange-700';
+    return 'bg-red-100 text-red-700';
+};
 
 // ── DataTable columns for transactions ──
 const txnColumns = [
@@ -301,6 +321,79 @@ const txnRows = computed(() =>
                     </div>
                 </template>
             </DataTable>
+        </div>
+    </div>
+
+    <!-- ── Outstanding Receivables (collect_payment only) ── -->
+    <div v-if="report.receivables" class="mt-5 rounded-ral border border-line bg-surface shadow-card">
+        <div class="border-b border-line px-5 py-3">
+            <h2 class="text-sm font-bold text-navy-800">
+                Outstanding Receivables
+                <span class="ml-2 font-mono font-normal text-ink-muted">— {{ money(report.receivables.total_outstanding) }}</span>
+            </h2>
+        </div>
+
+        <!-- Aging bucket summary cards -->
+        <div class="grid grid-cols-2 gap-4 p-5 lg:grid-cols-4">
+            <div
+                v-for="bucket in report.receivables.buckets"
+                :key="bucket.label"
+                class="rounded-ral border p-4"
+                :class="agingBucketClass(bucket.days_from)"
+            >
+                <p class="text-xs font-medium text-ink-soft">{{ bucket.label }}</p>
+                <p class="mt-1 font-mono text-base font-bold" :class="agingTextClass(bucket.days_from)">
+                    {{ money(bucket.total) }}
+                </p>
+                <p class="mt-0.5 text-xs text-ink-muted">{{ bucket.count }} {{ bucket.count === 1 ? 'visit' : 'visits' }}</p>
+            </div>
+        </div>
+
+        <!-- Receivables detail table -->
+        <div class="border-t border-line">
+            <div v-if="report.receivables.items.length" class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                        <tr>
+                            <th class="px-5 py-3 text-left">Client</th>
+                            <th class="px-5 py-3 text-left">Serial</th>
+                            <th class="px-5 py-3 text-left">Visit Date</th>
+                            <th class="px-5 py-3 text-left">Age</th>
+                            <th class="px-5 py-3 text-right">Amount</th>
+                            <th class="px-5 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        <tr
+                            v-for="item in report.receivables.items"
+                            :key="item.txn_id"
+                            class="transition hover:bg-surface-muted"
+                        >
+                            <td class="px-5 py-3 font-medium text-ink">{{ item.client_name }}</td>
+                            <td class="px-5 py-3 font-mono text-xs text-ink-muted">{{ item.serial_no ?? '—' }}</td>
+                            <td class="px-5 py-3 text-ink-soft">{{ fmtDate(item.visit_date) }}</td>
+                            <td class="px-5 py-3">
+                                <span
+                                    class="rounded-ra px-2 py-1 text-xs font-semibold"
+                                    :class="agingBadgeClass(item.days_outstanding)"
+                                >
+                                    {{ item.days_outstanding }}d
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 text-right font-mono font-semibold text-ink">{{ money(item.amount) }}</td>
+                            <td class="px-5 py-3 text-right">
+                                <Link
+                                    :href="route('service-records.show', item.visit_id)"
+                                    class="text-xs font-semibold text-primary hover:text-primary-hover"
+                                >
+                                    View →
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p v-else class="px-5 py-8 text-center text-sm text-ink-muted">No outstanding payments.</p>
         </div>
     </div>
     </AdminLayout>
