@@ -59,7 +59,7 @@ class DashboardTest extends TestCase
             );
     }
 
-    public function test_technician_without_view_reports_sees_launcher(): void
+    public function test_technician_without_view_reports_sees_scoped_dashboard(): void
     {
         $this->actingAs($this->user(['view_clients']))
             ->get(route('dashboard'))
