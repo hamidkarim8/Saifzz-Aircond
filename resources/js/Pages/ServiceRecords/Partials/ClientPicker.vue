@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch } from 'vue';
-import Card from '@/Components/Card.vue';
 import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
@@ -52,7 +51,10 @@ const setMode = (mode) => {
 </script>
 
 <template>
-    <Card title="Client">
+    <!-- overflow-visible (not Card component) so the client-search dropdown escapes the card boundary -->
+    <div class="rounded-ral border border-line bg-surface shadow-card">
+        <div class="flex items-center border-b border-line px-4 py-3.5 text-sm font-bold text-ink">Client</div>
+        <div class="p-4">
         <!-- Mode toggle: two selectable option cards -->
         <div class="mb-5 grid grid-cols-2 gap-3">
             <button
@@ -148,5 +150,6 @@ const setMode = (mode) => {
                 <InputError :message="form.errors['new_client.address']" />
             </div>
         </div>
-    </Card>
+        </div>
+    </div>
 </template>

@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-13 (session 20)
+> **Last updated:** 2026-06-13 (session 24)
 
 ---
 
@@ -54,13 +54,16 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - **Hot fixes** (session 18): migration was pending in the live DB — ran `php artisan migrate` (added `technician_id` columns + backfill). `ServiceVisit::client()` and `Appointment::client()` relations added `->withTrashed()` so visits and appointments referencing soft-deleted clients no longer return null (was crashing `Show.vue`). **Suite stays 187/187**.
 - **Dynamic service types** (session 20): service types moved from hardcoded PHP constants to a DB-backed service_types table. New ServiceTypeController (index/store/update, no delete) gated by new manage_service_types permission (default-on for technicians). Six initial types seeded. All three former SERVICE_TYPES constants removed; validators use Rule::exists; controllers use ServiceType::orderBy("name")->pluck. New Pages/ServiceTypes/Index.vue management page with inline-edit + add-row. Nav restructured: Appointments moved to Main; Management renamed to Settings (Service Types → Service Fees → Users). **Full suite: 197 passed / 755 assertions**. Spec + plan in docs/superpowers/.
 - **Auth UI rebrand** (session 14): staff `Login`/`Register` moved off default Breeze onto the design system (`GuestLayout` rebranded, native inputs + tokens); `Welcome.vue` replaced with a branded landing page exposing two entry points — **Customer portal** (`/portal`) and **Staff sign in** (`/login`). Login also links customers to the portal. Full UI/UX/cosmetics polish pass still deferred (owner will do a dedicated pass).
-- **Dynamic service types** (session 20): service types moved from hardcoded PHP constants to a DB-backed  table. New  (index/store/update, no delete) gated by new  permission (default-on for technicians). Six initial types seeded (Cleaning, Gas Top-Up, Repair, Installation, Troubleshoot, Dismantle). All three former  constants removed; validators now use ; controllers use . New  management page with inline-edit + add-row. Nav restructured: Appointments moved to Main; Management renamed to Settings with order Service Types → Service Fees → Users. **Full suite: 197 passed / 755 assertions**. Spec + plan in .
+- **Dashboard KPI scoping** (session 21): `DashboardController` always sends scoped `report.kpis`, `report.servicesByType`, `appointments` regardless of `view_reports`. `Dashboard.vue` restructured — KPI cards + calendar + chart always rendered (scoped); transactions table gated `canReport`; Pending Reminders card hidden when null (scoped techs). **Full suite: 198 passed**.
+- **Per-unit identity tracking** (session 22): `client_units` table (label, unit_type, hp, brand/model/serial/refrigerant, next_service_date, next_service_type, is_active). `service_lines.unit_id` nullable FK. `manage_units` permission. `ClientUnitController` (JSON index, store/update/deactivate). `ReminderService::dueList()` two-query (primary from units, fallback from lines). `ServiceVisitController::normalizeLine()` syncs date+type to unit after save. `Clients/Show` `UnitsSection` + `UnitModal`. `ServiceRecords/Create` unit selector + "Add line for each unit" button. Backfill migration (idempotent). **Full suite: 226 passed**.
+- **Receivables / aging report** (session 23): `ReportService::receivables()` — pending transactions aged into 4 buckets (0-30/31-60/61-90/91+). `DashboardController` gates payload behind `collect_payment`. `Dashboard.vue` outstanding receivables section with bucket cards + detail table. Scoped tech sees own pending only. **Full suite: 233 passed**. Spec + plan in `docs/superpowers/`.
+- **Round 1 fixups + dropdown bug** (session 24): MonthCalendar button `pb-3` prevents day-number / count-badge overlap; single dot bumped `h-1.5→h-2`. Fees/Index `??` → `||` for option display so Repair shows "Flat job" not blank; `StoreServiceFeeRequest::prepareForValidation()` normalises empty option/rate to null. Reminders `v-if="item.service_type"` guard on both Badge instances avoids empty gray pill when unit backfill has null `next_service_type`. Client search dropdown in Create service record was clipped by `Card`'s `overflow-hidden` — `ClientPicker.vue` now inlines card structure without overflow-hidden so dropdown escapes. **Full suite: 233 passed**.
 
 ## 🔄 In Progress
 - _(none)_
 
 ## ⏳ Pending / Next (ordered)
-1. **Owner visual review** of technician scoping UI (`npm run dev`): eyeball as scoped technician vs admin — technician selectors on create-record form + appointment modal, "My Jobs" title, scoped dashboard/KPIs, scoped client profile history. Plus Round 1 pending fixups: MonthCalendar dot polish, Fees Repair option-field hidden on submit, Reminders card fields rendering.
+1. **Owner visual review** (Khalid): eyeball as scoped technician vs admin — technician selectors on create-record form + appointment modal, "My Jobs" title, scoped dashboard/KPIs, per-unit section on client profile, receivables section visible only with collect_payment.
 2. BayarCash go-live: confirm v3 callback field names / status codes / checksum ordering (`TODO(go-live)` markers), fill creds, flip `BAYARCASH_DRIVER=live`; consider moving webhook handling to a queue under load.
 3. Deployment doc (Dockerfile/compose for prod) + go-live checklist.
 
@@ -76,7 +79,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 - ~~**Public registration is open.**~~ **CLOSED (session 14):** `/register` routes removed from `routes/auth.php` (both GET/POST now 404, RegistrationTest asserts it). `RegisteredUserController` + `Auth/Register.vue` kept for reuse by module 1 (admin-created staff). New staff until then: tinker/seeder.
 
 ## 🐞 Bugs
-- _(none)_
+- _(none known)_
 
 ## 🎨 Cosmetic / Polish
 - Mockup `index.html` visual is improvable (flows authoritative, look can be upgraded during UI build).

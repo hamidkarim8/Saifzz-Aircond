@@ -92,7 +92,7 @@ const modeLabel = { fixed_per_unit: 'per unit', tiered: 'tiered', flexible: 'Fle
                                 <Badge v-if="idx === 0" :variant="serviceVariant(type)">{{ type }}</Badge>
                             </td>
                             <td class="py-3 pr-4 align-middle font-medium text-ink">
-                                {{ f.option ?? 'Flat job' }}
+                                {{ f.option || 'Flat job' }}
                             </td>
                             <td class="py-3 pr-4 align-middle">
                                 <Badge v-if="f.pricing_mode === 'flexible'" variant="amber">Flexible</Badge>

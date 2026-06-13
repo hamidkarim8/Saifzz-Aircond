@@ -115,7 +115,7 @@ const isEmpty = computed(() => props.overdue.length === 0 && props.due_this_mont
 
                     <!-- Service info row -->
                     <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                        <Badge :variant="serviceVariant(item.service_type)">{{ item.service_type }}</Badge>
+                        <Badge v-if="item.service_type" :variant="serviceVariant(item.service_type)">{{ item.service_type }}</Badge>
                         <span v-if="item.units" class="text-[12px] text-ink-soft">{{ item.units }} unit{{ item.units !== 1 ? 's' : '' }}</span>
                         <span v-if="item.serial_no" class="font-mono text-[11px] tracking-widest text-ink-muted">#{{ item.serial_no }}</span>
                     </div>
@@ -204,7 +204,7 @@ const isEmpty = computed(() => props.overdue.length === 0 && props.due_this_mont
 
                     <!-- Service info row -->
                     <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                        <Badge :variant="serviceVariant(item.service_type)">{{ item.service_type }}</Badge>
+                        <Badge v-if="item.service_type" :variant="serviceVariant(item.service_type)">{{ item.service_type }}</Badge>
                         <span v-if="item.units" class="text-[12px] text-ink-soft">{{ item.units }} unit{{ item.units !== 1 ? 's' : '' }}</span>
                         <span v-if="item.serial_no" class="font-mono text-[11px] tracking-widest text-ink-muted">#{{ item.serial_no }}</span>
                     </div>

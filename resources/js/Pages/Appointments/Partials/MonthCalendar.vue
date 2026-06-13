@@ -61,7 +61,7 @@ const isToday = (day) =>
                     v-for="day in days"
                     :key="day"
                     type="button"
-                    class="relative aspect-square rounded-ra text-sm font-medium transition"
+                    class="relative aspect-square rounded-ra pb-3 text-sm font-medium transition"
                     :class="[
                         selectedDay === day ? 'bg-primary text-white shadow-card'
                             : byDay[day] ? 'bg-primary-50 text-primary hover:bg-primary-100'
@@ -74,7 +74,7 @@ const isToday = (day) =>
                     <span v-if="byDay[day]" class="absolute bottom-1 left-1/2 -translate-x-1/2">
                         <span
                             v-if="byDay[day].length === 1"
-                            class="block h-1.5 w-1.5 rounded-full"
+                            class="block h-2 w-2 rounded-full"
                             :class="selectedDay === day ? 'bg-white' : 'bg-primary'"
                         />
                         <span

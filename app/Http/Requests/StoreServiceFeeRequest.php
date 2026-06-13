@@ -15,6 +15,16 @@ class StoreServiceFeeRequest extends FormRequest
     /**
      * @return array<string, mixed>
      */
+    protected function prepareForValidation(): void
+    {
+        if ($this->option === '') {
+            $this->merge(['option' => null]);
+        }
+        if ($this->rate === '') {
+            $this->merge(['rate' => null]);
+        }
+    }
+
     public function rules(): array
     {
         return [
