@@ -1,7 +1,8 @@
 FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache \
-    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev nodejs npm
+    git curl libpq-dev libzip-dev zip unzip icu-dev oniguruma-dev nodejs npm \
+    autoconf g++ make
 
 RUN docker-php-ext-install \
     pdo_pgsql pgsql zip bcmath intl mbstring opcache \
