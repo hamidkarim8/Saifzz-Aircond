@@ -1,7 +1,7 @@
 # Deployment Guide — Saifzz Aircond
 
 **Target:** Google Cloud VM → `saifzz.mktechnologies.my`
-**Stack:** Docker Compose (PHP 8.3-FPM · PostgreSQL 16 · Redis) · Nginx (host, SSL) · Node.js (build only)
+**Stack:** Docker Compose (PHP 8.5-FPM · PostgreSQL 16 · Redis) · Nginx (host, SSL)
 **Strategy:** Docker Compose on server. GitHub Actions CI/CD.
 
 ---
