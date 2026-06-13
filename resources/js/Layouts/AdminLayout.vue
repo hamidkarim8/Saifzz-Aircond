@@ -5,7 +5,7 @@ import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
     IconCurrencyDollar, IconCalendarEvent, IconQrcode, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2,
+    IconAirConditioning, IconLogout, IconMenu2, IconCategory,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -36,6 +36,7 @@ const sections = computed(() => {
         { title: 'Management', items: [
             { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users' },
         ]},
         { title: 'Portal', items: [
