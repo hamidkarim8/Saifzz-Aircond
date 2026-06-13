@@ -227,7 +227,7 @@ class ReportService
                 'client_name'      => $r->client_name,
                 'serial_no'        => $r->serial_no,
                 'visit_date'       => substr((string) $r->visit_date, 0, 10),
-                'amount'           => $amount,
+                'amount'           => round($amount, 2),
                 'days_outstanding' => $days,
             ];
         }
