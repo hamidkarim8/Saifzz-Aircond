@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Badge from '@/Components/Badge.vue';
 import UnitModal from './UnitModal.vue';
@@ -29,8 +29,7 @@ const deactivate = (unit) => {
     router.patch(route('clients.units.deactivate', [props.client.id, unit.id]), {}, { preserveScroll: true });
 };
 
-const units = props.client.units ?? [];
-const activeUnits = units.filter(u => u.is_active);
+const activeUnits = computed(() => (props.client.units ?? []).filter(u => u.is_active));
 </script>
 
 <template>

@@ -27,7 +27,7 @@ watch(() => props.open, (open) => {
     if (props.unit) {
         form.label = props.unit.label ?? '';
         form.unit_type = props.unit.unit_type ?? '';
-        form.hp = props.unit.hp ?? null;
+        form.hp = props.unit.hp != null ? Number(props.unit.hp) : null;
         form.brand = props.unit.brand ?? '';
         form.model = props.unit.model ?? '';
         form.serial_no = props.unit.serial_no ?? '';
