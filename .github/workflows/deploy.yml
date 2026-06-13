@@ -28,6 +28,9 @@ jobs:
             set -e
             cd /var/www/Saifzz-Aircond
 
+            echo "==> Handing storage back to deploy so git can reset it"
+            docker run --rm -v "$PWD/storage:/s" alpine chown -R "$(id -u):$(id -g)" /s
+
             echo "==> Pulling latest main"
             git fetch origin main
             git reset --hard origin/main
@@ -35,6 +38,9 @@ jobs:
             echo "==> Rebuilding app containers (includes npm build inside Docker)"
             docker compose -f docker-compose.prod.yml build app worker
             docker compose -f docker-compose.prod.yml up -d --no-deps app worker
+
+            echo "==> Restoring storage ownership to php-fpm uid (82)"
+            docker run --rm -v "$PWD/storage:/s" alpine chown -R 82:82 /s
 
             echo "==> Copying built assets from container to host for nginx"
             rm -rf ./public/build
