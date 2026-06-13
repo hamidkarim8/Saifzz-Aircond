@@ -170,10 +170,12 @@ class ClientController extends Controller
             'visits.lines',
             'visits.transaction',
             'appointments' => fn ($q) => $q->visibleTo($user)->latest('datetime'),
+            'units' => fn ($q) => $q->orderBy('label'),
         ]);
 
         return Inertia::render('Clients/Show', [
             'client' => $client,
+            'canManageUnits' => $user->can('manage_units'),
         ]);
     }
 

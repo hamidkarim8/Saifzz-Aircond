@@ -8,8 +8,12 @@ import Badge from '@/Components/Badge.vue';
 import WarrantyPill from '@/Components/WarrantyPill.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
 import { waLink as wa } from '@/lib/whatsapp';
+import UnitsSection from './Partials/UnitsSection.vue';
 
-const props = defineProps({ client: Object });
+const props = defineProps({
+    client: Object,
+    canManageUnits: { type: Boolean, default: false },
+});
 const can = computed(() => usePage().props.auth.can ?? {});
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
@@ -133,6 +137,11 @@ const waLink = computed(() => wa(props.client.phone));
                 </div>
                 <p v-else class="rounded-ral border border-dashed border-line bg-surface py-8 text-center text-sm text-ink-soft">None scheduled.</p>
             </section>
+        </div>
+
+        <!-- Units -->
+        <div class="mt-6">
+            <UnitsSection :client="client" :can-manage="canManageUnits" />
         </div>
     </AdminLayout>
 </template>
