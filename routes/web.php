@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\ClientUnitController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
@@ -43,6 +44,15 @@ Route::middleware('auth')->group(function () {
     Route::get('clients/{client}/edit', [ClientController::class, 'edit'])->middleware('can:edit_client')->name('clients.edit');
     Route::put('clients/{client}', [ClientController::class, 'update'])->middleware('can:edit_client')->name('clients.update');
     Route::delete('clients/{client}', [ClientController::class, 'destroy'])->middleware('can:edit_client')->name('clients.destroy');
+
+    // Client Units — nested under clients, gated by view_clients (read) and manage_units (write)
+    Route::get('clients/{client}/units', [ClientUnitController::class, 'index'])
+        ->middleware('can:view_clients')->name('clients.units.index');
+    Route::middleware('can:manage_units')->group(function () {
+        Route::post('clients/{client}/units', [ClientUnitController::class, 'store'])->name('clients.units.store');
+        Route::put('clients/{client}/units/{unit}', [ClientUnitController::class, 'update'])->name('clients.units.update');
+        Route::patch('clients/{client}/units/{unit}/deactivate', [ClientUnitController::class, 'deactivate'])->name('clients.units.deactivate');
+    });
 
     // Service Records (module 4) — gated by record_service (P3)
     Route::middleware('can:record_service')->group(function () {

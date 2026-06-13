@@ -61,4 +61,100 @@ class ClientUnitTest extends TestCase
     {
         $this->assertContains('manage_units', User::DEFAULT_TECHNICIAN_PERMISSIONS);
     }
+
+    private function makeClient(): Client
+    {
+        return Client::create(['name' => 'Test', 'phone' => '011-22334455', 'address' => 'KL']);
+    }
+
+    private function makeAdmin(): User
+    {
+        return User::factory()->create(['role' => 'admin']);
+    }
+
+    private function makeTech(): User
+    {
+        return User::factory()->technician()->create();
+    }
+
+    public function test_guest_cannot_store_unit(): void
+    {
+        $client = $this->makeClient();
+        $this->postJson(route('clients.units.store', $client), ['label' => 'BR1', 'unit_type' => 'Wall Mounted'])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_admin_can_store_unit(): void
+    {
+        $client = $this->makeClient();
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('clients.units.store', $client), [
+                'label' => 'Master Bedroom', 'unit_type' => 'Wall Mounted',
+                'hp' => 1.0, 'brand' => 'LG', 'model' => 'S12EQ', 'serial_no' => 'ABC123',
+                'refrigerant_type' => 'R32', 'notes' => null,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('client_units', ['client_id' => $client->id, 'label' => 'Master Bedroom']);
+    }
+
+    public function test_tech_with_manage_units_can_store_unit(): void
+    {
+        $client = $this->makeClient();
+        $tech = $this->makeTech();
+        $this->assertTrue($tech->hasPermission('manage_units'));
+
+        $this->actingAs($tech)
+            ->postJson(route('clients.units.store', $client), ['label' => 'BR1', 'unit_type' => 'Cassette'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('client_units', ['label' => 'BR1', 'unit_type' => 'Cassette']);
+    }
+
+    public function test_admin_can_update_unit(): void
+    {
+        $client = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $client->id, 'label' => 'Old', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->putJson(route('clients.units.update', [$client, $unit]), ['label' => 'New Label', 'unit_type' => 'Cassette'])
+            ->assertRedirect();
+
+        $this->assertSame('New Label', $unit->fresh()->label);
+    }
+
+    public function test_admin_can_deactivate_unit(): void
+    {
+        $client = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->patchJson(route('clients.units.deactivate', [$client, $unit]))
+            ->assertRedirect();
+
+        $this->assertFalse($unit->fresh()->is_active);
+    }
+
+    public function test_unit_belonging_to_other_client_returns_404(): void
+    {
+        $clientA = $this->makeClient();
+        $clientB = $this->makeClient();
+        $unit = ClientUnit::create(['client_id' => $clientA->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->patchJson(route('clients.units.deactivate', [$clientB, $unit]))
+            ->assertNotFound();
+    }
+
+    public function test_units_index_returns_json_for_client(): void
+    {
+        $client = $this->makeClient();
+        ClientUnit::create(['client_id' => $client->id, 'label' => 'BR1', 'unit_type' => 'Wall Mounted', 'is_active' => true]);
+        ClientUnit::create(['client_id' => $client->id, 'label' => 'BR2', 'unit_type' => 'Wall Mounted', 'is_active' => false]); // inactive
+
+        $response = $this->actingAs($this->makeAdmin())
+            ->getJson(route('clients.units.index', $client));
+
+        $response->assertOk()->assertJsonCount(1); // only active
+    }
 }
