@@ -39,7 +39,6 @@ class ClientUnitController extends Controller
     public function deactivate(Client $client, ClientUnit $unit): RedirectResponse
     {
         abort_if($unit->client_id !== $client->id, 404);
-        abort_unless(request()->user()->can('manage_units'), 403);
         $unit->update(['is_active' => false]);
 
         return back()->with('success', 'Unit deactivated.');

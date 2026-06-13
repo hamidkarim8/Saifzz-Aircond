@@ -157,4 +157,20 @@ class ClientUnitTest extends TestCase
 
         $response->assertOk()->assertJsonCount(1); // only active
     }
+
+    public function test_guest_cannot_access_units_index(): void
+    {
+        $client = $this->makeClient();
+        $this->getJson(route('clients.units.index', $client))->assertRedirect(route('login'));
+    }
+
+    public function test_user_without_manage_units_cannot_store_unit(): void
+    {
+        $client = $this->makeClient();
+        $user = User::factory()->technician()->create(['permissions' => ['view_clients', 'record_service']]);
+
+        $this->actingAs($user)
+            ->postJson(route('clients.units.store', $client), ['label' => 'BR1', 'unit_type' => 'Wall Mounted'])
+            ->assertForbidden();
+    }
 }
