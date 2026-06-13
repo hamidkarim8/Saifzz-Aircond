@@ -66,7 +66,26 @@ class DashboardTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Dashboard')
                 ->where('canReport', false)
-                ->missing('report')
+                ->has('report.kpis')
+                ->has('report.servicesByType')
+                ->where('report.transactions', [])
+                ->has('appointments')
+            );
+    }
+
+    public function test_technician_kpis_scoped_without_view_reports(): void
+    {
+        $alice = User::factory()->technician()->create(['permissions' => ['view_clients']]);
+        $bob   = User::factory()->technician()->create();
+        $this->paidVisitFor($alice->id, 150);
+        $this->paidVisitFor($bob->id, 300);
+
+        $this->actingAs($alice)->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('canReport', false)
+                ->where('report.kpis.revenue_all_time', 150)
+                ->where('report.transactions', [])
             );
     }
 

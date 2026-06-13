@@ -21,26 +21,25 @@ class DashboardController extends Controller
             $period = 'all';
         }
 
-        if (! $request->user()->hasPermission('view_reports')) {
-            return Inertia::render('Dashboard', ['canReport' => false]);
-        }
-
         $month = (string) $request->input('month', '');
         if (! preg_match('/^\d{4}-\d{2}$/', $month)) {
             $month = now()->format('Y-m');
         }
 
-        $user = $request->user();
-        $scopeId = $user->seesAllData() ? null : $user->id;
+        $user      = $request->user();
+        $scopeId   = $user->seesAllData() ? null : $user->id;
+        $canReport = $user->hasPermission('view_reports');
 
         return Inertia::render('Dashboard', [
-            'canReport' => true,
-            'period' => $period,
-            'month' => $month,
-            'report' => [
-                'kpis' => $reports->kpis($scopeId),
+            'canReport'    => $canReport,
+            'period'       => $period,
+            'month'        => $month,
+            'report'       => [
+                'kpis'           => $reports->kpis($scopeId),
                 'servicesByType' => $reports->servicesByType($period, $scopeId),
-                'transactions' => $reports->transactions($period, 50, $scopeId),
+                'transactions'   => $canReport
+                    ? $reports->transactions($period, 50, $scopeId)
+                    : [],
             ],
             'appointments' => Appointment::query()
                 ->visibleTo($user)
