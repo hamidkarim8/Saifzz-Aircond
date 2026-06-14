@@ -60,6 +60,8 @@ Route::middleware('auth')->group(function () {
         Route::get('service-records/create', [ServiceVisitController::class, 'create'])->name('service-records.create');
         Route::post('service-records', [ServiceVisitController::class, 'store'])->name('service-records.store');
         Route::get('service-records/{serviceRecord}', [ServiceVisitController::class, 'show'])->name('service-records.show');
+        Route::get('service-records/{serviceRecord}/edit', [ServiceVisitController::class, 'edit'])->name('service-records.edit');
+        Route::patch('service-records/{serviceRecord}', [ServiceVisitController::class, 'update'])->name('service-records.update');
         Route::delete('service-records/{serviceRecord}', [ServiceVisitController::class, 'destroy'])->name('service-records.destroy');
     });
 

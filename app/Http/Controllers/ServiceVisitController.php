@@ -150,6 +150,67 @@ class ServiceVisitController extends Controller
         ]);
     }
 
+    public function edit(ServiceVisit $serviceRecord): Response
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+        abort_unless($serviceRecord->transaction?->status === 'pending', 403);
+
+        $serviceRecord->load(['client', 'lines', 'transaction']);
+
+        return Inertia::render('ServiceRecords/Edit', [
+            'visit' => $serviceRecord,
+            'technicians' => request()->user()->seesAllData()
+                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                : null,
+        ]);
+    }
+
+    public function update(\Illuminate\Http\Request $request, ServiceVisit $serviceRecord): RedirectResponse
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+        abort_unless($serviceRecord->transaction?->status === 'pending', 422);
+
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'visit_date' => ['required', 'date'],
+            'warranty_months' => ['required', 'integer', 'between:0,6'],
+            'payment_method' => ['required', \Illuminate\Validation\Rule::in(['Cash', 'DuitNow QR'])],
+            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if ($validated['payment_method'] === 'Cash' && ! $user->hasPermission('collect_payment')) {
+            return back()->withErrors(['payment_method' => 'Cash payment is not permitted for your account.']);
+        }
+
+        $technicianId = $user->seesAllData()
+            ? ($validated['technician_id'] ?? $serviceRecord->technician_id)
+            : $serviceRecord->technician_id;
+
+        $serviceRecord->update([
+            'visit_date' => $validated['visit_date'],
+            'warranty_months' => $validated['warranty_months'],
+        ]);
+
+        $serviceRecord->transaction->update([
+            'method' => $validated['payment_method'],
+        ]);
+
+        if ($technicianId) {
+            $serviceRecord->update(['technician_id' => $technicianId]);
+        }
+
+        return redirect()->route('service-records.show', $serviceRecord)
+            ->with('success', 'Record updated.');
+    }
+
     public function destroy(ServiceVisit $serviceRecord): RedirectResponse
     {
         abort_unless(

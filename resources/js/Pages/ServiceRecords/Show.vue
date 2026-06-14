@@ -59,9 +59,18 @@ const cancelRecord = async () => {
         <template #header>
             <PageHeader :title="txn?.txn_id ?? 'Service Record'">
                 <template #actions>
-                    <Link :href="route('service-records.index')" class="text-sm font-medium text-ink-soft hover:text-ink transition">
-                        ← All records
-                    </Link>
+                    <div class="flex items-center gap-3">
+                        <Link
+                            v-if="txn?.status === 'pending'"
+                            :href="route('service-records.edit', visit.id)"
+                            class="text-sm font-medium text-ink-soft hover:text-ink transition"
+                        >
+                            Edit
+                        </Link>
+                        <Link :href="route('service-records.index')" class="text-sm font-medium text-ink-soft hover:text-ink transition">
+                            ← All records
+                        </Link>
+                    </div>
                 </template>
             </PageHeader>
         </template>
