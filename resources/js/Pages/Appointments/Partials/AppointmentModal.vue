@@ -13,6 +13,8 @@ const emit = defineEmits(['close']);
 
 const isEdit = computed(() => !!props.appointment);
 
+const todayIso = new Date().toISOString().slice(0, 10);
+
 const form = useForm({
     client_id: null,
     date: '',
@@ -128,7 +130,7 @@ const submit = () => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="mb-1.5 block text-sm font-semibold text-ink">Date</label>
-                            <input v-model="form.date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                            <input v-model="form.date" type="date" :min="isEdit ? undefined : todayIso" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                             <p v-if="form.errors.date" class="mt-1 text-sm text-danger">{{ form.errors.date }}</p>
                         </div>
                         <div>

@@ -9,6 +9,13 @@ import Badge from '@/Components/Badge.vue';
 import MonthCalendar from './Partials/MonthCalendar.vue';
 import AppointmentModal from './Partials/AppointmentModal.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
+
+const waLink = (phone) => {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    const number = digits.startsWith('0') ? '6' + digits : digits;
+    return `https://wa.me/${number}`;
+};
 import { confirmAction, toast } from '@/lib/swal';
 
 const props = defineProps({
@@ -50,6 +57,10 @@ const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? nul
 const fmtDate   = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
 const money     = (v)  => (v == null ? '—' : 'RM ' + Number(v).toFixed(2));
+const monthLabel = computed(() => {
+    const [y, m] = props.month.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+});
 
 // Status actions
 const setStatus = async (a, status) => {
@@ -141,7 +152,8 @@ const columns = [
 
         <!-- Calendar + day panel + today sidebar -->
         <div class="grid gap-5 lg:grid-cols-3">
-            <div class="space-y-4 lg:col-span-2">
+            <!-- Calendar -->
+            <div>
                 <MonthCalendar
                     :month="month"
                     :appointments="appointments"
@@ -150,54 +162,54 @@ const columns = [
                     @prev="shiftMonth(-1)"
                     @next="shiftMonth(1)"
                 />
+            </div>
 
-                <!-- Selected-day panel -->
-                <div v-if="selectedDay !== null" class="rounded-ral border border-line bg-surface p-4 shadow-card">
-                    <h3 class="mb-3 text-sm font-bold text-navy-800">
-                        {{ selectedDay }} {{ month }}
-                    </h3>
-                    <div v-if="dayList.length" class="space-y-2">
-                        <button
-                            v-for="a in dayList"
-                            :key="a.id"
-                            class="flex w-full items-center gap-3 rounded-ra bg-surface-muted px-3 py-2.5 text-left text-sm transition hover:bg-primary-50"
-                            @click="openEdit(a)"
-                        >
-                            <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                            <span class="font-medium text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
-                            <Badge :variant="serviceVariant(a.service_type)">{{ a.service_type }}</Badge>
-                            <Badge class="ml-auto" :variant="statusVariant(a.status.charAt(0).toUpperCase() + a.status.slice(1))">{{ a.status }}</Badge>
-                        </button>
-                    </div>
-                    <p v-else class="py-3 text-center text-sm text-ink-muted">No appointments on this date.</p>
+            <!-- Selected-day panel -->
+            <div class="rounded-ral border border-line bg-surface p-4 shadow-card">
+                <h3 class="mb-3 text-sm font-bold text-navy-800">
+                    <template v-if="selectedDay !== null">{{ selectedDay }} {{ monthLabel }}</template>
+                    <template v-else>Select a day</template>
+                </h3>
+                <div v-if="selectedDay !== null && dayList.length" class="space-y-2">
+                    <button
+                        v-for="a in dayList"
+                        :key="a.id"
+                        class="flex w-full flex-wrap items-center gap-2 rounded-ra bg-surface-muted px-3 py-2.5 text-left text-sm transition hover:bg-primary-50"
+                        @click="openEdit(a)"
+                    >
+                        <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
+                        <span class="font-medium text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
+                        <Badge :variant="serviceVariant(a.service_type)">{{ a.service_type }}</Badge>
+                        <Badge class="ml-auto" :variant="statusVariant(a.status.charAt(0).toUpperCase() + a.status.slice(1))">{{ a.status }}</Badge>
+                    </button>
                 </div>
+                <p v-else-if="selectedDay !== null" class="py-3 text-center text-sm text-ink-muted">No appointments on this date.</p>
+                <p v-else class="py-3 text-center text-sm text-ink-muted">Click a day on the calendar.</p>
             </div>
 
             <!-- Today's schedule sidebar -->
-            <div class="space-y-4">
-                <div class="rounded-ral border border-line bg-surface p-5 shadow-card">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Today's schedule</div>
-                    <div class="mt-1 text-xl font-bold text-navy-800">{{ stats.today_total ?? 0 }} appointment{{ (stats.today_total ?? 0) !== 1 ? 's' : '' }}</div>
-                    <div v-if="today.length" class="mt-3 space-y-2">
-                        <button
-                            v-for="a in today"
-                            :key="a.id"
-                            class="flex w-full items-center gap-2 rounded-ra bg-surface-muted px-3 py-2 text-left text-[13px] transition hover:bg-primary-50"
-                            @click="openEdit(a)"
-                        >
-                            <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                            <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }} — {{ a.service_type }}</span>
-                        </button>
-                    </div>
-                    <p v-else class="mt-3 text-sm text-ink-muted">No appointments today.</p>
+            <div class="rounded-ral border border-line bg-surface p-5 shadow-card">
+                <div class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Today's schedule</div>
+                <div class="mt-1 text-xl font-bold text-navy-800">{{ stats.today_total ?? 0 }} appointment{{ (stats.today_total ?? 0) !== 1 ? 's' : '' }}</div>
+                <div v-if="today.length" class="mt-3 space-y-2">
+                    <button
+                        v-for="a in today"
+                        :key="a.id"
+                        class="flex w-full items-center gap-2 rounded-ra bg-surface-muted px-3 py-2 text-left text-[13px] transition hover:bg-primary-50"
+                        @click="openEdit(a)"
+                    >
+                        <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
+                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }} — {{ a.service_type }}</span>
+                    </button>
                 </div>
+                <p v-else class="mt-3 text-sm text-ink-muted">No appointments today.</p>
             </div>
         </div>
 
         <!-- Month appointments DataTable -->
         <div class="mt-6">
             <div class="mb-3 flex items-center justify-between">
-                <h2 class="font-bold text-navy-800">All appointments — {{ month }}</h2>
+                <h2 class="font-bold text-navy-800">Appointments — {{ monthLabel }}</h2>
             </div>
             <DataTable
                 mode="server"
@@ -223,7 +235,11 @@ const columns = [
 
                 <!-- Contact -->
                 <template #cell-phone="{ value }">
-                    <span class="font-mono text-xs text-ink-soft">{{ value }}</span>
+                    <a v-if="waLink(value)" :href="waLink(value)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 font-mono text-xs text-ok hover:underline">
+                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.849L.057 23.526a.5.5 0 0 0 .611.658l5.849-1.531A11.946 11.946 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.671-.497-5.206-1.367l-.373-.215-3.872 1.014 1.013-3.799-.234-.389A9.946 9.946 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                        {{ value }}
+                    </a>
+                    <span v-else class="font-mono text-xs text-ink-soft">—</span>
                 </template>
 
                 <!-- Technician -->
@@ -278,7 +294,14 @@ const columns = [
                         <div class="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                             <span class="font-mono font-semibold text-primary">{{ fmtDate(row.datetime) }} {{ fmtTime(row.datetime) }}</span>
                         </div>
-                        <div class="mt-2 text-xs text-ink-soft">{{ row.phone }} · {{ row.address }}</div>
+                        <div class="mt-2 text-xs text-ink-soft">
+                            <a v-if="waLink(row.phone)" :href="waLink(row.phone)" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-ok hover:underline">
+                                <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.849L.057 23.526a.5.5 0 0 0 .611.658l5.849-1.531A11.946 11.946 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.671-.497-5.206-1.367l-.373-.215-3.872 1.014 1.013-3.799-.234-.389A9.946 9.946 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                                {{ row.phone }}
+                            </a>
+                            <span v-else>—</span>
+                            · {{ row.address }}
+                        </div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">
                             <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">+ Record</Link>
                             <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
