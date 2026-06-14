@@ -60,7 +60,7 @@ const columns = [
             <!-- Date / Time -->
             <template #cell-visit_date="{ row }">
                 <span class="font-medium text-ink">{{ fmtDate(row.visit_date) }}</span>
-                <span v-if="fmtTime(row.visit_date)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.visit_date) }}</span>
+                <span v-if="fmtTime(row.created_at)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.created_at) }}</span>
             </template>
 
             <!-- Client name -->

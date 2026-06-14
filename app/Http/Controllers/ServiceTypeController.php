@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,7 +35,16 @@ class ServiceTypeController extends Controller
             'name' => ['required', 'string', 'max:100', "unique:service_types,name,{$serviceType->id}"],
         ]);
 
-        $serviceType->update(['name' => $request->input('name')]);
+        $oldName = $serviceType->name;
+        $newName = $request->input('name');
+
+        $serviceType->update(['name' => $newName]);
+
+        if ($oldName !== $newName) {
+            DB::table('service_fees')->where('service_type', $oldName)->update(['service_type' => $newName]);
+            DB::table('service_lines')->where('service_type', $oldName)->update(['service_type' => $newName]);
+            DB::table('appointments')->where('service_type', $oldName)->update(['service_type' => $newName]);
+        }
 
         return back()->with('success', 'Service type updated.');
     }
