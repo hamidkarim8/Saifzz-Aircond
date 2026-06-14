@@ -65,18 +65,18 @@ class ReportService
         $revenueAllTime = (float) $allTimeQ->sum('t.amount');
 
         if ($technicianId === null) {
-            $totalClients      = Client::query()->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))->count();
-            $clientsThisMonth  = Client::query()->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))->whereBetween('created_at', [$monthStart, $monthEnd])->count();
+            $totalClients      = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->count();
+            $clientsThisMonth  = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->whereBetween('created_at', [$monthStart, $monthEnd])->count();
             $reminderStats     = $this->reminders->dueList($tenantId)['stats'];
             $pending           = $reminderStats['overdue'] + $reminderStats['due_this_month'];
         } else {
             $totalClients = (int) DB::table('service_visits')
                 ->where('technician_id', $technicianId)
-                ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
                 ->distinct()->count('client_id');
             $clientsThisMonth = (int) DB::table('service_visits')
                 ->where('technician_id', $technicianId)
-                ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
                 ->whereBetween('visit_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
                 ->distinct()->count('client_id');
             $pending = (int) DB::table('client_units')
@@ -85,7 +85,7 @@ class ReportService
                 ->whereIn('client_id', function ($q) use ($technicianId, $tenantId) {
                     $q->select('client_id')->from('service_visits')
                       ->where('technician_id', $technicianId)
-                      ->when($tenantId, fn ($sq) => $sq->where('tenant_id', $tenantId))
+                      ->when($tenantId !== null, fn ($sq) => $sq->where('tenant_id', $tenantId))
                       ->distinct();
                 })
                 ->count();
