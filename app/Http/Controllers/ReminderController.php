@@ -25,6 +25,8 @@ class ReminderController extends Controller
      */
     public function toggleContacted(Client $client): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
+
         $existing = ReminderContact::where('client_id', $client->id)->first();
 
         if ($existing) {
@@ -48,6 +50,8 @@ class ReminderController extends Controller
      */
     public function dismiss(Client $client): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
+
         ClientUnit::where('client_id', $client->id)
             ->where('is_active', true)
             ->update(['next_service_date' => null, 'next_service_type' => null]);

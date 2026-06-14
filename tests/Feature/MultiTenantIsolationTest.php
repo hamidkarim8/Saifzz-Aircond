@@ -325,6 +325,27 @@ class MultiTenantIsolationTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_boss_cannot_dismiss_other_tenant_reminder(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+        $sClient->units()->create(['label' => 'SU', 'unit_type' => 'Wall Mounted', 'is_active' => true, 'next_service_date' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($khalid)->delete(route('reminders.dismiss', $sClient))->assertNotFound();
+        // Saifzz's unit date must be untouched
+        $this->assertNotNull($sClient->units()->first()->fresh()->next_service_date);
+    }
+
+    public function test_boss_cannot_toggle_contacted_other_tenant_reminder(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->patch(route('reminders.contacted', $sClient))->assertNotFound();
+    }
+
     private function techFor(\App\Models\User $boss, string $email): \App\Models\User
     {
         return \App\Models\User::factory()->technician()->create([
