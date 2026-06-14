@@ -19,15 +19,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate(
-            ['email' => 'admin@saifzz.test'],
-            [
-                'name' => 'Khalid',
-                'role' => User::ROLE_ADMIN,
-                'active' => true,
-                'password' => Hash::make('password'),
-            ],
-        );
+        // User::firstOrCreate(
+        //     ['email' => 'admin@saifzz.test'],
+        //     [
+        //         'name' => 'Khalid',
+        //         'role' => User::ROLE_ADMIN,
+        //         'active' => true,
+        //         'password' => Hash::make('password'),
+        //     ],
+        // );
 
         User::firstOrCreate(
             ['email' => 'khalid@admin.com'],
