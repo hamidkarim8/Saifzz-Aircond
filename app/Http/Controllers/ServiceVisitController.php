@@ -72,6 +72,7 @@ class ServiceVisitController extends Controller
                     ->where('is_active', true)->orderBy('label')
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
+            'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
                     ->where('active', true)->orderBy('name')->get(['id', 'name'])

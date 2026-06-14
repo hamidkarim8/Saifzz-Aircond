@@ -251,7 +251,7 @@ const columns = [
                     <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-medium">
                         <Link
                             v-if="row.client"
-                            :href="route('service-records.create', { client: row.client.id })"
+                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })"
                             class="text-ok hover:text-ok/80"
                         >+ Service record</Link>
                         <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
@@ -280,7 +280,7 @@ const columns = [
                         </div>
                         <div class="mt-2 text-xs text-ink-soft">{{ row.phone }} · {{ row.address }}</div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">
-                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id })" class="text-ok hover:text-ok/80">+ Record</Link>
+                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">+ Record</Link>
                             <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                             <button
                                 v-for="next in (transitions[row.status] ?? [])"
