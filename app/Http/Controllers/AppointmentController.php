@@ -81,7 +81,7 @@ class AppointmentController extends Controller
             'transitions' => Appointment::TRANSITIONS,
             // Optional pre-selected client (e.g. arriving from a client profile or reminder).
             'presetClient' => $request->filled('client')
-                ? Client::where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
+                ? Client::visibleTo($request->user())->where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
                 : null,
             'technicians' => $request->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
@@ -93,6 +93,12 @@ class AppointmentController extends Controller
     public function store(StoreAppointmentRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        $clientId = $request->input('client_id');
+        if ($clientId !== null) {
+            Client::visibleTo($user)->findOrFail($clientId);
+        }
+
         // Scoped techs always own their bookings; all-data users may assign.
         $technicianId = $user->seesAllData() ? $request->input('technician_id') : $user->id;
 
@@ -115,6 +121,12 @@ class AppointmentController extends Controller
         );
 
         $user = $request->user();
+
+        $clientId = $request->input('client_id');
+        if ($clientId !== null) {
+            Client::visibleTo($user)->findOrFail($clientId);
+        }
+
         $data = $request->appointmentData();
         $data['technician_id'] = $user->seesAllData()
             ? $request->input('technician_id')

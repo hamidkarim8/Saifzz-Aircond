@@ -125,6 +125,18 @@ class MultiTenantIsolationTest extends TestCase
         $this->assertSame($khalid->id, \App\Models\Appointment::latest('id')->first()->tenant_id);
     }
 
+    public function test_boss_cannot_book_appointment_for_other_tenant_client(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $saifzzClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->post(route('appointments.store'), [
+            'client_id' => $saifzzClient->id, 'date' => '2026-07-01', 'time' => '09:00',
+            'phone' => '012-3456789', 'address' => 'KL',
+        ])->assertNotFound();
+    }
+
     public function test_technician_store_inherits_boss_tenant(): void
     {
         $khalid = $this->boss();
