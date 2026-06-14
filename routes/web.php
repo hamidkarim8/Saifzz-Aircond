@@ -112,6 +112,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:view_clients')->group(function () {
         Route::get('reminders', [ReminderController::class, 'index'])->name('reminders.index');
         Route::patch('reminders/{client}/contacted', [ReminderController::class, 'toggleContacted'])->name('reminders.contacted');
+        Route::delete('reminders/{client}', [ReminderController::class, 'dismiss'])->name('reminders.dismiss');
     });
 
     // Reports (module 9) — transactions CSV export, gated export_data (P3).

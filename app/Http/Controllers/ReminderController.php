@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\ClientUnit;
 use App\Models\ReminderContact;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\RedirectResponse;
@@ -39,5 +40,18 @@ class ReminderController extends Controller
         ]);
 
         return back()->with('success', 'Marked contacted.');
+    }
+
+    /**
+     * Dismiss a reminder — clears next_service_date from all active client_units.
+     * The reminder reappears once the next service visit sets a new date.
+     */
+    public function dismiss(Client $client): RedirectResponse
+    {
+        ClientUnit::where('client_id', $client->id)
+            ->where('is_active', true)
+            ->update(['next_service_date' => null, 'next_service_type' => null]);
+
+        return back()->with('success', 'Reminder dismissed.');
     }
 }
