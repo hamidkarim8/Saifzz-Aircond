@@ -238,6 +238,16 @@ class MultiTenantIsolationTest extends TestCase
                     && ! collect($techs)->pluck('id')->contains($sTech->id)));
     }
 
+    public function test_client_unit_index_blocked_cross_tenant(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->getJson(route('clients.units.index', $sClient))
+            ->assertNotFound();
+    }
+
     private function techFor(\App\Models\User $boss, string $email): \App\Models\User
     {
         return \App\Models\User::factory()->technician()->create([
