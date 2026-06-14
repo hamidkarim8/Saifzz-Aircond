@@ -254,4 +254,35 @@ class MultiTenantIsolationTest extends TestCase
             'email' => $email, 'tenant_id' => $boss->id,
         ]);
     }
+
+    private function paidVisitFor(\App\Models\User $boss, float $amount): void
+    {
+        $client = $this->clientFor($boss);
+        $visit = $client->visits()->create([
+            'visit_date' => now()->toDateString(), 'warranty_months' => 0, 'total_amount' => $amount,
+            'created_by' => $boss->id, 'technician_id' => null, 'tenant_id' => $boss->tenantId(),
+        ]);
+        $visit->transaction()->create([
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount' => $amount, 'method' => 'Cash', 'status' => 'paid', 'paid_at' => now(),
+        ]);
+    }
+
+    public function test_report_revenue_is_tenant_scoped(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $this->paidVisitFor($khalid, 100.0);
+        $this->paidVisitFor($saifzz, 999.0);
+
+        $reports = app(\App\Services\Reports\ReportService::class);
+
+        $kKpis = $reports->kpis(null, $khalid->tenantId());
+        $this->assertSame(100.0, $kKpis['revenue_all_time']);
+        $this->assertSame(1, $kKpis['total_clients']);
+
+        $kTxns = $reports->transactions('all', 50, null, $khalid->tenantId());
+        $this->assertCount(1, $kTxns);
+        $this->assertSame(100.0, $kTxns[0]['amount']);
+    }
 }

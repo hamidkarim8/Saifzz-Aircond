@@ -18,7 +18,7 @@ class ReminderService
     /**
      * @return array{overdue: list<array<string,mixed>>, due_this_month: list<array<string,mixed>>, stats: array<string,int>}
      */
-    public function dueList(): array
+    public function dueList(?int $tenantId = null): array
     {
         $today = Carbon::today();
         $endOfMonth = $today->copy()->endOfMonth();
@@ -28,6 +28,7 @@ class ReminderService
             ->join('clients as c', 'c.id', '=', 'cu.client_id')
             ->leftJoin('reminder_contacts as rc', 'rc.client_id', '=', 'c.id')
             ->whereNull('c.deleted_at')
+            ->when($tenantId, fn ($q) => $q->where('c.tenant_id', $tenantId))
             ->where('cu.is_active', true)
             ->whereNotNull('cu.next_service_date')
             ->groupBy('c.id', 'c.serial_no', 'c.name', 'c.phone', 'c.address')
@@ -54,6 +55,7 @@ class ReminderService
             ->join('clients as c', 'c.id', '=', 'sv.client_id')
             ->leftJoin('reminder_contacts as rc', 'rc.client_id', '=', 'c.id')
             ->whereNull('c.deleted_at')
+            ->when($tenantId, fn ($q) => $q->where('c.tenant_id', $tenantId))
             ->whereNotNull('sl.next_service_date')
             ->when(!empty($coveredIds), fn ($q) => $q->whereNotIn('c.id', $coveredIds))
             ->groupBy('c.id', 'c.serial_no', 'c.name', 'c.phone', 'c.address')
