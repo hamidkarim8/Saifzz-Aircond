@@ -75,7 +75,9 @@ class ServiceVisitController extends Controller
             'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
-                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                    ->where('active', true)
+                    ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
+                    ->orderBy('name')->get(['id', 'name'])
                 : null,
         ]);
     }
@@ -167,7 +169,9 @@ class ServiceVisitController extends Controller
             'visit' => $serviceRecord,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
-                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                    ->where('active', true)
+                    ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
+                    ->orderBy('name')->get(['id', 'name'])
                 : null,
         ]);
     }

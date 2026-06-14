@@ -218,6 +218,26 @@ class MultiTenantIsolationTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_technician_dropdowns_are_tenant_filtered(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $kTech = $this->techFor($khalid, 'kdrop@example.com');
+        $sTech = $this->techFor($saifzz, 'sdrop@example.com');
+
+        $this->actingAs($khalid)->get(route('appointments.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('technicians',
+                fn ($techs) => collect($techs)->pluck('id')->contains($kTech->id)
+                    && ! collect($techs)->pluck('id')->contains($sTech->id)));
+
+        $this->actingAs($khalid)->get(route('service-records.create'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('technicians',
+                fn ($techs) => collect($techs)->pluck('id')->contains($kTech->id)
+                    && ! collect($techs)->pluck('id')->contains($sTech->id)));
+    }
+
     private function techFor(\App\Models\User $boss, string $email): \App\Models\User
     {
         return \App\Models\User::factory()->technician()->create([
