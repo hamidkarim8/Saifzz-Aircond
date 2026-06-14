@@ -52,7 +52,11 @@ watch([() => props.line.unit_type, () => props.line.gas_option], autofill);
 function autofill() {
     if (isRepair.value || !props.line.service_type) return;
     const option = isGas.value ? props.line.gas_option : props.line.unit_type;
-    if (!option) { props.line.rate = ''; return; }
+    if (!option) {
+        const flat = props.feeMap[props.line.service_type];
+        props.line.rate = flat != null ? flat : '';
+        return;
+    }
     const rate = props.feeMap[`${props.line.service_type}|${option}`];
     props.line.rate = rate != null ? rate : '';
 }

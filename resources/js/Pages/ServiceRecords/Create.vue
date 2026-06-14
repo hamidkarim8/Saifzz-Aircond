@@ -22,7 +22,10 @@ const props = defineProps({
 // Fee lookup map for client-side rate preview ("type|option" -> rate).
 const feeMap = computed(() => {
     const m = {};
-    for (const f of props.fees) if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
+    for (const f of props.fees) {
+        if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
+        else if (f.rate != null) m[f.service_type] = Number(f.rate);
+    }
     return m;
 });
 

@@ -70,7 +70,14 @@ class ReportService
                 ->where('technician_id', $technicianId)
                 ->whereBetween('visit_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
                 ->distinct()->count('client_id');
-            $pending = null; // reminders are client-global; omitted for scoped techs (v1)
+            $pending = (int) DB::table('client_units')
+                ->where('is_active', true)
+                ->where('next_service_date', '<=', $now->copy()->endOfMonth()->toDateString())
+                ->whereIn('client_id', function ($q) use ($technicianId) {
+                    $q->select('client_id')->from('service_visits')
+                      ->where('technician_id', $technicianId)->distinct();
+                })
+                ->count();
         }
 
         return [

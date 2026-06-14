@@ -29,22 +29,22 @@ const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
-            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
+            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients', adminOnly: true },
             { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
         ]},
         { title: 'Settings', items: [
-            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
-            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees' },
-            { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users' },
+            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
+            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees', adminOnly: true },
+            { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
         ]},
         { title: 'Portal', items: [
-            { label: 'Client Portal', route: 'portal.login', match: 'portal', icon: IconQrcode, permission: null },
+            { label: 'Client Portal', route: 'portal.login', match: 'portal', icon: IconQrcode, permission: null, adminOnly: true },
         ]},
     ];
     return def
-        .map((s) => ({ ...s, items: s.items.filter((i) => i.permission === null || can.value[i.permission]) }))
+        .map((s) => ({ ...s, items: s.items.filter((i) => (i.permission === null || can.value[i.permission]) && (!i.adminOnly || isAdmin.value)) }))
         .filter((s) => s.items.length);
 });
 

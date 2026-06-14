@@ -126,9 +126,12 @@ const txnRows = computed(() =>
     <!-- ── KPI Stat Cards (always visible, scoped to user's own data) ── -->
     <div
         class="mb-6 grid gap-4 sm:grid-cols-2"
-        :class="kpis.pending_reminders !== null ? 'lg:grid-cols-4' : 'lg:grid-cols-3'"
+        :class="canReport
+            ? (kpis.pending_reminders !== null ? 'lg:grid-cols-4' : 'lg:grid-cols-3')
+            : 'lg:grid-cols-1'"
     >
         <StatCard
+            v-if="canReport"
             label="Total Clients"
             :value="kpis.total_clients ?? 0"
             :sub="`+${kpis.clients_this_month ?? 0} this month`"
@@ -143,6 +146,7 @@ const txnRows = computed(() =>
         </StatCard>
 
         <StatCard
+            v-if="canReport"
             label="Revenue (This Month)"
             :value="money(kpis.revenue_month)"
             :sub="kpis.revenue_mom_pct != null ? `${kpis.revenue_mom_pct >= 0 ? '+' : ''}${kpis.revenue_mom_pct}% vs last month` : 'no prior month'"
@@ -157,6 +161,7 @@ const txnRows = computed(() =>
         </StatCard>
 
         <StatCard
+            v-if="canReport"
             label="All-time Revenue"
             :value="money(kpis.revenue_all_time)"
             variant="primary"

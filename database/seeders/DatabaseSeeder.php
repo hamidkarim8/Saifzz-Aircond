@@ -29,6 +29,26 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        User::firstOrCreate(
+            ['email' => 'khalid@admin.com'],
+            [
+                'name' => 'Superadmin Khalid',
+                'role' => User::ROLE_ADMIN,
+                'active' => true,
+                'password' => Hash::make('khalid123'),
+            ],
+        );
+
+        User::firstOrCreate(
+            ['email' => 'saifzz@admin.com'],
+            [
+                'name' => 'Superadmin Saifzz',
+                'role' => User::ROLE_ADMIN,
+                'active' => true,
+                'password' => Hash::make('saifzz123'),
+            ],
+        );
+
         $this->call(ServiceFeeSeeder::class);
         $this->call(ServiceTypeSeeder::class);
     }

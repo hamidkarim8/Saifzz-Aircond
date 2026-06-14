@@ -70,7 +70,7 @@ const submit = () => {
             class="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
             @click.self="emit('close')"
         >
-            <div class="w-full max-w-lg rounded-t-rax bg-surface p-6 shadow-lift sm:rounded-rax">
+            <div class="w-full max-w-lg rounded-t-rax bg-surface p-6 shadow-lift sm:rounded-rax max-h-[90vh] overflow-y-auto">
                 <!-- Header -->
                 <div class="mb-5 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-navy-800">{{ isEdit ? 'Edit user' : 'Add user' }}</h3>
