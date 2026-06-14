@@ -74,9 +74,7 @@ const columns = [
     { key: 'datetime',     label: 'Date / Time',  sortable: true },
     { key: 'client',       label: 'Client' },
     { key: 'phone',        label: 'Contact' },
-    { key: 'service_type', label: 'Service' },
     { key: 'address',      label: 'Address' },
-    { key: 'units',        label: 'Units',   align: 'center' },
     { key: 'amount',       label: 'Amount',  align: 'right' },
     { key: 'status',       label: 'Status' },
     { key: 'actions',      label: '' },
@@ -227,20 +225,9 @@ const columns = [
                     <span class="font-mono text-xs text-ink-soft">{{ value }}</span>
                 </template>
 
-                <!-- Service -->
-                <template #cell-service_type="{ row, value }">
-                    <Badge :variant="serviceVariant(value)">{{ value }}</Badge>
-                    <span v-if="row.units" class="ml-1 text-xs text-ink-muted">×{{ row.units }}</span>
-                </template>
-
                 <!-- Address -->
                 <template #cell-address="{ value }">
                     <span class="max-w-[16rem] truncate text-ink-soft">{{ value }}</span>
-                </template>
-
-                <!-- Units -->
-                <template #cell-units="{ value }">
-                    <span class="text-ink-soft">{{ value ?? '—' }}</span>
                 </template>
 
                 <!-- Amount -->
@@ -279,7 +266,6 @@ const columns = [
                         </div>
                         <div class="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                             <span class="font-mono font-semibold text-primary">{{ fmtDate(row.datetime) }} {{ fmtTime(row.datetime) }}</span>
-                            <Badge :variant="serviceVariant(row.service_type)">{{ row.service_type }}</Badge>
                         </div>
                         <div class="mt-2 text-xs text-ink-soft">{{ row.phone }} · {{ row.address }}</div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">

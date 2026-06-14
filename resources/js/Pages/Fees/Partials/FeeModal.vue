@@ -58,7 +58,7 @@ const submit = () => {
     }
 };
 
-const modeLabel = { fixed_per_unit: 'Fixed per unit', tiered: 'Tiered', flexible: 'Flexible (no fixed rate)' };
+const modeLabel = { fixed_per_unit: 'Fixed per unit', flexible: 'Flexible (no fixed rate)' };
 </script>
 
 <template>

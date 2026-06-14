@@ -18,6 +18,8 @@ class ServiceFeeController extends Controller
      */
     public function index(): Response
     {
+        abort_unless(request()->user()->hasPermission('edit_fees'), 403);
+
         $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
 
         return Inertia::render('Fees/Index', [

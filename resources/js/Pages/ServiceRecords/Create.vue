@@ -1,12 +1,14 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
+
+const page = usePage();
 
 const props = defineProps({
     fees: Array,
@@ -125,7 +127,7 @@ const submit = () => form.post(route('service-records.store'));
                     <div v-if="technicians">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Technician</label>
                         <select v-model="form.technician_id" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                            <option :value="null">— Me —</option>
+                            <option :value="null">{{ page.props.auth?.user?.name ?? '— Me —' }}</option>
                             <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
                         </select>
                         <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>

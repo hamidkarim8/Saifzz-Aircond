@@ -35,7 +35,7 @@ const remove = async (fee) => {
 
 const money = (v) => v == null ? '—' : 'RM ' + Number(v).toFixed(2);
 
-const modeLabel = { fixed_per_unit: 'per unit', tiered: 'tiered', flexible: 'Flexible' };
+const modeLabel = { fixed_per_unit: 'per unit', flexible: 'Flexible' };
 </script>
 
 <template>

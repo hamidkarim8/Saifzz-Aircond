@@ -4,7 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
-    IconCurrencyDollar, IconCalendarEvent, IconQrcode, IconUserCog,
+    IconCurrencyDollar, IconCalendarEvent, IconUserCog,
     IconAirConditioning, IconLogout, IconMenu2, IconCategory,
 } from '@tabler/icons-vue';
 
@@ -39,9 +39,7 @@ const sections = computed(() => {
             { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees', adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
         ]},
-        { title: 'Portal', items: [
-            { label: 'Client Portal', route: 'portal.login', match: 'portal', icon: IconQrcode, permission: null, adminOnly: true },
-        ]},
+
     ];
     return def
         .map((s) => ({ ...s, items: s.items.filter((i) => (i.permission === null || can.value[i.permission]) && (!i.adminOnly || isAdmin.value)) }))
@@ -155,6 +153,9 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
 
             <main class="px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
+                <footer class="mt-8 border-t border-line pt-4 text-center text-xs text-ink-muted">
+                    Powered by MK Technologies
+                </footer>
             </main>
         </div>
     </div>
