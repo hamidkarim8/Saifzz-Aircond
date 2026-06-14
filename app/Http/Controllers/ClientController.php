@@ -155,7 +155,9 @@ class ClientController extends Controller
 
     public function store(StoreClientRequest $request): RedirectResponse
     {
-        $client = Client::create($request->validated());
+        $client = Client::create($request->validated() + [
+            'tenant_id' => $request->user()->tenantId(),
+        ]);
 
         return redirect()
             ->route('clients.show', $client)

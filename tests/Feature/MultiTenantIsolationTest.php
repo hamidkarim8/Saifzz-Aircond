@@ -96,4 +96,60 @@ class MultiTenantIsolationTest extends TestCase
             'technician_id' => null, 'tenant_id' => $boss->tenantId(),
         ]);
     }
+
+    public function test_store_paths_stamp_creator_tenant(): void
+    {
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $khalid = $this->boss();
+
+        $this->actingAs($khalid)->post(route('clients.store'), [
+            'name' => 'New', 'phone' => '012-3456789', 'address' => 'KL',
+        ])->assertRedirect();
+        $client = \App\Models\Client::where('name', 'New')->first();
+        $this->assertSame($khalid->id, $client->tenant_id);
+
+        $this->actingAs($khalid)->post(route('service-records.store'), [
+            'client_mode' => 'existing', 'client_id' => $client->id,
+            'visit_date' => '2026-06-11', 'warranty_months' => 0, 'payment_method' => 'Cash',
+            'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
+        ])->assertRedirect();
+        $this->assertSame($khalid->id, \App\Models\ServiceVisit::latest('id')->first()->tenant_id);
+
+        $this->actingAs($khalid)->post(route('appointments.store'), [
+            'client_id' => $client->id, 'date' => '2026-07-01', 'time' => '09:00',
+            'phone' => '012-3456789', 'address' => 'KL',
+        ])->assertRedirect();
+        $this->assertSame($khalid->id, \App\Models\Appointment::latest('id')->first()->tenant_id);
+    }
+
+    public function test_technician_store_inherits_boss_tenant(): void
+    {
+        $khalid = $this->boss();
+        $this->actingAs($khalid)->post(route('users.store'), [
+            'name' => 'Tech A', 'email' => 'techa@example.com', 'password' => 'password123',
+        ])->assertRedirect();
+
+        $tech = \App\Models\User::where('email', 'techa@example.com')->first();
+        $this->assertSame($khalid->id, $tech->tenant_id);
+    }
+
+    public function test_boss_cannot_attach_visit_to_other_tenant_client(): void
+    {
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $saifzzClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->post(route('service-records.store'), [
+            'client_mode' => 'existing', 'client_id' => $saifzzClient->id,
+            'visit_date' => '2026-06-11', 'warranty_months' => 0, 'payment_method' => 'Cash',
+            'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
+        ])->assertNotFound();
+    }
 }

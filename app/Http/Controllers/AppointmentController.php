@@ -99,6 +99,7 @@ class AppointmentController extends Controller
         Appointment::create($request->appointmentData() + [
             'status' => 'pending',
             'technician_id' => $technicianId,
+            'tenant_id' => $user->tenantId(),
         ]);
 
         return redirect()

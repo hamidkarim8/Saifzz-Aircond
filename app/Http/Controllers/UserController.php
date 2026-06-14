@@ -28,6 +28,7 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => User::ROLE_TECHNICIAN,
+            'tenant_id' => $request->user()->tenantId(),
         ]);
 
         // booted() sets DEFAULT_TECHNICIAN_PERMISSIONS when permissions is null.

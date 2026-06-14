@@ -85,11 +85,12 @@ class ServiceVisitController extends Controller
         $data = $request->validated();
 
         $visit = DB::transaction(function () use ($data, $request) {
-            $client = $data['client_mode'] === 'existing'
-                ? Client::findOrFail($data['client_id'])
-                : Client::create($data['new_client']);
-
             $user = $request->user();
+
+            $client = $data['client_mode'] === 'existing'
+                ? Client::visibleTo($user)->findOrFail($data['client_id'])
+                : Client::create($data['new_client'] + ['tenant_id' => $user->tenantId()]);
+
             // Scoped techs always own their own jobs; all-data users may assign.
             $technicianId = $user->seesAllData()
                 ? ($data['technician_id'] ?? $user->id)
@@ -100,6 +101,7 @@ class ServiceVisitController extends Controller
                 'warranty_months' => $data['warranty_months'],
                 'created_by' => $user->id,
                 'technician_id' => $technicianId,
+                'tenant_id' => $user->tenantId(),
             ]);
 
             foreach ($data['lines'] as $line) {
