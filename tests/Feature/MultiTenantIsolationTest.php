@@ -268,6 +268,63 @@ class MultiTenantIsolationTest extends TestCase
             });
     }
 
+    public function test_boss_cannot_edit_update_or_delete_other_tenant_client(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->get(route('clients.edit', $sClient))->assertNotFound();
+        $this->actingAs($khalid)->put(route('clients.update', $sClient), [
+            'name' => 'HACKED', 'phone' => '012-0000000', 'address' => 'X',
+        ])->assertNotFound();
+        $this->actingAs($khalid)->delete(route('clients.destroy', $sClient))->assertNotFound();
+        $this->assertSame('C', $sClient->fresh()->name); // unchanged
+    }
+
+    public function test_service_record_create_preset_is_tenant_scoped(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->get(route('service-records.create', ['client' => $sClient->id]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('presetClient', null));
+    }
+
+    public function test_payment_return_blocked_cross_tenant(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $visit = $this->visitFor($this->clientFor($saifzz), $saifzz);
+        $txn = $visit->transaction()->create([
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-001',
+            'amount' => 100, 'method' => 'DuitNow QR', 'status' => 'pending',
+        ]);
+
+        $this->actingAs($khalid)->get(route('payments.return', $txn))->assertForbidden();
+    }
+
+    public function test_boss_cannot_assign_other_tenant_technician_to_visit(): void
+    {
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $saifzzTech = \App\Models\User::factory()->technician()->create(['tenant_id' => $saifzz->id]);
+        $kClient = $this->clientFor($khalid);
+
+        $this->actingAs($khalid)->post(route('service-records.store'), [
+            'client_mode' => 'existing', 'client_id' => $kClient->id,
+            'visit_date' => '2026-06-11', 'warranty_months' => 0, 'payment_method' => 'Cash',
+            'technician_id' => $saifzzTech->id,
+            'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
+        ])->assertNotFound();
+    }
+
     private function techFor(\App\Models\User $boss, string $email): \App\Models\User
     {
         return \App\Models\User::factory()->technician()->create([

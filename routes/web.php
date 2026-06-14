@@ -100,7 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('payments/{transaction}', [PaymentController::class, 'show'])->middleware('can:collect_payment')->name('payments.show');
     Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
     Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
-    Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->name('payments.return');
+    Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->middleware('can:collect_payment')->name('payments.return');
 
     // Documents (module 6) — invoice & receipt view + PDF, gated view_clients (P3).
     Route::middleware('can:view_clients')->group(function () {

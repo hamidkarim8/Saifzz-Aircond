@@ -187,6 +187,9 @@ class ClientController extends Controller
 
     public function edit(Client $client): Response
     {
+        $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         return Inertia::render('Clients/Edit', [
             'client' => $client->only('id', 'serial_no', 'name', 'phone', 'address'),
         ]);
@@ -194,6 +197,9 @@ class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->update($request->validated());
 
         return redirect()
@@ -206,6 +212,9 @@ class ClientController extends Controller
      */
     public function destroy(Client $client): RedirectResponse
     {
+        $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->delete();
 
         return redirect()

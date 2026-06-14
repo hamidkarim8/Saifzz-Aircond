@@ -57,7 +57,7 @@ class ServiceVisitController extends Controller
     public function create(): Response
     {
         $presetClient = request('client')
-            ? Client::where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
+            ? Client::visibleTo(request()->user())->where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
             : null;
 
         return Inertia::render('ServiceRecords/Create', [
@@ -97,6 +97,13 @@ class ServiceVisitController extends Controller
             $technicianId = $user->seesAllData()
                 ? ($data['technician_id'] ?? $user->id)
                 : $user->id;
+
+            if ($user->tenantId() !== null && $technicianId !== null) {
+                abort_unless(
+                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    404,
+                );
+            }
 
             $visit = $client->visits()->create([
                 'visit_date' => $data['visit_date'],
@@ -200,6 +207,13 @@ class ServiceVisitController extends Controller
         $technicianId = $user->seesAllData()
             ? ($validated['technician_id'] ?? $serviceRecord->technician_id)
             : $serviceRecord->technician_id;
+
+        if ($user->tenantId() !== null && $technicianId !== null) {
+            abort_unless(
+                \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                404,
+            );
+        }
 
         $serviceRecord->update([
             'visit_date' => $validated['visit_date'],

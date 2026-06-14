@@ -104,6 +104,13 @@ class AppointmentController extends Controller
         // Scoped techs always own their bookings; all-data users may assign.
         $technicianId = $user->seesAllData() ? $request->input('technician_id') : $user->id;
 
+        if ($user->tenantId() !== null && $technicianId !== null) {
+            abort_unless(
+                \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                404,
+            );
+        }
+
         Appointment::create($request->appointmentData() + [
             'status' => 'pending',
             'technician_id' => $technicianId,
@@ -133,6 +140,13 @@ class AppointmentController extends Controller
         $data['technician_id'] = $user->seesAllData()
             ? $request->input('technician_id')
             : $appointment->technician_id;
+
+        if ($user->tenantId() !== null && $data['technician_id'] !== null) {
+            abort_unless(
+                \App\Models\User::whereKey($data['technician_id'])->where('tenant_id', $user->tenantId())->exists(),
+                404,
+            );
+        }
 
         // Status is owned by the lifecycle endpoint, not the edit form.
         $appointment->update($data);
