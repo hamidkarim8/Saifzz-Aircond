@@ -1,6 +1,5 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -50,7 +49,7 @@ function toggleNextService(type) {
 <template>
     <AdminLayout>
         <template #header>
-            <PageHeader title="Service Types" />
+            <h1 class="text-base font-bold text-navy-800">Service Types</h1>
         </template>
 
         <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">

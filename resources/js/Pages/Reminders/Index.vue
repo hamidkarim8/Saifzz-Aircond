@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Badge from '@/Components/Badge.vue';
 import { waLink as wa } from '@/lib/whatsapp';
@@ -72,10 +71,7 @@ const dismissReminder = async (item) => {
 
     <AdminLayout>
         <template #header>
-            <PageHeader
-                title="Service Reminders"
-                subtitle="Clients overdue or due this month for air-cond servicing."
-            />
+            <h1 class="text-base font-bold text-navy-800">Service Reminders</h1>
         </template>
 
         <!-- Summary stat cards -->

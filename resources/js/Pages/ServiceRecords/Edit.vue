@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
 import { serviceVariant } from '@/lib/badges';
@@ -39,13 +38,10 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
 
     <AdminLayout>
         <template #header>
-            <PageHeader title="Edit service record" :subtitle="visit.transaction?.txn_id ?? ''">
-                <template #actions>
-                    <Link :href="route('service-records.show', visit.id)" class="text-sm font-medium text-ink-soft hover:text-ink transition">
-                        ← Back
-                    </Link>
-                </template>
-            </PageHeader>
+            <div class="flex min-w-0 items-center justify-between gap-4">
+                <h1 class="truncate text-base font-bold text-navy-800">Edit service record</h1>
+                <Link :href="route('service-records.show', visit.id)" class="shrink-0 text-sm font-medium text-ink-soft hover:text-ink transition">← Back</Link>
+            </div>
         </template>
 
         <form class="mx-auto max-w-3xl space-y-5 pb-16" @submit.prevent="submit">

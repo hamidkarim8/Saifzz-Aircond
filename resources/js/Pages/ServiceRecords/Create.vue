@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ClientPicker from './Partials/ClientPicker.vue';
@@ -107,7 +106,7 @@ const submit = () => form.post(route('service-records.store'));
 
     <AdminLayout>
         <template #header>
-            <PageHeader title="Add service record" subtitle="Fill in the details below to create a new service visit." />
+            <h1 class="text-base font-bold text-navy-800">New service record</h1>
         </template>
 
         <form class="mx-auto max-w-3xl space-y-5 pb-32" @submit.prevent="submit">

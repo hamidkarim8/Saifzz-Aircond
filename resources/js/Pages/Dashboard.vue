@@ -117,10 +117,7 @@ const txnRows = computed(() =>
 
     <AdminLayout>
         <template #header>
-            <div>
-                <h1 class="text-lg font-bold tracking-tight text-navy-800">Dashboard</h1>
-                <p class="text-xs text-ink-soft">Your aircond business at a glance — revenue, services and reminders.</p>
-            </div>
+            <h1 class="text-base font-bold text-navy-800">Dashboard</h1>
         </template>
 
     <!-- ── KPI Stat Cards (always visible, scoped to user's own data) ── -->
