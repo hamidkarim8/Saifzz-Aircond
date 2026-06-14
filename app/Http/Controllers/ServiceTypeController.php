@@ -14,7 +14,7 @@ class ServiceTypeController extends Controller
     public function index(): Response
     {
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name']),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service']),
         ]);
     }
 
@@ -22,9 +22,13 @@ class ServiceTypeController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:service_types,name'],
+            'requires_next_service' => ['boolean'],
         ]);
 
-        ServiceType::create(['name' => $request->input('name')]);
+        ServiceType::create([
+            'name' => $request->input('name'),
+            'requires_next_service' => $request->boolean('requires_next_service', false),
+        ]);
 
         return back()->with('success', 'Service type added.');
     }
@@ -33,12 +37,16 @@ class ServiceTypeController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:100', "unique:service_types,name,{$serviceType->id}"],
+            'requires_next_service' => ['boolean'],
         ]);
 
         $oldName = $serviceType->name;
         $newName = $request->input('name');
 
-        $serviceType->update(['name' => $newName]);
+        $serviceType->update([
+            'name' => $newName,
+            'requires_next_service' => $request->boolean('requires_next_service', $serviceType->requires_next_service),
+        ]);
 
         if ($oldName !== $newName) {
             DB::table('service_fees')->where('service_type', $oldName)->update(['service_type' => $newName]);

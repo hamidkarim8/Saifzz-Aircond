@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 import Badge from '@/Components/Badge.vue';
 import InputError from '@/Components/InputError.vue';
 import { serviceVariant } from '@/lib/badges';
@@ -15,6 +15,7 @@ const props = defineProps({
     clientUnits: { type: Array, default: () => [] },
     errors: { type: Object, default: () => ({}) },
     removable: Boolean,
+    visitDate: { type: String, default: null },
 });
 const emit = defineEmits(['remove']);
 
@@ -22,6 +23,14 @@ const isRepair = computed(() => props.line.service_type === 'Repair');
 const isGas = computed(() => props.line.service_type === 'Gas Top-Up');
 const carriesUnitType = computed(() => props.unitTypeServices.includes(props.line.service_type));
 const hasUnitSelected = computed(() => !!props.line.unit_id);
+
+const nextServiceMonths = ref(null);
+
+const requiresNextService = computed(() => {
+    if (!props.line.service_type) return false;
+    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
+    return t?.requires_next_service ?? false;
+});
 
 const err = (field) => props.errors[`lines.${props.index}.${field}`];
 
@@ -31,6 +40,7 @@ watch(() => props.line.service_type, () => {
     props.line.gas_option = null;
     props.line.repair_desc = '';
     props.line.next_service_date = null;
+    nextServiceMonths.value = null;
     props.line.notes = '';
     if (isRepair.value) props.line.rate = '';
     autofill();
@@ -48,6 +58,20 @@ watch(() => props.line.unit_id, (unitId) => {
 });
 
 watch([() => props.line.unit_type, () => props.line.gas_option], autofill);
+
+watch(nextServiceMonths, (months) => {
+    if (!months || !props.visitDate) { props.line.next_service_date = null; return; }
+    const d = new Date(props.visitDate);
+    d.setMonth(d.getMonth() + months);
+    props.line.next_service_date = d.toISOString().slice(0, 10);
+});
+
+watch(() => props.visitDate, () => {
+    if (!nextServiceMonths.value || !props.visitDate) { props.line.next_service_date = null; return; }
+    const d = new Date(props.visitDate);
+    d.setMonth(d.getMonth() + nextServiceMonths.value);
+    props.line.next_service_date = d.toISOString().slice(0, 10);
+});
 
 function autofill() {
     if (isRepair.value || !props.line.service_type) return;
@@ -120,7 +144,7 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Service type</label>
                     <select v-model="line.service_type" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
                         <option value="" disabled>Choose…</option>
-                        <option v-for="t in serviceTypes" :key="t" :value="t">{{ t }}</option>
+                        <option v-for="t in serviceTypes" :key="t.name" :value="t.name">{{ t.name }}</option>
                     </select>
                     <InputError :message="err('service_type')" />
                 </div>
@@ -184,10 +208,14 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <input v-model.number="line.discount" type="number" step="0.01" min="0" inputmode="decimal" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="0.00" />
                 </div>
 
-                <!-- Next service date (R2) -->
-                <div v-if="carriesUnitType">
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Next service date</label>
-                    <input v-model="line.next_service_date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                <!-- Next service months (R2) -->
+                <div v-if="requiresNextService">
+                    <label class="mb-1.5 block text-sm font-semibold text-ink">Next service</label>
+                    <select v-model.number="nextServiceMonths" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                        <option :value="null" disabled>Choose months…</option>
+                        <option v-for="m in [3,4,5,6,7,8,9,10,11,12]" :key="m" :value="m">{{ m }} months</option>
+                    </select>
+                    <p v-if="line.next_service_date" class="mt-1 text-xs text-ok">Next service: {{ line.next_service_date }}</p>
                 </div>
 
                 <!-- Notes (R3: not for Repair) -->

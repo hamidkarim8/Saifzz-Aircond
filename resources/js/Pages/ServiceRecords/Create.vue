@@ -161,6 +161,7 @@ const submit = () => form.post(route('service-records.store'));
                     :client-units="clientUnits"
                     :errors="form.errors"
                     :removable="form.lines.length > 1"
+                    :visit-date="form.visit_date"
                     @remove="removeLine(i)"
                 />
                 <button

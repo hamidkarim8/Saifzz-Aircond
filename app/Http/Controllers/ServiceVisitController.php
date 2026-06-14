@@ -62,7 +62,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['name', 'requires_next_service'])->toArray(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
