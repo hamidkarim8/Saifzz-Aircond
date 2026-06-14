@@ -13,13 +13,15 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $tenantId = request()->user()->tenantId();
+        // Technician-management page: lists only technicians in the acting boss's
+        // tenant (admins are managed elsewhere; superadmins with null tenant see all).
+        $tenantId = $request->user()->tenantId();
 
         return Inertia::render('Users/Index', [
             'users' => User::query()
-                ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
                 ->where('role', User::ROLE_TECHNICIAN)
                 ->orderBy('name')
                 ->get(['id', 'name', 'email', 'role', 'active', 'permissions']),
