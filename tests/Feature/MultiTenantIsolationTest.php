@@ -182,4 +182,46 @@ class MultiTenantIsolationTest extends TestCase
             'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
         ])->assertNotFound();
     }
+
+    public function test_user_index_lists_only_own_tenant_technicians(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $kTech = $this->techFor($khalid, 'kt@example.com');
+        $sTech = $this->techFor($saifzz, 'st@example.com');
+
+        $this->actingAs($khalid)->get(route('users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('users', fn ($users) => collect($users)->pluck('id')->contains($kTech->id)
+                    && ! collect($users)->pluck('id')->contains($sTech->id)));
+    }
+
+    public function test_boss_cannot_update_other_tenant_technician(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sTech = $this->techFor($saifzz, 'st2@example.com');
+
+        $this->actingAs($khalid)->put(route('users.update', $sTech), [
+            'name' => 'Hacked', 'permissions' => [],
+        ])->assertNotFound();
+    }
+
+    public function test_boss_cannot_deactivate_other_tenant_technician(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sTech = $this->techFor($saifzz, 'st3@example.com');
+
+        $this->actingAs($khalid)->patch(route('users.active', $sTech))
+            ->assertNotFound();
+    }
+
+    private function techFor(\App\Models\User $boss, string $email): \App\Models\User
+    {
+        return \App\Models\User::factory()->technician()->create([
+            'email' => $email, 'tenant_id' => $boss->id,
+        ]);
+    }
 }
