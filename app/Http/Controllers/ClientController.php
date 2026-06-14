@@ -30,6 +30,7 @@ class ClientController extends Controller
         $sortWhitelist = ['serial_no', 'name', 'last_service_date', 'last_amount'];
 
         $clients = Client::query()
+            ->visibleTo($request->user())
             ->withCount('visits')
             ->with(['latestVisit.lines'])
             ->when($search !== '', function ($q) use ($search) {
@@ -136,6 +137,7 @@ class ClientController extends Controller
         $q = trim((string) $request->input('q', ''));
 
         $clients = Client::query()
+            ->visibleTo($request->user())
             ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
                 $w->where('name', 'ilike', "%{$q}%")
                     ->orWhere('serial_no', 'ilike', "%{$q}%")

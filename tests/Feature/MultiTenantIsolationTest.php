@@ -148,6 +148,24 @@ class MultiTenantIsolationTest extends TestCase
         $this->assertSame($khalid->id, $tech->tenant_id);
     }
 
+    public function test_client_index_and_lookup_are_tenant_scoped(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $kClient = $this->clientFor($khalid);
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->get(route('clients.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('clients.total', 1));
+
+        $res = $this->actingAs($khalid)->getJson(route('clients.lookup'));
+        $res->assertOk();
+        $ids = collect($res->json())->pluck('id')->all();
+        $this->assertContains($kClient->id, $ids);
+        $this->assertNotContains($sClient->id, $ids);
+    }
+
     public function test_boss_cannot_attach_visit_to_other_tenant_client(): void
     {
         $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
