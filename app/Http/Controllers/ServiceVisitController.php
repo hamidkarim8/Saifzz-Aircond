@@ -150,6 +150,22 @@ class ServiceVisitController extends Controller
         ]);
     }
 
+    public function destroy(ServiceVisit $serviceRecord): RedirectResponse
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+
+        $txn = $serviceRecord->transaction;
+        abort_unless($txn && $txn->status === 'pending', 422);
+
+        $txn->update(['status' => 'cancelled']);
+
+        return redirect()->route('service-records.index')
+            ->with('success', 'Record cancelled.');
+    }
+
     /**
      * Build a persistable line: snapshot the fee rate (R1) and strip
      * fields that don't apply to the service type (R2/R3).

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { confirmAction } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
@@ -39,6 +40,16 @@ const warrantyLabel = computed(() => {
 const lineLabel = (l) => [l.unit_type, l.gas_option].filter(Boolean).join(' ') || (l.service_type === 'Repair' ? 'Flat job' : '');
 
 const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? false);
+
+const cancelRecord = async () => {
+    const ok = await confirmAction({
+        title: 'Cancel this record?',
+        body: 'This will void the pending payment. The service history will remain.',
+        confirmText: 'Cancel record',
+    });
+    if (!ok) return;
+    router.delete(route('service-records.destroy', props.visit.id));
+};
 </script>
 
 <template>
@@ -125,6 +136,12 @@ const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? 
                         >
                             Collect payment
                         </Link>
+                        <button
+                            class="text-sm font-semibold text-danger hover:underline transition"
+                            @click="cancelRecord"
+                        >
+                            Cancel record
+                        </button>
                     </span>
                 </div>
             </div>

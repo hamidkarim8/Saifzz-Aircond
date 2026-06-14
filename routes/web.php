@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
         Route::get('service-records/create', [ServiceVisitController::class, 'create'])->name('service-records.create');
         Route::post('service-records', [ServiceVisitController::class, 'store'])->name('service-records.store');
         Route::get('service-records/{serviceRecord}', [ServiceVisitController::class, 'show'])->name('service-records.show');
+        Route::delete('service-records/{serviceRecord}', [ServiceVisitController::class, 'destroy'])->name('service-records.destroy');
     });
 
     // Appointments (module 7) — scheduling, all gated by set_appointment (P3)
