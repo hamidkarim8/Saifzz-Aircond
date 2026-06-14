@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
         //     ],
         // );
 
-        User::firstOrCreate(
+        $khalid = User::firstOrCreate(
             ['email' => 'khalid@admin.com'],
             [
                 'name' => 'Superadmin Khalid',
@@ -38,8 +38,11 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('khalid123'),
             ],
         );
+        if ($khalid->tenant_id === null) {
+            $khalid->update(['tenant_id' => $khalid->id]);
+        }
 
-        User::firstOrCreate(
+        $saifzz = User::firstOrCreate(
             ['email' => 'saifzz@admin.com'],
             [
                 'name' => 'Superadmin Saifzz',
@@ -48,6 +51,9 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('saifzz123'),
             ],
         );
+        if ($saifzz->tenant_id === null) {
+            $saifzz->update(['tenant_id' => $saifzz->id]);
+        }
 
         $this->call(ServiceFeeSeeder::class);
         $this->call(ServiceTypeSeeder::class);
