@@ -248,6 +248,26 @@ class MultiTenantIsolationTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_reminders_page_is_tenant_scoped(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+
+        $kClient = $this->clientFor($khalid);
+        $sClient = $this->clientFor($saifzz);
+        $kClient->units()->create(['label' => 'KU', 'unit_type' => 'Wall Mounted', 'is_active' => true, 'next_service_date' => now()->subDay()->toDateString()]);
+        $sClient->units()->create(['label' => 'SU', 'unit_type' => 'Wall Mounted', 'is_active' => true, 'next_service_date' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($khalid)->get(route('reminders.index'))
+            ->assertOk()
+            ->assertInertia(function ($page) use ($kClient, $sClient) {
+                $overdue = collect($page->toArray()['props']['overdue'] ?? []);
+                $ids = $overdue->pluck('client_id')->all();
+                $this->assertContains($kClient->id, $ids);
+                $this->assertNotContains($sClient->id, $ids);
+            });
+    }
+
     private function techFor(\App\Models\User $boss, string $email): \App\Models\User
     {
         return \App\Models\User::factory()->technician()->create([
