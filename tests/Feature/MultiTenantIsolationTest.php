@@ -288,6 +288,25 @@ class MultiTenantIsolationTest extends TestCase
         ]);
     }
 
+    public function test_boss_cannot_read_other_tenant_service_record(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $visit = $this->visitFor($this->clientFor($saifzz), $saifzz);
+
+        $this->actingAs($saifzz)->get(route('service-records.show', $visit))->assertOk();
+        $this->actingAs($khalid)->get(route('service-records.show', $visit))->assertForbidden();
+    }
+
+    public function test_boss_cannot_read_other_tenant_client_profile(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+        $sClient = $this->clientFor($saifzz);
+
+        $this->actingAs($khalid)->get(route('clients.show', $sClient))->assertNotFound();
+    }
+
     public function test_report_revenue_is_tenant_scoped(): void
     {
         $khalid = $this->boss();

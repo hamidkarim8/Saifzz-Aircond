@@ -169,6 +169,8 @@ class ClientController extends Controller
     public function show(Client $client): Response
     {
         $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->load([
             'visits' => fn ($q) => $q->visibleTo($user)->latest('visit_date'),
             'visits.lines',
