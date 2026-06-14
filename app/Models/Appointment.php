@@ -35,6 +35,7 @@ class Appointment extends Model
         'status',
         'contacted_flag',
         'notes',
+        'tenant_id',
     ];
 
     protected function casts(): array
@@ -81,6 +82,16 @@ class Appointment extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $user->seesAllData() ? $query : $query->where('technician_id', $user->id);
+        // Tenant filter applies only when the user has a tenant; legacy/test
+        // fixtures with null tenant are not filtered (see tenant seam contract).
+        if ($tid = $user->tenantId()) {
+            $query->where('tenant_id', $tid);
+        }
+
+        if (! $user->seesAllData()) {
+            $query->where('technician_id', $user->id);
+        }
+
+        return $query;
     }
 }
