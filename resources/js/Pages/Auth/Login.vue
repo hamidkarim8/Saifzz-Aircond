@@ -25,7 +25,7 @@ const submit = () => {
 
     <GuestLayout>
         <h1 class="text-xl font-bold text-navy-900">Sign in</h1>
-        <p class="mt-1 text-sm text-ink-soft">Access the Saifzz Aircond service system.</p>
+        <p class="mt-1 text-sm text-ink-soft">Access the Saifzz Aircond Services system.</p>
 
         <div v-if="status" class="mt-4 rounded-ra bg-ok-bg px-3 py-2 text-sm font-medium text-ok">{{ status }}</div>
 

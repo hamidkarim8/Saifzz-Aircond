@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { confirmAction } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import DataTable from '@/Components/DataTable.vue';
@@ -14,6 +15,16 @@ const pageTitle    = computed(() => seesAllData.value ? 'Service Records' : 'My 
 const pageSubtitle = computed(() => seesAllData.value ? 'Recorded visits, newest first.' : 'Service visits you performed.');
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
+
+const cancelRecord = async (row) => {
+    const ok = await confirmAction({
+        title: 'Cancel this record?',
+        body: 'Voids the pending payment. Service history remains.',
+        confirmText: 'Cancel record',
+    });
+    if (!ok) return;
+    router.delete(route('service-records.destroy', row.id), {}, { preserveScroll: true });
+};
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -60,7 +71,7 @@ const columns = [
             <!-- Date / Time -->
             <template #cell-visit_date="{ row }">
                 <span class="font-medium text-ink">{{ fmtDate(row.visit_date) }}</span>
-                <span v-if="fmtTime(row.visit_date)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.visit_date) }}</span>
+                <span v-if="fmtTime(row.created_at)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.created_at) }}</span>
             </template>
 
             <!-- Client name -->
@@ -100,12 +111,28 @@ const columns = [
 
             <!-- Actions -->
             <template #cell-actions="{ row }">
-                <Link
-                    :href="route('service-records.show', row.id)"
-                    class="rounded-ra px-3 py-1.5 text-xs font-medium text-primary shadow-card hover:bg-surface-muted transition"
-                >
-                    View
-                </Link>
+                <div class="flex items-center justify-end gap-2 whitespace-nowrap">
+                    <Link
+                        :href="route('service-records.show', row.id)"
+                        class="rounded-ra px-3 py-1.5 text-xs font-medium text-primary shadow-card hover:bg-surface-muted transition"
+                    >
+                        View
+                    </Link>
+                    <Link
+                        v-if="row.transaction?.status === 'pending'"
+                        :href="route('service-records.edit', row.id)"
+                        class="text-xs font-medium text-ink-soft hover:text-ink transition"
+                    >
+                        Edit
+                    </Link>
+                    <button
+                        v-if="row.transaction?.status === 'pending'"
+                        class="text-xs font-medium text-danger hover:underline transition"
+                        @click="cancelRecord(row)"
+                    >
+                        Cancel
+                    </button>
+                </div>
             </template>
 
             <!-- Mobile card slot -->

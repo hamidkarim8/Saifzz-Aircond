@@ -48,5 +48,5 @@ class StoreServiceFeeRequest extends FormRequest
         });
     }
 
-    public const MODES = ['fixed_per_unit', 'tiered', 'flexible'];
+    public const MODES = ['fixed_per_unit', 'flexible'];
 }

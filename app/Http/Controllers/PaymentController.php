@@ -69,6 +69,8 @@ class PaymentController extends Controller
 
     public function return(Transaction $transaction): Response
     {
+        $this->authorizeVisitScope($transaction);
+
         $transaction->load('visit.client', 'receipt');
 
         return Inertia::render('Payments/Return', [

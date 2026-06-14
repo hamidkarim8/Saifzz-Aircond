@@ -272,7 +272,37 @@ containers, copies assets to the host, and runs migrations.
 
 ---
 
-## 10. Common Operations
+## 10. DBeaver (Remote DB Access)
+
+Postgres runs inside Docker and is **not** exposed to the internet. Connect via SSH tunnel.
+
+**In DBeaver → New Connection → PostgreSQL:**
+
+**SSH tab:**
+
+| Field | Value |
+|---|---|
+| Host | `saifzz.mktechnologies.my` |
+| Port | `22` |
+| User | `deploy` |
+| Auth method | Public Key |
+| Private key | path to your `privatekey.txt` (the `id_ed25519` key from Step 4) |
+
+**Main tab:**
+
+| Field | Value |
+|---|---|
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `saifzz_prod` |
+| User | `saifzz` |
+| Password | value of `DB_PASSWORD` in `.env` |
+
+This is the same private key stored in the `DEPLOY_SSH_KEY` GitHub Actions secret.
+
+---
+
+## 11. Common Operations
 
 All commands assume `cd /var/www/Saifzz-Aircond` and use
 `docker compose -f docker-compose.prod.yml` (aliased `$DC` below).
@@ -308,7 +338,7 @@ $DC exec -T postgres pg_dump -U saifzz saifzz_prod | gzip > saifzz_$(date +%Y%m%
 
 ---
 
-## 11. Production Operations
+## 12. Production Operations
 
 ### Survives reboot (verify once)
 
@@ -379,7 +409,7 @@ gunzip -c /home/deploy/backups/saifzz_YYYYMMDD_HHMM.sql.gz | \
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Symptom | Cause & Fix |
 |---|---|

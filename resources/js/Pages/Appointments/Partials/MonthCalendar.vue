@@ -51,9 +51,9 @@ const isToday = (day) =>
             </div>
         </header>
 
-        <div class="p-3 sm:p-4">
-            <div class="grid grid-cols-7 gap-1 text-center">
-                <div v-for="w in WEEKDAYS" :key="w" class="py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{{ w }}</div>
+        <div class="p-2 sm:p-3">
+            <div class="grid grid-cols-7 gap-0.5 text-center">
+                <div v-for="w in WEEKDAYS" :key="w" class="py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">{{ w }}</div>
 
                 <div v-for="b in leadingBlanks" :key="'b' + b" />
 
@@ -61,7 +61,7 @@ const isToday = (day) =>
                     v-for="day in days"
                     :key="day"
                     type="button"
-                    class="relative aspect-square rounded-ra pb-3 text-sm font-medium transition"
+                    class="relative aspect-square rounded-ra pb-2.5 text-xs font-medium transition"
                     :class="[
                         selectedDay === day ? 'bg-primary text-white shadow-card'
                             : byDay[day] ? 'bg-primary-50 text-primary hover:bg-primary-100'

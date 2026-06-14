@@ -15,9 +15,9 @@ class ServiceFeeSeeder extends Seeder
         $fees = [
             ['Cleaning', 'Wall Mounted', 60, 'fixed_per_unit'],
             ['Cleaning', 'Cassette', 90, 'fixed_per_unit'],
-            ['Gas Top-Up', '20 PSI', 80, 'tiered'],
-            ['Gas Top-Up', 'Half Top-Up', 150, 'tiered'],
-            ['Gas Top-Up', 'Full Top-Up', 280, 'tiered'],
+            ['Gas Top-Up', '20 PSI', 80, 'fixed_per_unit'],
+            ['Gas Top-Up', 'Half Top-Up', 150, 'fixed_per_unit'],
+            ['Gas Top-Up', 'Full Top-Up', 280, 'fixed_per_unit'],
             ['Repair', null, null, 'flexible'],
             ['Installation', 'Wall Mounted', 120, 'fixed_per_unit'],
             ['Installation', 'Cassette', 180, 'fixed_per_unit'],

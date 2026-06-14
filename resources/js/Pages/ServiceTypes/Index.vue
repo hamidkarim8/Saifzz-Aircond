@@ -1,8 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
 
@@ -20,11 +19,12 @@ function submitAdd() {
 }
 
 const editingId = ref(null);
-const editForm = useForm({ name: '' });
+const editForm = useForm({ name: '', requires_next_service: false });
 
 function startEdit(type) {
     editingId.value = type.id;
     editForm.name = type.name;
+    editForm.requires_next_service = type.requires_next_service;
 }
 
 function cancelEdit() {
@@ -37,12 +37,19 @@ function submitEdit(type) {
         onSuccess: () => { editingId.value = null; },
     });
 }
+
+function toggleNextService(type) {
+    router.put(route('service-types.update', type.id), {
+        name: type.name,
+        requires_next_service: !type.requires_next_service,
+    }, { preserveScroll: true });
+}
 </script>
 
 <template>
     <AdminLayout>
         <template #header>
-            <PageHeader title="Service Types" />
+            <h1 class="text-base font-bold text-navy-800">Service Types</h1>
         </template>
 
         <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
@@ -55,6 +62,15 @@ function submitEdit(type) {
                     >
                         <template v-if="editingId !== type.id">
                             <span class="flex-1 text-sm font-medium text-ink">{{ type.name }}</span>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition"
+                                :class="type.requires_next_service ? 'bg-primary-50 text-primary' : 'bg-surface-muted text-ink-soft'"
+                                @click="toggleNextService(type)"
+                            >
+                                <span class="h-3.5 w-3.5 rounded-full border-2 transition" :class="type.requires_next_service ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'" />
+                                {{ type.requires_next_service ? 'Next service' : 'No follow-up' }}
+                            </button>
                             <button
                                 type="button"
                                 class="rounded p-1 text-ink-muted hover:text-primary"

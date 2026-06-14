@@ -60,6 +60,9 @@ Route::middleware('auth')->group(function () {
         Route::get('service-records/create', [ServiceVisitController::class, 'create'])->name('service-records.create');
         Route::post('service-records', [ServiceVisitController::class, 'store'])->name('service-records.store');
         Route::get('service-records/{serviceRecord}', [ServiceVisitController::class, 'show'])->name('service-records.show');
+        Route::get('service-records/{serviceRecord}/edit', [ServiceVisitController::class, 'edit'])->name('service-records.edit');
+        Route::patch('service-records/{serviceRecord}', [ServiceVisitController::class, 'update'])->name('service-records.update');
+        Route::delete('service-records/{serviceRecord}', [ServiceVisitController::class, 'destroy'])->name('service-records.destroy');
     });
 
     // Appointments (module 7) — scheduling, all gated by set_appointment (P3)
@@ -97,7 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('payments/{transaction}', [PaymentController::class, 'show'])->middleware('can:collect_payment')->name('payments.show');
     Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
     Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
-    Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->name('payments.return');
+    Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->middleware('can:collect_payment')->name('payments.return');
 
     // Documents (module 6) — invoice & receipt view + PDF, gated view_clients (P3).
     Route::middleware('can:view_clients')->group(function () {
@@ -111,6 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:view_clients')->group(function () {
         Route::get('reminders', [ReminderController::class, 'index'])->name('reminders.index');
         Route::patch('reminders/{client}/contacted', [ReminderController::class, 'toggleContacted'])->name('reminders.contacted');
+        Route::delete('reminders/{client}', [ReminderController::class, 'dismiss'])->name('reminders.dismiss');
     });
 
     // Reports (module 9) — transactions CSV export, gated export_data (P3).

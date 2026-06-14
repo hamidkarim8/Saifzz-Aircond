@@ -58,7 +58,7 @@ class HandleInertiaRequests extends Middleware
         if (! $user || ! $user->can('view_clients')) {
             return 0;
         }
-        $list = app(\App\Services\Reminders\ReminderService::class)->dueList();
+        $list = app(\App\Services\Reminders\ReminderService::class)->dueList($user->tenantId());
 
         // dueList() returns keys: overdue, due_this_month, stats.
         return count($list['overdue']) + count($list['due_this_month']);

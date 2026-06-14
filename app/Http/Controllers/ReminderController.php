@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\ClientUnit;
 use App\Models\ReminderContact;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ class ReminderController extends Controller
      */
     public function index(ReminderService $reminders): Response
     {
-        return Inertia::render('Reminders/Index', $reminders->dueList());
+        return Inertia::render('Reminders/Index', $reminders->dueList(request()->user()->tenantId()));
     }
 
     /**
@@ -24,6 +25,8 @@ class ReminderController extends Controller
      */
     public function toggleContacted(Client $client): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
+
         $existing = ReminderContact::where('client_id', $client->id)->first();
 
         if ($existing) {
@@ -39,5 +42,20 @@ class ReminderController extends Controller
         ]);
 
         return back()->with('success', 'Marked contacted.');
+    }
+
+    /**
+     * Dismiss a reminder — clears next_service_date from all active client_units.
+     * The reminder reappears once the next service visit sets a new date.
+     */
+    public function dismiss(Client $client): RedirectResponse
+    {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
+
+        ClientUnit::where('client_id', $client->id)
+            ->where('is_active', true)
+            ->update(['next_service_date' => null, 'next_service_type' => null]);
+
+        return back()->with('success', 'Reminder dismissed.');
     }
 }

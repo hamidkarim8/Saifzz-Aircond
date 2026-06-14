@@ -22,7 +22,7 @@ class StoreAppointmentRequest extends FormRequest
             'client_id' => ['nullable', 'exists:clients,id'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
-            'service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
+            'service_type' => ['nullable', 'string', Rule::exists('service_types', 'name')],
             'units' => ['nullable', 'integer', 'min:1'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'phone' => ['required', 'string', 'regex:/^01\d-?\d{7,8}$/'],

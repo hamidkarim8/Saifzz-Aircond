@@ -159,7 +159,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('report.kpis.revenue_all_time', 100)
-                ->where('report.kpis.pending_reminders', null));
+                ->where('report.kpis.pending_reminders', 0));
     }
 
     private function pendingVisitFor(int $techId, float $amount, int $daysAgo = 5): void

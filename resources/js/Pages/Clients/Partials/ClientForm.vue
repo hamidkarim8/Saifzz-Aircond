@@ -40,7 +40,7 @@ const submit = () => {
         </div>
 
         <div>
-            <label class="mb-1.5 block text-sm font-semibold text-ink">Phone</label>
+            <label class="mb-1.5 block text-sm font-semibold text-ink">Phone Number</label>
             <input
                 v-model="form.phone"
                 type="tel"

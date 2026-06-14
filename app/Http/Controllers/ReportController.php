@@ -22,7 +22,7 @@ class ReportController extends Controller
         $user = $request->user();
         $scopeId = $user->seesAllData() ? null : $user->id;
 
-        $rows = $reports->transactions($period, null, $scopeId);
+        $rows = $reports->transactions($period, null, $scopeId, $user->tenantId());
         $filename = "transactions-{$period}-".now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($rows) {

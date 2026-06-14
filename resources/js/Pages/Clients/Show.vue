@@ -63,7 +63,7 @@ const waLink = computed(() => wa(props.client.phone));
                     <div class="font-mono font-semibold text-navy-800">#{{ client.serial_no }}</div>
                 </div>
                 <div>
-                    <div class="mb-0.5 text-xs font-bold uppercase tracking-wide text-ink-soft">Phone</div>
+                    <div class="mb-0.5 text-xs font-bold uppercase tracking-wide text-ink-soft">Phone Number</div>
                     <div class="font-mono text-ink">{{ client.phone }}</div>
                 </div>
                 <div class="sm:col-span-1">

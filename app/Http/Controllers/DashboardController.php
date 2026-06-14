@@ -28,6 +28,7 @@ class DashboardController extends Controller
 
         $user      = $request->user();
         $scopeId   = $user->seesAllData() ? null : $user->id;
+        $tenantId  = $user->tenantId();
         $canReport  = $user->hasPermission('view_reports');
         $canCollect = $user->hasPermission('collect_payment');
 
@@ -36,13 +37,13 @@ class DashboardController extends Controller
             'period'       => $period,
             'month'        => $month,
             'report'       => [
-                'kpis'           => $reports->kpis($scopeId),
-                'servicesByType' => $reports->servicesByType($period, $scopeId),
+                'kpis'           => $reports->kpis($scopeId, $tenantId),
+                'servicesByType' => $reports->servicesByType($period, $scopeId, $tenantId),
                 'transactions'   => $canReport
-                    ? $reports->transactions($period, 50, $scopeId)
+                    ? $reports->transactions($period, 50, $scopeId, $tenantId)
                     : [],
                 'receivables'    => $canCollect
-                    ? $reports->receivables($scopeId)
+                    ? $reports->receivables($scopeId, $tenantId)
                     : null,
             ],
             'appointments' => Appointment::query()

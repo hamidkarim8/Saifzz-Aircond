@@ -1,8 +1,8 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { confirmAction } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
 import WarrantyPill from '@/Components/WarrantyPill.vue';
@@ -39,6 +39,16 @@ const warrantyLabel = computed(() => {
 const lineLabel = (l) => [l.unit_type, l.gas_option].filter(Boolean).join(' ') || (l.service_type === 'Repair' ? 'Flat job' : '');
 
 const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? false);
+
+const cancelRecord = async () => {
+    const ok = await confirmAction({
+        title: 'Cancel this record?',
+        body: 'This will void the pending payment. The service history will remain.',
+        confirmText: 'Cancel record',
+    });
+    if (!ok) return;
+    router.delete(route('service-records.destroy', props.visit.id));
+};
 </script>
 
 <template>
@@ -46,13 +56,13 @@ const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? 
 
     <AdminLayout>
         <template #header>
-            <PageHeader :title="txn?.txn_id ?? 'Service Record'">
-                <template #actions>
-                    <Link :href="route('service-records.index')" class="text-sm font-medium text-ink-soft hover:text-ink transition">
-                        ← All records
-                    </Link>
-                </template>
-            </PageHeader>
+            <div class="flex min-w-0 items-center justify-between gap-4">
+                <span class="truncate font-mono text-base font-bold text-navy-800">{{ txn?.txn_id ?? 'Service Record' }}</span>
+                <div class="flex shrink-0 items-center gap-3 text-sm font-medium">
+                    <Link v-if="txn?.status === 'pending'" :href="route('service-records.edit', visit.id)" class="text-ink-soft hover:text-ink transition">Edit</Link>
+                    <Link :href="route('service-records.index')" class="text-ink-soft hover:text-ink transition">← All records</Link>
+                </div>
+            </div>
         </template>
 
         <div class="mx-auto max-w-3xl space-y-5">
@@ -110,22 +120,31 @@ const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? 
 
             <!-- Payment / document card -->
             <div v-if="txn && txn.status === 'pending'" class="overflow-hidden rounded-ral border border-warn/40 bg-warn-bg shadow-card">
-                <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="px-5 py-4 space-y-3">
                     <div class="flex items-center gap-2">
                         <Badge variant="amber">Pending</Badge>
                         <span class="text-sm text-warn">Payment pending via {{ txn.method }}.</span>
                     </div>
-                    <span class="flex flex-wrap items-center gap-3">
-                        <a :href="route('documents.invoice', txn.id)" target="_blank" class="text-sm font-semibold text-warn underline hover:text-warn/80 transition">View invoice</a>
-                        <a :href="route('documents.invoice.pdf', txn.id)" class="text-sm font-semibold text-warn underline hover:text-warn/80 transition">Download PDF</a>
+                    <div class="flex flex-wrap gap-2">
+                        <a
+                            :href="route('documents.invoice', txn.id)"
+                            target="_blank"
+                            class="inline-flex items-center rounded-ra border border-warn/50 bg-white px-3 py-1.5 text-sm font-semibold text-warn transition hover:bg-warn/10"
+                        >View invoice</a>
+                        <a
+                            :href="route('documents.invoice.pdf', txn.id)"
+                            class="inline-flex items-center rounded-ra border border-warn/50 bg-white px-3 py-1.5 text-sm font-semibold text-warn transition hover:bg-warn/10"
+                        >Download PDF</a>
                         <Link
                             v-if="canCollect"
                             :href="route('payments.show', txn.id)"
-                            class="inline-block rounded-ral bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-600"
-                        >
-                            Collect payment
-                        </Link>
-                    </span>
+                            class="inline-flex items-center rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                        >Collect payment</Link>
+                        <button
+                            class="inline-flex items-center rounded-ra border border-danger/40 bg-white px-3 py-1.5 text-sm font-semibold text-danger transition hover:bg-danger/10"
+                            @click="cancelRecord"
+                        >Cancel record</button>
+                    </div>
                 </div>
             </div>
             <div v-else-if="txn && txn.status === 'paid'" class="overflow-hidden rounded-ral border border-ok/40 bg-ok-bg shadow-card">

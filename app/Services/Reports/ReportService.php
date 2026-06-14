@@ -28,7 +28,7 @@ class ReportService
      *
      * @return array<string, int|float|null>
      */
-    public function kpis(?int $technicianId = null): array
+    public function kpis(?int $technicianId = null, ?int $tenantId = null): array
     {
         $now = Carbon::now();
         $monthStart = $now->copy()->startOfMonth();
@@ -36,13 +36,16 @@ class ReportService
         $lastStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
         $lastEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
 
-        $paidRevenue = function (Carbon $start, Carbon $end) use ($technicianId): float {
+        $paidRevenue = function (Carbon $start, Carbon $end) use ($technicianId, $tenantId): float {
             $q = DB::table('transactions as t')
                 ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
                 ->where('t.status', 'paid')
                 ->whereBetween('t.paid_at', [$start, $end]);
             if ($technicianId !== null) {
                 $q->where('sv.technician_id', $technicianId);
+            }
+            if ($tenantId !== null) {
+                $q->where('sv.tenant_id', $tenantId);
             }
             return (float) $q->sum('t.amount');
         };
@@ -56,21 +59,36 @@ class ReportService
         if ($technicianId !== null) {
             $allTimeQ->where('sv.technician_id', $technicianId);
         }
+        if ($tenantId !== null) {
+            $allTimeQ->where('sv.tenant_id', $tenantId);
+        }
         $revenueAllTime = (float) $allTimeQ->sum('t.amount');
 
         if ($technicianId === null) {
-            $totalClients      = Client::count();
-            $clientsThisMonth  = Client::whereBetween('created_at', [$monthStart, $monthEnd])->count();
-            $reminderStats     = $this->reminders->dueList()['stats'];
+            $totalClients      = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->count();
+            $clientsThisMonth  = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->whereBetween('created_at', [$monthStart, $monthEnd])->count();
+            $reminderStats     = $this->reminders->dueList($tenantId)['stats'];
             $pending           = $reminderStats['overdue'] + $reminderStats['due_this_month'];
         } else {
             $totalClients = (int) DB::table('service_visits')
-                ->where('technician_id', $technicianId)->distinct()->count('client_id');
+                ->where('technician_id', $technicianId)
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->distinct()->count('client_id');
             $clientsThisMonth = (int) DB::table('service_visits')
                 ->where('technician_id', $technicianId)
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
                 ->whereBetween('visit_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
                 ->distinct()->count('client_id');
-            $pending = null; // reminders are client-global; omitted for scoped techs (v1)
+            $pending = (int) DB::table('client_units')
+                ->where('is_active', true)
+                ->where('next_service_date', '<=', $now->copy()->endOfMonth()->toDateString())
+                ->whereIn('client_id', function ($q) use ($technicianId, $tenantId) {
+                    $q->select('client_id')->from('service_visits')
+                      ->where('technician_id', $technicianId)
+                      ->when($tenantId !== null, fn ($sq) => $sq->where('tenant_id', $tenantId))
+                      ->distinct();
+                })
+                ->count();
         }
 
         return [
@@ -89,7 +107,7 @@ class ReportService
      *
      * @return list<array{type: string, count: int}>
      */
-    public function servicesByType(string $period, ?int $technicianId = null): array
+    public function servicesByType(string $period, ?int $technicianId = null, ?int $tenantId = null): array
     {
         [$from, $to] = $this->range($period);
 
@@ -98,6 +116,9 @@ class ReportService
 
         if ($technicianId !== null) {
             $q->where('sv.technician_id', $technicianId);
+        }
+        if ($tenantId !== null) {
+            $q->where('sv.tenant_id', $tenantId);
         }
 
         if ($from) {
@@ -118,7 +139,7 @@ class ReportService
      *
      * @return list<array<string, mixed>>
      */
-    public function transactions(string $period, ?int $limit = 50, ?int $technicianId = null): array
+    public function transactions(string $period, ?int $limit = 50, ?int $technicianId = null, ?int $tenantId = null): array
     {
         [$from, $to] = $this->range($period);
 
@@ -145,6 +166,9 @@ class ReportService
 
         if ($technicianId !== null) {
             $q->where('sv.technician_id', $technicianId);
+        }
+        if ($tenantId !== null) {
+            $q->where('sv.tenant_id', $tenantId);
         }
 
         if ($from) {
@@ -176,7 +200,7 @@ class ReportService
      *
      * @return array{buckets: list<array{label:string,days_from:int,days_to:int|null,count:int,total:float}>, items: list<array<string,mixed>>, total_outstanding: float}
      */
-    public function receivables(?int $technicianId = null): array
+    public function receivables(?int $technicianId = null, ?int $tenantId = null): array
     {
         $today = now()->toDateString();
 
@@ -186,6 +210,7 @@ class ReportService
             ->whereNull('c.deleted_at')
             ->where('t.status', 'pending')
             ->when($technicianId !== null, fn ($q) => $q->where('sv.technician_id', $technicianId))
+            ->when($tenantId !== null, fn ($q) => $q->where('sv.tenant_id', $tenantId))
             ->select([
                 'sv.id as visit_id',
                 't.txn_id',

@@ -64,7 +64,7 @@ defineProps({
                 </div>
             </main>
 
-            <footer class="text-xs text-ink-muted">© Saifzz Aircond · Service Management System</footer>
+            <footer class="text-xs text-ink-muted">© Saifzz Aircond Services</footer>
         </div>
     </div>
 </template>

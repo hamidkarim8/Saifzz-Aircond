@@ -30,6 +30,7 @@ class ClientController extends Controller
         $sortWhitelist = ['serial_no', 'name', 'last_service_date', 'last_amount'];
 
         $clients = Client::query()
+            ->visibleTo($request->user())
             ->withCount('visits')
             ->with(['latestVisit.lines'])
             ->when($search !== '', function ($q) use ($search) {
@@ -136,6 +137,7 @@ class ClientController extends Controller
         $q = trim((string) $request->input('q', ''));
 
         $clients = Client::query()
+            ->visibleTo($request->user())
             ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
                 $w->where('name', 'ilike', "%{$q}%")
                     ->orWhere('serial_no', 'ilike', "%{$q}%")
@@ -155,7 +157,9 @@ class ClientController extends Controller
 
     public function store(StoreClientRequest $request): RedirectResponse
     {
-        $client = Client::create($request->validated());
+        $client = Client::create($request->validated() + [
+            'tenant_id' => $request->user()->tenantId(),
+        ]);
 
         return redirect()
             ->route('clients.show', $client)
@@ -165,6 +169,8 @@ class ClientController extends Controller
     public function show(Client $client): Response
     {
         $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->load([
             'visits' => fn ($q) => $q->visibleTo($user)->latest('visit_date'),
             'visits.lines',
@@ -181,6 +187,9 @@ class ClientController extends Controller
 
     public function edit(Client $client): Response
     {
+        $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         return Inertia::render('Clients/Edit', [
             'client' => $client->only('id', 'serial_no', 'name', 'phone', 'address'),
         ]);
@@ -188,6 +197,9 @@ class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->update($request->validated());
 
         return redirect()
@@ -200,6 +212,9 @@ class ClientController extends Controller
      */
     public function destroy(Client $client): RedirectResponse
     {
+        $user = request()->user();
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($user)->exists(), 404);
+
         $client->delete();
 
         return redirect()

@@ -14,6 +14,8 @@ class ClientUnitController extends Controller
     /** JSON list of active units for client — used by service visit unit selector. */
     public function index(Client $client): JsonResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
+
         $units = $client->units()->active()->orderBy('label')->get([
             'id', 'label', 'unit_type', 'hp', 'brand', 'model', 'serial_no', 'refrigerant_type', 'next_service_date',
         ]);
@@ -23,6 +25,8 @@ class ClientUnitController extends Controller
 
     public function store(StoreClientUnitRequest $request, Client $client): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($request->user())->exists(), 404);
+
         $client->units()->create($request->validated());
 
         return back()->with('success', 'Unit added.');
@@ -30,6 +34,7 @@ class ClientUnitController extends Controller
 
     public function update(UpdateClientUnitRequest $request, Client $client, ClientUnit $unit): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo($request->user())->exists(), 404);
         abort_if($unit->client_id !== $client->id, 404);
         $unit->update($request->validated());
 
@@ -38,6 +43,7 @@ class ClientUnitController extends Controller
 
     public function deactivate(Client $client, ClientUnit $unit): RedirectResponse
     {
+        abort_unless(Client::whereKey($client->getKey())->visibleTo(request()->user())->exists(), 404);
         abort_if($unit->client_id !== $client->id, 404);
         $unit->update(['is_active' => false]);
 

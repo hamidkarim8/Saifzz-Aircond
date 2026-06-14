@@ -140,7 +140,7 @@ const setMode = (mode) => {
                 <InputError :message="form.errors['new_client.name']" />
             </div>
             <div>
-                <label class="mb-1.5 block text-sm font-semibold text-ink">Phone</label>
+                <label class="mb-1.5 block text-sm font-semibold text-ink">Phone Number</label>
                 <input v-model="form.new_client.phone" type="tel" inputmode="tel" placeholder="012-3456789" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" />
                 <InputError :message="form.errors['new_client.phone']" />
             </div>

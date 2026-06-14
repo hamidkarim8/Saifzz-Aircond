@@ -4,7 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
-    IconCurrencyDollar, IconCalendarEvent, IconQrcode, IconUserCog,
+    IconCurrencyDollar, IconCalendarEvent, IconUserCog,
     IconAirConditioning, IconLogout, IconMenu2, IconCategory,
 } from '@tabler/icons-vue';
 
@@ -29,22 +29,20 @@ const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
-            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
             { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
         ]},
         { title: 'Settings', items: [
-            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
-            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees' },
-            { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users' },
+            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
+            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees', adminOnly: true },
+            { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
+            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients', adminOnly: true },
         ]},
-        { title: 'Portal', items: [
-            { label: 'Client Portal', route: 'portal.login', match: 'portal', icon: IconQrcode, permission: null },
-        ]},
+
     ];
     return def
-        .map((s) => ({ ...s, items: s.items.filter((i) => i.permission === null || can.value[i.permission]) }))
+        .map((s) => ({ ...s, items: s.items.filter((i) => (i.permission === null || can.value[i.permission]) && (!i.adminOnly || isAdmin.value)) }))
         .filter((s) => s.items.length);
 });
 
@@ -155,6 +153,9 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
 
             <main class="px-4 py-6 sm:px-6 lg:px-8">
                 <slot />
+                <footer class="mt-8 border-t border-line pt-4 text-center text-xs text-ink-muted">
+                    Powered by MK Technologies
+                </footer>
             </main>
         </div>
     </div>

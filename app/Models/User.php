@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'permissions', 'active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'permissions', 'active', 'tenant_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -102,6 +102,16 @@ class User extends Authenticatable
     public function seesAllData(): bool
     {
         return $this->hasPermission('view_all_data');
+    }
+
+    /**
+     * The tenant (boss) this user belongs to. Bosses are their own tenant root
+     * (tenant_id === own id). Null only for legacy/test fixtures — production
+     * users always have a tenant.
+     */
+    public function tenantId(): ?int
+    {
+        return $this->tenant_id;
     }
 
     /**

@@ -13,13 +13,12 @@ const emit = defineEmits(['close']);
 
 const isEdit = computed(() => !!props.appointment);
 
+const todayIso = new Date().toISOString().slice(0, 10);
+
 const form = useForm({
     client_id: null,
     date: '',
     time: '',
-    service_type: '',
-    units: '',
-    amount: '',
     phone: '',
     address: '',
     notes: '',
@@ -69,9 +68,6 @@ watch(() => props.open, (open) => {
         form.client_id = a.client_id ?? null;
         form.date = (a.datetime ?? '').slice(0, 10);   // 'YYYY-MM-DD' — slice avoids tz drift
         form.time = (a.datetime ?? '').slice(11, 16);  // 'HH:MM'
-        form.service_type = a.service_type ?? '';
-        form.units = a.units ?? '';
-        form.amount = a.amount ?? '';
         form.phone = a.phone ?? '';
         form.address = a.address ?? '';
         form.notes = a.notes ?? '';
@@ -134,7 +130,7 @@ const submit = () => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="mb-1.5 block text-sm font-semibold text-ink">Date</label>
-                            <input v-model="form.date" type="date" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                            <input v-model="form.date" type="date" :min="isEdit ? undefined : todayIso" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                             <p v-if="form.errors.date" class="mt-1 text-sm text-danger">{{ form.errors.date }}</p>
                         </div>
                         <div>
@@ -144,31 +140,9 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <!-- Service + units + amount -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2">
-                            <label class="mb-1.5 block text-sm font-semibold text-ink">Service type</label>
-                            <select v-model="form.service_type" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                                <option value="" disabled>Choose…</option>
-                                <option v-for="t in serviceTypes" :key="t" :value="t">{{ t }}</option>
-                            </select>
-                            <p v-if="form.errors.service_type" class="mt-1 text-sm text-danger">{{ form.errors.service_type }}</p>
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-ink">Units <span class="font-normal text-ink-muted">(est.)</span></label>
-                            <input v-model="form.units" type="number" min="1" inputmode="numeric" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
-                            <p v-if="form.errors.units" class="mt-1 text-sm text-danger">{{ form.errors.units }}</p>
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-ink">Amount <span class="font-normal text-ink-muted">(est. RM)</span></label>
-                            <input v-model="form.amount" type="number" step="0.01" min="0" inputmode="decimal" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" />
-                            <p v-if="form.errors.amount" class="mt-1 text-sm text-danger">{{ form.errors.amount }}</p>
-                        </div>
-                    </div>
-
                     <!-- Phone -->
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Phone</label>
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Phone Number</label>
                         <input v-model="form.phone" type="tel" inputmode="tel" placeholder="012-3456789" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" />
                         <p v-if="form.errors.phone" class="mt-1 text-sm text-danger">{{ form.errors.phone }}</p>
                     </div>

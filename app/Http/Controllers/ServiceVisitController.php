@@ -57,12 +57,12 @@ class ServiceVisitController extends Controller
     public function create(): Response
     {
         $presetClient = request('client')
-            ? Client::where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
+            ? Client::visibleTo(request()->user())->where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
             : null;
 
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['name', 'requires_next_service'])->toArray(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
@@ -72,9 +72,12 @@ class ServiceVisitController extends Controller
                     ->where('is_active', true)->orderBy('label')
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
+            'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
-                    ->where('active', true)->orderBy('name')->get(['id', 'name'])
+                    ->where('active', true)
+                    ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
+                    ->orderBy('name')->get(['id', 'name'])
                 : null,
         ]);
     }
@@ -84,21 +87,30 @@ class ServiceVisitController extends Controller
         $data = $request->validated();
 
         $visit = DB::transaction(function () use ($data, $request) {
-            $client = $data['client_mode'] === 'existing'
-                ? Client::findOrFail($data['client_id'])
-                : Client::create($data['new_client']);
-
             $user = $request->user();
+
+            $client = $data['client_mode'] === 'existing'
+                ? Client::visibleTo($user)->findOrFail($data['client_id'])
+                : Client::create($data['new_client'] + ['tenant_id' => $user->tenantId()]);
+
             // Scoped techs always own their own jobs; all-data users may assign.
             $technicianId = $user->seesAllData()
                 ? ($data['technician_id'] ?? $user->id)
                 : $user->id;
+
+            if ($user->tenantId() !== null && $technicianId !== null) {
+                abort_unless(
+                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    404,
+                );
+            }
 
             $visit = $client->visits()->create([
                 'visit_date' => $data['visit_date'],
                 'warranty_months' => $data['warranty_months'],
                 'created_by' => $user->id,
                 'technician_id' => $technicianId,
+                'tenant_id' => $user->tenantId(),
             ]);
 
             foreach ($data['lines'] as $line) {
@@ -148,6 +160,92 @@ class ServiceVisitController extends Controller
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
         ]);
+    }
+
+    public function edit(ServiceVisit $serviceRecord): Response
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+        abort_unless($serviceRecord->transaction?->status === 'pending', 403);
+
+        $serviceRecord->load(['client', 'lines', 'transaction']);
+
+        return Inertia::render('ServiceRecords/Edit', [
+            'visit' => $serviceRecord,
+            'technicians' => request()->user()->seesAllData()
+                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                    ->where('active', true)
+                    ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
+                    ->orderBy('name')->get(['id', 'name'])
+                : null,
+        ]);
+    }
+
+    public function update(\Illuminate\Http\Request $request, ServiceVisit $serviceRecord): RedirectResponse
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+        abort_unless($serviceRecord->transaction?->status === 'pending', 422);
+
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'visit_date' => ['required', 'date'],
+            'warranty_months' => ['required', 'integer', 'between:0,6'],
+            'payment_method' => ['required', \Illuminate\Validation\Rule::in(['Cash', 'DuitNow QR'])],
+            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if ($validated['payment_method'] === 'Cash' && ! $user->hasPermission('collect_payment')) {
+            return back()->withErrors(['payment_method' => 'Cash payment is not permitted for your account.']);
+        }
+
+        $technicianId = $user->seesAllData()
+            ? ($validated['technician_id'] ?? $serviceRecord->technician_id)
+            : $serviceRecord->technician_id;
+
+        if ($user->tenantId() !== null && $technicianId !== null) {
+            abort_unless(
+                \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                404,
+            );
+        }
+
+        $serviceRecord->update([
+            'visit_date' => $validated['visit_date'],
+            'warranty_months' => $validated['warranty_months'],
+        ]);
+
+        $serviceRecord->transaction->update([
+            'method' => $validated['payment_method'],
+        ]);
+
+        if ($technicianId) {
+            $serviceRecord->update(['technician_id' => $technicianId]);
+        }
+
+        return redirect()->route('service-records.show', $serviceRecord)
+            ->with('success', 'Record updated.');
+    }
+
+    public function destroy(ServiceVisit $serviceRecord): RedirectResponse
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
+            403,
+        );
+
+        $txn = $serviceRecord->transaction;
+        abort_unless($txn && $txn->status === 'pending', 422);
+
+        $txn->update(['status' => 'cancelled']);
+
+        return redirect()->route('service-records.index')
+            ->with('success', 'Record cancelled.');
     }
 
     /**

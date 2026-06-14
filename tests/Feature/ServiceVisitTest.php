@@ -53,7 +53,7 @@ class ServiceVisitTest extends TestCase
             'client_id' => $client->id,
             'visit_date' => '2026-06-11',
             'warranty_months' => 0,
-            'payment_method' => 'Cash',
+            'payment_method' => 'DuitNow QR',
             'lines' => $lines,
         ], $overrides);
     }
@@ -165,7 +165,7 @@ class ServiceVisitTest extends TestCase
             'new_client' => ['name' => 'Fresh', 'phone' => '013-1112222', 'address' => 'PJ'],
             'visit_date' => '2026-06-11',
             'warranty_months' => 0,
-            'payment_method' => 'Cash',
+            'payment_method' => 'DuitNow QR',
             'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
         ];
 

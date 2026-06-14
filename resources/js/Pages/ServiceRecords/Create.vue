@@ -1,12 +1,14 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
+
+const page = usePage();
+const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
     fees: Array,
@@ -16,13 +18,17 @@ const props = defineProps({
     unitTypeServices: Array,
     presetClient: { type: Object, default: null },
     presetClientUnits: { type: Array, default: () => [] },
+    presetTechnicianId: { type: Number, default: null },
     technicians: { type: Array, default: null },
 });
 
 // Fee lookup map for client-side rate preview ("type|option" -> rate).
 const feeMap = computed(() => {
     const m = {};
-    for (const f of props.fees) if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
+    for (const f of props.fees) {
+        if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
+        else if (f.rate != null) m[f.service_type] = Number(f.rate);
+    }
     return m;
 });
 
@@ -39,8 +45,8 @@ const form = useForm({
     new_client: { name: '', phone: '', address: '' },
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
-    payment_method: 'Cash',
-    technician_id: null,
+    payment_method: canCollectCash ? 'Cash' : 'DuitNow QR',
+    technician_id: props.presetTechnicianId ?? null,
     lines: [blankLine()],
 });
 
@@ -101,7 +107,7 @@ const submit = () => form.post(route('service-records.store'));
 
     <AdminLayout>
         <template #header>
-            <PageHeader title="Add service record" subtitle="Fill in the details below to create a new service visit." />
+            <h1 class="text-base font-bold text-navy-800">New service record</h1>
         </template>
 
         <form class="mx-auto max-w-3xl space-y-5 pb-32" @submit.prevent="submit">
@@ -122,7 +128,7 @@ const submit = () => form.post(route('service-records.store'));
                     <div v-if="technicians">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Technician</label>
                         <select v-model="form.technician_id" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                            <option :value="null">— Me —</option>
+                            <option :value="null">{{ page.props.auth?.user?.name ?? '— Me —' }}</option>
                             <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
                         </select>
                         <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>
@@ -156,6 +162,7 @@ const submit = () => form.post(route('service-records.store'));
                     :client-units="clientUnits"
                     :errors="form.errors"
                     :removable="form.lines.length > 1"
+                    :visit-date="form.visit_date"
                     @remove="removeLine(i)"
                 />
                 <button
@@ -178,8 +185,9 @@ const submit = () => form.post(route('service-records.store'));
 
             <!-- Payment method -->
             <Card title="Payment method">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid gap-3" :class="canCollectCash ? 'grid-cols-2' : 'grid-cols-1'">
                     <label
+                        v-if="canCollectCash"
                         class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
                         :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
                     >

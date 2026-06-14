@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ClientUnit;
 use App\Models\ServiceVisit;
+use App\Models\User;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends Model
@@ -19,6 +21,7 @@ class Client extends Model
         'name',
         'phone',
         'address',
+        'tenant_id',
     ];
 
     /**
@@ -57,5 +60,18 @@ class Client extends Model
     public function units(): HasMany
     {
         return $this->hasMany(ClientUnit::class);
+    }
+
+    /**
+     * Restrict to clients in the user's tenant. A granted technician sees all
+     * tenant clients (visibility is permission-gated upstream, not per-technician).
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($tid = $user->tenantId()) {
+            $query->where('tenant_id', $tid);
+        }
+
+        return $query;
     }
 }

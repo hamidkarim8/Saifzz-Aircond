@@ -13,10 +13,18 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // Technician-management page: lists only technicians in the acting boss's
+        // tenant (admins are managed elsewhere; superadmins with null tenant see all).
+        $tenantId = $request->user()->tenantId();
+
         return Inertia::render('Users/Index', [
-            'users' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'active', 'permissions']),
+            'users' => User::query()
+                ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->where('role', User::ROLE_TECHNICIAN)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'role', 'active', 'permissions']),
             'grantablePermissions' => array_values(array_diff(User::PERMISSIONS, User::ADMIN_ONLY_PERMISSIONS)),
         ]);
     }
@@ -28,6 +36,7 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => User::ROLE_TECHNICIAN,
+            'tenant_id' => $request->user()->tenantId(),
         ]);
 
         // booted() sets DEFAULT_TECHNICIAN_PERMISSIONS when permissions is null.
@@ -50,6 +59,11 @@ class UserController extends Controller
             abort(403);
         }
 
+        abort_if(
+            $request->user()->tenantId() !== null && $user->tenant_id !== $request->user()->tenantId(),
+            404,
+        );
+
         $user->name = $request->name;
         $user->permissions = [];
         foreach ($request->permissions ?? [] as $p) {
@@ -63,6 +77,11 @@ class UserController extends Controller
     public function toggleActive(Request $request, User $user): RedirectResponse
     {
         abort_if($user->is($request->user()), 422, 'Cannot deactivate your own account.');
+
+        abort_if(
+            $request->user()->tenantId() !== null && $user->tenant_id !== $request->user()->tenantId(),
+            404,
+        );
 
         $user->update(['active' => ! $user->active]);
 

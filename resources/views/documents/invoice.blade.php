@@ -79,7 +79,7 @@
                     </tr>
                 @endif
                 <tr>
-                    <td class="k"><strong>Line Total</strong></td>
+                    <td class="k"><strong>Service Total</strong></td>
                     <td class="v mono">{{ $money($l['subtotal']) }}</td>
                 </tr>
             </table>

@@ -52,7 +52,7 @@ const formatRM = (val) => (val != null ? `RM ${Number(val).toFixed(2)}` : '—')
 const columns = [
     { key: 'serial_no',        label: 'Serial',       sortable: true,  cellClass: 'font-mono font-semibold text-primary' },
     { key: 'name',             label: 'Name',         sortable: true  },
-    { key: 'phone',            label: 'Phone',        sortable: false, cellClass: 'font-mono text-ink-soft' },
+    { key: 'phone',            label: 'Phone Number', sortable: false, cellClass: 'font-mono text-ink-soft' },
     { key: 'last_service_date',label: 'Last Service', sortable: true,  formatter: formatDate },
     { key: 'service_types',    label: 'Services',     sortable: false },
     { key: 'units',            label: 'Units',        sortable: false, align: 'center' },
