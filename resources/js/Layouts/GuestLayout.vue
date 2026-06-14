@@ -16,6 +16,6 @@ import { Link } from '@inertiajs/vue3';
             <slot />
         </div>
 
-        <p class="mt-6 text-xs text-ink-muted">Staff access · © Saifzz Aircond</p>
+        <p class="mt-6 text-xs text-ink-muted">Staff access · © Saifzz Aircond Services</p>
     </div>
 </template>

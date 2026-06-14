@@ -140,7 +140,7 @@ const submit = () => {
 
                     <!-- Phone -->
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Phone</label>
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Phone Number</label>
                         <input v-model="form.phone" type="tel" inputmode="tel" placeholder="012-3456789" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" />
                         <p v-if="form.errors.phone" class="mt-1 text-sm text-danger">{{ form.errors.phone }}</p>
                     </div>

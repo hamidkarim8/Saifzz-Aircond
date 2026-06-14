@@ -28,14 +28,14 @@ class AppointmentController extends Controller
 
         $appointments = Appointment::query()
             ->visibleTo($request->user())
-            ->with('client:id,serial_no,name')
+            ->with(['client:id,serial_no,name', 'technician:id,name'])
             ->forMonth($month)
             ->orderBy('datetime')
             ->get();
 
         $today = Appointment::query()
             ->visibleTo($request->user())
-            ->with('client:id,serial_no,name')
+            ->with(['client:id,serial_no,name', 'technician:id,name'])
             ->whereDate('datetime', now()->toDateString())
             ->orderBy('datetime')
             ->get();
@@ -58,7 +58,7 @@ class AppointmentController extends Controller
 
         $tableQuery = Appointment::query()
             ->visibleTo($request->user())
-            ->with('client:id,serial_no,name')
+            ->with(['client:id,serial_no,name', 'technician:id,name'])
             ->forMonth($month);
 
         if ($search) {

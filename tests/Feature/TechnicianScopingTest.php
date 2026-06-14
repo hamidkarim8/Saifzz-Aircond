@@ -138,7 +138,7 @@ class TechnicianScopingTest extends TestCase
             'client_id' => $client->id,
             'visit_date' => '2026-06-11',
             'warranty_months' => 0,
-            'payment_method' => 'Cash',
+            'payment_method' => 'DuitNow QR',
             'technician_id' => $bob->id, // forged — must be ignored
             'lines' => [['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1]],
         ])->assertRedirect();

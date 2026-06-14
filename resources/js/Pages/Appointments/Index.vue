@@ -74,6 +74,7 @@ const columns = [
     { key: 'datetime',     label: 'Date / Time',  sortable: true },
     { key: 'client',       label: 'Client' },
     { key: 'phone',        label: 'Contact' },
+    { key: 'technician',   label: 'Technician' },
     { key: 'address',      label: 'Address' },
     { key: 'amount',       label: 'Amount',  align: 'right' },
     { key: 'status',       label: 'Status' },
@@ -223,6 +224,11 @@ const columns = [
                 <!-- Contact -->
                 <template #cell-phone="{ value }">
                     <span class="font-mono text-xs text-ink-soft">{{ value }}</span>
+                </template>
+
+                <!-- Technician -->
+                <template #cell-technician="{ row }">
+                    <span class="text-sm text-ink">{{ row.technician?.name ?? '—' }}</span>
                 </template>
 
                 <!-- Address -->

@@ -26,7 +26,7 @@ const fmtDate = (d) => {
 
 // wa.me click-to-chat with a prefilled reminder (module 11 — shared builder).
 const waLink = (item) =>
-    wa(item.phone, `Hi ${item.name}, this is Saifzz Aircond. Your aircond service (#${item.serial_no}) is due on ${fmtDate(item.next_due)}. Reply to schedule a visit.`);
+    wa(item.phone, `Hi ${item.name}, this is Saifzz Aircond Services. Your aircond service (#${item.serial_no}) is due on ${fmtDate(item.next_due)}. Reply to schedule a visit.`);
 
 const setAppointment = (item) => route('appointments.index', { client: item.client_id });
 
@@ -131,7 +131,7 @@ const isEmpty = computed(() => props.overdue.length === 0 && props.due_this_mont
                             <dd class="text-ink">{{ fmtDate(item.last_service_date) }}</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-ink-soft">Phone</dt>
+                            <dt class="text-ink-soft">Phone Number</dt>
                             <dd class="font-mono text-ink">{{ item.phone }}</dd>
                         </div>
                     </dl>
@@ -220,7 +220,7 @@ const isEmpty = computed(() => props.overdue.length === 0 && props.due_this_mont
                             <dd class="text-ink">{{ fmtDate(item.last_service_date) }}</dd>
                         </div>
                         <div class="flex justify-between">
-                            <dt class="text-ink-soft">Phone</dt>
+                            <dt class="text-ink-soft">Phone Number</dt>
                             <dd class="font-mono text-ink">{{ item.phone }}</dd>
                         </div>
                     </dl>

@@ -9,6 +9,7 @@ import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
 
 const page = usePage();
+const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
     fees: Array,
@@ -44,7 +45,7 @@ const form = useForm({
     new_client: { name: '', phone: '', address: '' },
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
-    payment_method: 'Cash',
+    payment_method: canCollectCash ? 'Cash' : 'DuitNow QR',
     technician_id: null,
     lines: [blankLine()],
 });
@@ -184,8 +185,9 @@ const submit = () => form.post(route('service-records.store'));
 
             <!-- Payment method -->
             <Card title="Payment method">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid gap-3" :class="canCollectCash ? 'grid-cols-2' : 'grid-cols-1'">
                     <label
+                        v-if="canCollectCash"
                         class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
                         :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
                     >

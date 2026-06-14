@@ -51,6 +51,9 @@ class StoreServiceVisitRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($v) {
+            if ($this->input('payment_method') === 'Cash' && ! $this->user()->hasPermission('collect_payment')) {
+                $v->errors()->add('payment_method', 'Cash payment is not permitted for your account.');
+            }
             foreach ((array) $this->input('lines', []) as $i => $line) {
                 $type = $line['service_type'] ?? null;
                 $key = "lines.$i";

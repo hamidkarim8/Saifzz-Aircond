@@ -21,7 +21,7 @@ const submit = () => {
 
     <GuestLayout>
         <h1 class="text-xl font-bold text-navy-900">Create staff account</h1>
-        <p class="mt-1 text-sm text-ink-soft">Register a new Saifzz Aircond staff login.</p>
+        <p class="mt-1 text-sm text-ink-soft">Register a new Saifzz Aircond Services staff login.</p>
 
         <form class="mt-6 space-y-4" @submit.prevent="submit">
             <div>
