@@ -11,7 +11,7 @@ import { confirmDanger } from '@/lib/swal';
 
 const props = defineProps({
     serviceTypes: Array,
-    feeGroups: Object,
+    feeGroups: { type: Object, default: () => ({}) },
     modes: Array,
 });
 
@@ -243,8 +243,8 @@ const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
                                     </td>
                                     <td class="py-3 align-middle text-right">
                                         <div class="flex items-center justify-end gap-3">
-                                            <button class="text-sm font-medium text-primary hover:text-primary-hover" @click="openEdit(f)">Edit</button>
-                                            <button class="text-sm font-medium text-danger hover:underline" @click="remove(f)">Delete</button>
+                                            <button type="button" class="text-sm font-medium text-primary hover:text-primary-hover" @click="openEdit(f)">Edit</button>
+                                            <button type="button" class="text-sm font-medium text-danger hover:underline" @click="remove(f)">Delete</button>
                                         </div>
                                     </td>
                                 </tr>
