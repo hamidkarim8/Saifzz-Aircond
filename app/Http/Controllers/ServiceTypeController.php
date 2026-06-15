@@ -51,7 +51,6 @@ class ServiceTypeController extends Controller
         if ($oldName !== $newName) {
             DB::table('service_fees')->where('service_type', $oldName)->update(['service_type' => $newName]);
             DB::table('service_lines')->where('service_type', $oldName)->update(['service_type' => $newName]);
-            DB::table('appointments')->where('service_type', $oldName)->update(['service_type' => $newName]);
         }
 
         return back()->with('success', 'Service type updated.');
