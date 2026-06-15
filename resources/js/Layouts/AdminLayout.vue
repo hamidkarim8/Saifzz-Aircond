@@ -29,7 +29,7 @@ const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
-            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
+            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
         ]},
