@@ -7,6 +7,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PermissionPresetController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
@@ -94,6 +95,7 @@ Route::middleware('auth')->group(function () {
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::patch('users/{user}/active', [UserController::class, 'toggleActive'])->name('users.active');
+        Route::put('permission-presets', [PermissionPresetController::class, 'update'])->name('permission-presets.update');
     });
 
     // Payments (module 5) — collection gated by collect_payment (P3)

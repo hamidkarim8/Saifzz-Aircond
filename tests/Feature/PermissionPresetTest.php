@@ -66,4 +66,68 @@ class PermissionPresetTest extends TestCase
 
         $this->assertSame(['view_reports'], PermissionPreset::forTenant($boss->id)[3]);
     }
+
+    public function test_admin_saves_presets_for_own_tenant(): void
+    {
+        $boss = $this->boss();
+
+        $this->actingAs($boss)->put(route('permission-presets.update'), [
+            'presets' => [
+                1 => ['record_service'],
+                2 => ['record_service', 'collect_payment'],
+                3 => ['record_service', 'collect_payment', 'view_reports'],
+            ],
+        ])->assertRedirect();
+
+        $this->assertSame(['record_service'], PermissionPreset::forTenant($boss->id)[1]);
+        $this->assertSame(3, PermissionPreset::where('tenant_id', $boss->id)->count());
+    }
+
+    public function test_save_is_idempotent_upsert(): void
+    {
+        $boss = $this->boss();
+        $payload = ['presets' => [1 => ['record_service'], 2 => [], 3 => []]];
+
+        $this->actingAs($boss)->put(route('permission-presets.update'), $payload)->assertRedirect();
+        $this->actingAs($boss)->put(route('permission-presets.update'), $payload)->assertRedirect();
+
+        $this->assertSame(3, PermissionPreset::where('tenant_id', $boss->id)->count());
+    }
+
+    public function test_save_rejects_manage_users_and_unknown_keys(): void
+    {
+        $boss = $this->boss();
+
+        $this->actingAs($boss)->put(route('permission-presets.update'), [
+            'presets' => [1 => ['manage_users'], 2 => [], 3 => []],
+        ])->assertSessionHasErrors('presets.1.0');
+
+        $this->actingAs($boss)->put(route('permission-presets.update'), [
+            'presets' => [1 => ['bogus_perm'], 2 => [], 3 => []],
+        ])->assertSessionHasErrors('presets.1.0');
+    }
+
+    public function test_presets_are_tenant_isolated(): void
+    {
+        $khalid = $this->boss();
+        $saifzz = $this->boss();
+
+        $this->actingAs($khalid)->put(route('permission-presets.update'), [
+            'presets' => [1 => ['record_service'], 2 => [], 3 => []],
+        ])->assertRedirect();
+
+        // Saifzz sees his own defaults, not Khalid's saved L1.
+        $this->assertSame(PermissionPreset::DEFAULTS[1], PermissionPreset::forTenant($saifzz->id)[1]);
+        $this->assertSame(0, PermissionPreset::where('tenant_id', $saifzz->id)->count());
+    }
+
+    public function test_technician_cannot_save_presets(): void
+    {
+        $boss = $this->boss();
+        $tech = User::factory()->create(['tenant_id' => $boss->id, 'role' => User::ROLE_TECHNICIAN]);
+
+        $this->actingAs($tech)->put(route('permission-presets.update'), [
+            'presets' => [1 => [], 2 => [], 3 => []],
+        ])->assertForbidden();
+    }
 }
