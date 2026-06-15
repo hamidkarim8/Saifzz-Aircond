@@ -74,9 +74,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
     });
 
-    // Service Fees (module 3) — price book, all gated by edit_fees (P3)
+    // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
+    Route::redirect('fees', '/service-types')->name('fees.index');
     Route::middleware('can:edit_fees')->group(function () {
-        Route::get('fees', [ServiceFeeController::class, 'index'])->name('fees.index');
         Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
