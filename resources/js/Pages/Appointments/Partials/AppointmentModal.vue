@@ -5,7 +5,6 @@ import { useForm } from '@inertiajs/vue3';
 const props = defineProps({
     open: Boolean,
     appointment: { type: Object, default: null }, // null = new
-    serviceTypes: { type: Array, default: () => [] },
     presetClient: { type: Object, default: null },
     technicians:  { type: Array, default: null },
 });
