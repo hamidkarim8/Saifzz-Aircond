@@ -8,7 +8,7 @@ import DataTable from '@/Components/DataTable.vue';
 import Badge from '@/Components/Badge.vue';
 import MonthCalendar from './Partials/MonthCalendar.vue';
 import AppointmentModal from './Partials/AppointmentModal.vue';
-import { serviceVariant, statusVariant } from '@/lib/badges';
+import { statusVariant } from '@/lib/badges';
 
 const waLink = (phone) => {
     if (!phone) return null;
@@ -24,7 +24,6 @@ const props = defineProps({
     today:        { type: Array, default: () => [] },
     month:        { type: String, required: true },
     stats:        { type: Object, default: () => ({}) },
-    serviceTypes: { type: Array, default: () => [] },
     transitions:  { type: Object, default: () => ({}) },
     presetClient: { type: Object, default: null },
     technicians:  { type: Array, default: null },
@@ -56,7 +55,6 @@ const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? nul
 // Formatters
 const fmtDate   = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
-const money     = (v)  => (v == null ? '—' : 'RM ' + Number(v).toFixed(2));
 const monthLabel = computed(() => {
     const [y, m] = props.month.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -87,7 +85,6 @@ const columns = [
     { key: 'phone',        label: 'Contact' },
     { key: 'technician',   label: 'Technician' },
     { key: 'address',      label: 'Address' },
-    { key: 'amount',       label: 'Amount',  align: 'right' },
     { key: 'status',       label: 'Status' },
     { key: 'actions',      label: '' },
 ];
@@ -179,7 +176,6 @@ const columns = [
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
                         <span class="font-medium text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
-                        <Badge :variant="serviceVariant(a.service_type)">{{ a.service_type }}</Badge>
                         <Badge class="ml-auto" :variant="statusVariant(a.status.charAt(0).toUpperCase() + a.status.slice(1))">{{ a.status }}</Badge>
                     </button>
                 </div>
@@ -199,7 +195,7 @@ const columns = [
                         @click="openEdit(a)"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }} — {{ a.service_type }}</span>
+                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
                     </button>
                 </div>
                 <p v-else class="mt-3 text-sm text-ink-muted">No appointments today.</p>
@@ -250,11 +246,6 @@ const columns = [
                 <!-- Address -->
                 <template #cell-address="{ value }">
                     <span class="max-w-[16rem] truncate text-ink-soft">{{ value }}</span>
-                </template>
-
-                <!-- Amount -->
-                <template #cell-amount="{ value }">
-                    <span class="font-mono font-semibold text-navy-800">{{ money(value) }}</span>
                 </template>
 
                 <!-- Status -->
@@ -323,7 +314,6 @@ const columns = [
         <AppointmentModal
             :open="modalOpen"
             :appointment="editing"
-            :service-types="serviceTypes"
             :preset-client="presetClient"
             :technicians="technicians"
             @close="modalOpen = false"
