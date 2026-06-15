@@ -27,11 +27,8 @@ class Appointment extends Model
         'client_id',
         'technician_id',
         'datetime',
-        'service_type',
-        'units',
         'address',
         'phone',
-        'amount',
         'status',
         'contacted_flag',
         'notes',
@@ -42,8 +39,6 @@ class Appointment extends Model
     {
         return [
             'datetime' => 'datetime',
-            'units' => 'integer',
-            'amount' => 'decimal:2',
             'contacted_flag' => 'boolean',
         ];
     }
