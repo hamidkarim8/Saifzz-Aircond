@@ -130,4 +130,14 @@ class PermissionPresetTest extends TestCase
             'presets' => [1 => [], 2 => [], 3 => []],
         ])->assertForbidden();
     }
+
+    public function test_users_index_carries_tenant_presets(): void
+    {
+        $boss = $this->boss();
+        PermissionPreset::create(['tenant_id' => $boss->id, 'level' => 1, 'permissions' => ['record_service']]);
+
+        $this->actingAs($boss)->get(route('users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('presets.1', ['record_service']));
+    }
 }
