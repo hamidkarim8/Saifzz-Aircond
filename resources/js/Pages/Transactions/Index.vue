@@ -137,7 +137,7 @@ const rows = computed(() =>
                     </template>
 
                     <template #cell-method="{ value }">
-                        <Badge v-if="value" :variant="value === 'cash' ? 'blue' : 'indigo'">{{ value }}</Badge>
+                        <Badge v-if="value" :variant="value === 'cash' ? 'blue' : 'indigo'" class="capitalize">{{ value }}</Badge>
                         <span v-else class="text-ink-muted">—</span>
                     </template>
 
@@ -146,7 +146,7 @@ const rows = computed(() =>
                     </template>
 
                     <template #cell-status="{ value }">
-                        <Badge :variant="statusVariant(value)">{{ value }}</Badge>
+                        <Badge :variant="statusVariant(value)" class="capitalize">{{ value }}</Badge>
                     </template>
 
                     <template #empty>No transactions in this period.</template>
@@ -155,7 +155,7 @@ const rows = computed(() =>
                         <div class="rounded-ral border border-line bg-surface p-4 shadow-card">
                             <div class="mb-2 flex items-center justify-between gap-2">
                                 <span class="font-semibold text-ink">{{ row.client_name }}</span>
-                                <Badge :variant="statusVariant(row.status)">{{ row.status }}</Badge>
+                                <Badge :variant="statusVariant(row.status)" class="capitalize">{{ row.status }}</Badge>
                             </div>
                             <div class="flex items-center justify-between gap-2 text-xs text-ink-muted">
                                 <span class="font-mono">{{ row.serial_no ?? '—' }}</span>
@@ -166,7 +166,7 @@ const rows = computed(() =>
                                 <span class="font-mono font-semibold text-ink">{{ row.amount_fmt }}</span>
                             </div>
                             <div class="mt-2 flex items-center justify-between gap-2 text-xs">
-                                <Badge v-if="row.method" :variant="row.method === 'cash' ? 'blue' : 'indigo'">{{ row.method }}</Badge>
+                                <Badge v-if="row.method" :variant="row.method === 'cash' ? 'blue' : 'indigo'" class="capitalize">{{ row.method }}</Badge>
                                 <span v-else class="text-ink-muted">—</span>
                             </div>
                         </div>

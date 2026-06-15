@@ -30,13 +30,13 @@ const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
-            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
-            { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
+            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
             { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports', adminOnly: true },
         ]},
         { title: 'Settings', items: [
-            { label: 'Service Settings', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
+            { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
             { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients', adminOnly: true },
         ]},

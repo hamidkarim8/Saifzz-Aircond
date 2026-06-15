@@ -79,7 +79,7 @@ const cancelRecord = async () => {
                     </div>
                     <div class="flex flex-wrap items-center gap-2 sm:mt-1">
                         <WarrantyPill :state="warrantyState" :label="warrantyLabel" />
-                        <Badge v-if="txn" :variant="statusVariant(txn.status === 'paid' ? 'Paid' : txn.status === 'pending' ? 'Pending' : 'Failed')">
+                        <Badge v-if="txn" :variant="statusVariant(txn.status === 'paid' ? 'Paid' : txn.status === 'pending' ? 'Pending' : 'Failed')" class="capitalize">
                             {{ txn.status }} · {{ txn.method }}
                         </Badge>
                     </div>
