@@ -23,18 +23,20 @@ const logout = () => router.post(route('portal.logout'));
                     <span class="text-sm font-bold tracking-tight text-white">{{ business.name }}</span>
                 </div>
 
-                <!-- Right side: logout OR admin link -->
+                <!-- Right side: logout only (admin link hidden for customers) -->
                 <button
                     v-if="showLogout"
                     type="button"
                     class="rounded-ra bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
                     @click="logout"
                 >Sign out</button>
+                <!-- Admin link commented out — no admin-login redirect from customer portal
                 <a
                     v-else
                     :href="route('dashboard')"
                     class="rounded-ra bg-white/10 px-3 py-1 text-xs font-semibold text-primary-300 transition hover:bg-white/20 hover:text-white"
                 >Admin</a>
+                -->
             </div>
         </header>
 
