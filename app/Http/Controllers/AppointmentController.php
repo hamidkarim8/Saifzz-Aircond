@@ -109,11 +109,21 @@ class AppointmentController extends Controller
             );
         }
 
-        Appointment::create($request->appointmentData() + [
+        $apt = Appointment::create($request->appointmentData() + [
             'status' => 'pending',
             'technician_id' => $technicianId,
             'tenant_id' => $user->tenantId(),
         ]);
+
+        $tenantId = $user->tenantId();
+        $admins = \App\Models\User::where('role', \App\Models\User::ROLE_ADMIN)
+            ->where(fn ($q) => $tenantId ? $q->where('tenant_id', $tenantId) : $q->whereNull('tenant_id'))
+            ->where('id', '!=', $user->id)
+            ->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new \App\Notifications\NewAppointmentNotification($apt));
+        }
 
         return redirect()
             ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])

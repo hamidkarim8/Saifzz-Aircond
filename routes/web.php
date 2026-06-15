@@ -13,6 +13,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\StubGatewayController;
@@ -73,6 +75,11 @@ Route::middleware('auth')->group(function () {
         Route::put('appointments/{appointment}', [AppointmentController::class, 'update'])->name('appointments.update');
         Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
     });
+
+    Route::get('transactions', [TransactionController::class, 'index'])
+        ->middleware('can:view_reports')->name('transactions.index');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
     // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
     Route::redirect('fees', '/service-types')->name('fees.index');

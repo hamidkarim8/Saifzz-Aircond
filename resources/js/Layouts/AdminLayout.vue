@@ -5,7 +5,7 @@ import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
     IconCalendarEvent, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2, IconCategory,
+    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -23,6 +23,7 @@ watch(() => page.url, () => { drawerOpen.value = false; });
 useFlashToast();
 
 const reminderCount = computed(() => page.props.reminderCount ?? 0);
+const notificationCount = computed(() => page.props.notificationCount ?? 0);
 
 // Grouped nav. Each item gated by a permission key (null = always).
 const sections = computed(() => {
@@ -32,6 +33,7 @@ const sections = computed(() => {
             { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports', adminOnly: true },
         ]},
         { title: 'Settings', items: [
             { label: 'Service Settings', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
@@ -126,6 +128,13 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
                 <div class="flex-1">
                     <slot name="header" />
                 </div>
+
+                <Link :href="route('notifications.index')" class="relative flex h-9 w-9 items-center justify-center rounded-ra border border-line bg-surface text-ink-soft hover:bg-surface-muted transition">
+                    <IconBell :size="18" />
+                    <span v-if="notificationCount > 0" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white leading-none">
+                        {{ notificationCount > 9 ? '9+' : notificationCount }}
+                    </span>
+                </Link>
 
                 <!-- User menu -->
                 <div class="relative">
