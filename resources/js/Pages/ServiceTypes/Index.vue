@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
 import FeeModal from './Partials/FeeModal.vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
 import { serviceVariant } from '@/lib/badges';
 import { confirmDanger } from '@/lib/swal';
@@ -74,6 +74,7 @@ const remove = async (fee) => {
 const money = (v) => v == null ? '—' : 'RM ' + Number(v).toFixed(2);
 const modeLabel = { fixed_per_unit: 'per unit', flexible: 'Flexible' };
 const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
+const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false);
 </script>
 
 <template>
@@ -91,6 +92,7 @@ const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
                         New Service Type
                     </button>
                     <button
+                        v-if="canEditFees"
                         type="button"
                         class="inline-flex items-center gap-1.5 rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white shadow-card hover:bg-primary-hover"
                         @click="openAdd"
@@ -242,7 +244,7 @@ const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
                                         </span>
                                     </td>
                                     <td class="py-3 align-middle text-right">
-                                        <div class="flex items-center justify-end gap-3">
+                                        <div v-if="canEditFees" class="flex items-center justify-end gap-3">
                                             <button type="button" class="text-sm font-medium text-primary hover:text-primary-hover" @click="openEdit(f)">Edit</button>
                                             <button type="button" class="text-sm font-medium text-danger hover:underline" @click="remove(f)">Delete</button>
                                         </div>
