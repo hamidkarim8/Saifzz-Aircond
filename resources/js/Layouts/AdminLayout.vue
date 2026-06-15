@@ -5,7 +5,7 @@ import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
     IconCalendarEvent, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2,
+    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -31,6 +31,7 @@ const sections = computed(() => {
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Catalog', route: 'catalog.index', match: 'catalog', icon: IconBook, permission: null },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
             { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports', adminOnly: true },

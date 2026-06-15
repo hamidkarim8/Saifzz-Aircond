@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ClientUnitController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ClientController;
@@ -80,6 +81,8 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:view_reports')->name('transactions.index');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+
+    Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
 
     // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
     Route::redirect('fees', '/service-types')->name('fees.index');
