@@ -11,11 +11,12 @@ class PermissionPresetController extends Controller
     public function update(UpdatePermissionPresetRequest $request): RedirectResponse
     {
         $tenantId = $request->user()->tenantId();
+        $presets = $request->validated()['presets'];
 
-        foreach ($request->validated()['presets'] as $level => $permissions) {
+        foreach ([1, 2, 3] as $level) {
             PermissionPreset::updateOrCreate(
-                ['tenant_id' => $tenantId, 'level' => (int) $level],
-                ['permissions' => array_values($permissions)],
+                ['tenant_id' => $tenantId, 'level' => $level],
+                ['permissions' => array_values($presets[$level] ?? [])],
             );
         }
 

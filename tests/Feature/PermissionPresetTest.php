@@ -107,6 +107,18 @@ class PermissionPresetTest extends TestCase
         ])->assertSessionHasErrors('presets.1.0');
     }
 
+    public function test_save_ignores_levels_beyond_three(): void
+    {
+        $boss = $this->boss();
+
+        $this->actingAs($boss)->put(route('permission-presets.update'), [
+            'presets' => [1 => ['record_service'], 2 => [], 3 => [], 4 => ['view_reports']],
+        ])->assertRedirect();
+
+        $this->assertSame(3, PermissionPreset::where('tenant_id', $boss->id)->count());
+        $this->assertSame(0, PermissionPreset::where('tenant_id', $boss->id)->where('level', 4)->count());
+    }
+
     public function test_presets_are_tenant_isolated(): void
     {
         $khalid = $this->boss();
