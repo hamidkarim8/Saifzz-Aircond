@@ -18,9 +18,12 @@ class ServiceTypeController extends Controller
         $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
 
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service']),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based']),
             'feeGroups'    => $fees->groupBy('service_type'),
             'modes'        => StoreServiceFeeRequest::MODES,
+            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
+                ->get(['id', 'service_type_id', 'hp_value', 'price'])
+                ->groupBy('service_type_id'),
         ]);
     }
 

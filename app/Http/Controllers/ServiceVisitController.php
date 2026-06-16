@@ -62,7 +62,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->get(['name', 'requires_next_service'])->toArray(),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based'])->toArray(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
@@ -79,6 +79,9 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
+            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
+                ->get(['id', 'service_type_id', 'hp_value', 'price'])
+                ->groupBy('service_type_id'),
         ]);
     }
 
