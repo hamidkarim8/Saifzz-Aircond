@@ -35,6 +35,9 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "==> Pruning unused Docker images and cache"
+            docker system prune -f
+
             echo "==> Rebuilding app containers (includes npm build inside Docker)"
             docker compose -f docker-compose.prod.yml build app worker
             docker compose -f docker-compose.prod.yml up -d --no-deps app worker
