@@ -19,6 +19,8 @@ const props = defineProps({
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const can = computed(() => page.props.auth.can ?? {});
+const seesAllData = computed(() => can.value.view_all_data);
+const roleLabel = (r) => r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
 
 // ── Formatting ──
 const money = (v) => 'RM ' + Number(v ?? 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -93,14 +95,16 @@ const agingBadgeClass = (days) => {
 };
 
 // ── DataTable columns for transactions ──
-const txnColumns = [
+const txnColumns = computed(() => [
     { key: 'client_name', label: 'Client', sortable: true },
     { key: 'serial_no',   label: 'Serial',  sortable: false },
     { key: 'service_type',label: 'Service', sortable: true },
     { key: 'amount',      label: 'Amount',  sortable: true, align: 'right' },
     { key: 'method',      label: 'Payment', sortable: false },
     { key: 'status',      label: 'Status',  sortable: false },
-];
+    // Admins (all-data) see who recorded each transaction.
+    ...(seesAllData.value ? [{ key: 'created_by', label: 'Created by', sortable: true }] : []),
+]);
 
 // Flatten transactions for DataTable rows (add formatted amount)
 const txnRows = computed(() =>
@@ -280,7 +284,7 @@ const txnRows = computed(() =>
                 :rows="txnRows"
                 mode="client"
                 :searchable="true"
-                :search-keys="['client_name', 'serial_no', 'service_type', 'status']"
+                :search-keys="['client_name', 'serial_no', 'service_type', 'status', 'created_by']"
                 search-placeholder="Search transactions…"
                 :per-page="10"
             >
@@ -304,6 +308,14 @@ const txnRows = computed(() =>
                     <Badge :variant="statusVariant(value)">{{ value }}</Badge>
                 </template>
 
+                <template #cell-created_by="{ row }">
+                    <span v-if="row.created_by" class="text-ink">
+                        {{ row.created_by }}
+                        <span class="text-xs text-ink-muted">({{ roleLabel(row.created_by_role) }})</span>
+                    </span>
+                    <span v-else class="text-ink-muted">—</span>
+                </template>
+
                 <template #empty>No transactions in this period.</template>
 
                 <template #card="{ row }">
@@ -319,6 +331,9 @@ const txnRows = computed(() =>
                         <div class="mt-2 flex items-center justify-between gap-2">
                             <span class="text-xs text-ink-soft">{{ row.date_fmt }}</span>
                             <span class="font-mono font-semibold text-ink">{{ row.amount_fmt }}</span>
+                        </div>
+                        <div v-if="seesAllData && row.created_by" class="mt-1 text-xs text-ink-muted">
+                            By {{ row.created_by }} ({{ roleLabel(row.created_by_role) }})
                         </div>
                     </div>
                 </template>
@@ -353,7 +368,8 @@ const txnRows = computed(() =>
 
         <!-- Receivables detail table -->
         <div class="border-t border-line">
-            <div v-if="report.receivables.items.length" class="overflow-x-auto">
+            <!-- Desktop table -->
+            <div v-if="report.receivables.items.length" class="hidden overflow-x-auto md:block">
                 <table class="w-full text-sm">
                     <thead class="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-ink-soft">
                         <tr>
@@ -395,7 +411,33 @@ const txnRows = computed(() =>
                     </tbody>
                 </table>
             </div>
-            <p v-else class="px-5 py-8 text-center text-sm text-ink-muted">No outstanding payments.</p>
+
+            <!-- Mobile cards -->
+            <div v-if="report.receivables.items.length" class="divide-y divide-line md:hidden">
+                <Link
+                    v-for="item in report.receivables.items"
+                    :key="item.txn_id"
+                    :href="route('service-records.show', item.visit_id)"
+                    class="block px-5 py-4 transition hover:bg-surface-muted"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="truncate font-medium text-ink">{{ item.client_name }}</div>
+                            <div class="mt-0.5 font-mono text-xs text-ink-muted">{{ item.serial_no ?? '—' }} · {{ fmtDate(item.visit_date) }}</div>
+                        </div>
+                        <span class="font-mono font-semibold text-ink">{{ money(item.amount) }}</span>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <span
+                            class="rounded-ra px-2 py-1 text-xs font-semibold"
+                            :class="agingBadgeClass(item.days_outstanding)"
+                        >{{ item.days_outstanding }}d outstanding</span>
+                        <span class="text-xs font-semibold text-primary">View →</span>
+                    </div>
+                </Link>
+            </div>
+
+            <p v-if="!report.receivables.items.length" class="px-5 py-8 text-center text-sm text-ink-muted">No outstanding payments.</p>
         </div>
     </div>
     </AdminLayout>

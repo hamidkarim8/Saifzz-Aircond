@@ -2,11 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $number }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'DejaVu Sans', sans-serif; color: #0A1628; font-size: 12px; background: #f0f4f8; }
-        .doc { width: 500px; margin: 28px auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 30px; }
+        .doc { max-width: 500px; width: 100%; margin: 20px auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
+        @media (max-width: 540px) {
+            body { background: #fff; }
+            .doc { margin: 0; border: none; border-radius: 0; padding: 20px 16px; }
+        }
 
         /* ── Header ── */
         .head { text-align: center; border-bottom: 2px solid #0E2040; padding-bottom: 16px; margin-bottom: 16px; }

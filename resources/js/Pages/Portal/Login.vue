@@ -2,6 +2,7 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import PortalLayout from './PortalLayout.vue';
 import { waLink } from '@/lib/whatsapp';
+import { IconAirConditioning } from '@tabler/icons-vue';
 
 const props = defineProps({ business: Object });
 
@@ -13,9 +14,18 @@ const submit = () => form.post(route('portal.authenticate'));
 <template>
     <Head title="Client Portal" />
 
-    <PortalLayout :business="business">
+    <PortalLayout :business="business" center>
+        <!-- Logo badge above card -->
+        <div class="mb-6 flex flex-col items-center">
+            <div class="grid h-16 w-16 place-items-center rounded-rax bg-primary text-white shadow-lift">
+                <IconAirConditioning :size="34" :stroke="2" />
+            </div>
+            <h2 class="mt-4 text-lg font-bold tracking-tight text-white">{{ business?.name ?? 'Service Portal' }}</h2>
+            <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-primary-300/70">Customer Portal</p>
+        </div>
+
         <!-- Centered card -->
-        <div class="rounded-rax bg-surface p-6 shadow-lift">
+        <div class="rounded-rax bg-surface p-6 shadow-lift sm:p-7">
             <!-- Title -->
             <h1 class="text-center text-xl font-bold tracking-tight text-navy-800">
                 Enter Serial Number

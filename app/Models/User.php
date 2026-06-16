@@ -44,7 +44,6 @@ class User extends Authenticatable
         'view_clients',
         'record_service',
         'set_appointment',
-        'manage_service_types',
         'manage_units',
     ];
 

@@ -17,7 +17,12 @@ class ReminderController extends Controller
      */
     public function index(ReminderService $reminders): Response
     {
-        return Inertia::render('Reminders/Index', $reminders->dueList(request()->user()->tenantId()));
+        $user = request()->user();
+
+        return Inertia::render('Reminders/Index', $reminders->dueList(
+            $user->tenantId(),
+            $user->seesAllData() ? null : $user->id,
+        ));
     }
 
     /**

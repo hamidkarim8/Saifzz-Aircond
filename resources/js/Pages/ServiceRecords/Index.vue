@@ -28,15 +28,19 @@ const cancelRecord = async (row) => {
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) : '';
 
-const columns = [
+const roleLabel = (r) => r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
+
+const columns = computed(() => [
     { key: 'visit_date', label: 'Date / Time', sortable: true },
     { key: 'client',     label: 'Client' },
     { key: 'serial',     label: 'Serial', headerClass: 'font-mono' },
     { key: 'lines',      label: 'Services' },
+    // Admins (all-data) see who recorded each visit; scoped techs only see their own.
+    ...(seesAllData.value ? [{ key: 'creator', label: 'Created by' }] : []),
     { key: 'total_amount', label: 'Amount', sortable: true, align: 'right' },
     { key: 'status',     label: 'Status', align: 'center' },
     { key: 'actions',    label: '',        align: 'right' },
-];
+]);
 </script>
 
 <template>
@@ -92,6 +96,15 @@ const columns = [
                     </Badge>
                 </span>
                 <span v-else-if="row.lines_count" class="text-ink-soft text-xs">{{ row.lines_count }} service(s)</span>
+                <span v-else class="text-ink-muted text-xs">—</span>
+            </template>
+
+            <!-- Created by (admin only) -->
+            <template #cell-creator="{ row }">
+                <span v-if="row.creator" class="text-sm text-ink">
+                    {{ row.creator.name }}
+                    <span class="text-xs text-ink-muted">({{ roleLabel(row.creator.role) }})</span>
+                </span>
                 <span v-else class="text-ink-muted text-xs">—</span>
             </template>
 

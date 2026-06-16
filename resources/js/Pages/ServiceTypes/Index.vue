@@ -117,7 +117,6 @@ function removeHpTier(tier) {
     router.delete(route('service-hp-tiers.destroy', tier.id), { preserveScroll: true });
 }
 
-const STANDARD_HP = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0];
 </script>
 
 <template>
@@ -371,12 +370,8 @@ const STANDARD_HP = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0];
                                         min="0.5"
                                         max="20"
                                         placeholder="e.g. 1.5"
-                                        list="std-hp"
                                         class="w-24 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
                                     />
-                                    <datalist id="std-hp">
-                                        <option v-for="hp in STANDARD_HP" :key="hp" :value="hp" />
-                                    </datalist>
                                 </div>
                                 <div>
                                     <label class="mb-1 block text-xs font-semibold text-ink-muted">Price (RM)</label>

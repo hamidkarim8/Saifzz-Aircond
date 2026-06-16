@@ -29,18 +29,18 @@ const notificationCount = computed(() => page.props.notificationCount ?? 0);
 const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
-            { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
+            { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: 'view_reports' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
             { label: 'Catalog', route: 'catalog.index', match: 'catalog', icon: IconBook, permission: null },
             { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
-            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
-            { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports', adminOnly: true },
+            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
+            { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports' },
         ]},
         { title: 'Settings', items: [
-            { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
+            { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
             { label: 'Payment Settings', route: 'payment-settings.index', match: 'payment-settings', icon: IconCreditCard, adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
-            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients', adminOnly: true },
+            { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
         ]},
 
     ];

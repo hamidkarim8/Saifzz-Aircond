@@ -23,6 +23,7 @@ const fmtDate = (d) => {
     const [y, m, day] = d.slice(0, 10).split('-');
     return `${day} ${months[+m - 1]} ${y}`;
 };
+const roleLabel = (r) => r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
 
 // wa.me click-to-chat with a prefilled reminder (module 11 — shared builder).
 const waLink = (item) =>
@@ -185,7 +186,12 @@ const dismissReminder = async (item) => {
                         </div>
                         <div class="flex justify-between">
                             <dt class="text-ink-soft">Last service</dt>
-                            <dd class="text-ink">{{ fmtDate(item.last_service_date) }}</dd>
+                            <dd class="text-right text-ink">
+                                {{ fmtDate(item.last_service_date) }}
+                                <span v-if="item.last_service_by" class="block text-[11px] text-ink-muted">
+                                    by {{ item.last_service_by }} ({{ roleLabel(item.last_service_by_role) }})
+                                </span>
+                            </dd>
                         </div>
                         <div class="flex justify-between">
                             <dt class="text-ink-soft">Phone Number</dt>

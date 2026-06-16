@@ -59,34 +59,19 @@ class DashboardTest extends TestCase
             );
     }
 
-    public function test_technician_without_view_reports_sees_scoped_dashboard(): void
+    public function test_technician_without_view_reports_is_redirected_to_appointments(): void
+    {
+        // No dashboard for L1/L2 — they land on their work surface instead.
+        $this->actingAs($this->user(['view_clients', 'set_appointment']))
+            ->get(route('dashboard'))
+            ->assertRedirect(route('appointments.index'));
+    }
+
+    public function test_user_without_reports_or_appointments_falls_back_to_catalog(): void
     {
         $this->actingAs($this->user(['view_clients']))
             ->get(route('dashboard'))
-            ->assertInertia(fn ($page) => $page
-                ->component('Dashboard')
-                ->where('canReport', false)
-                ->has('report.kpis')
-                ->has('report.servicesByType')
-                ->where('report.transactions', [])
-                ->has('appointments')
-            );
-    }
-
-    public function test_technician_kpis_scoped_without_view_reports(): void
-    {
-        $alice = User::factory()->technician()->create(['permissions' => ['view_clients']]);
-        $bob   = User::factory()->technician()->create();
-        $this->paidVisitFor($alice->id, 150);
-        $this->paidVisitFor($bob->id, 300);
-
-        $this->actingAs($alice)->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('canReport', false)
-                ->where('report.kpis.revenue_all_time', 150)
-                ->where('report.transactions', [])
-            );
+            ->assertRedirect(route('catalog.index'));
     }
 
     public function test_export_is_forbidden_without_export_data(): void
@@ -185,7 +170,7 @@ class DashboardTest extends TestCase
 
     public function test_user_with_collect_payment_gets_receivables(): void
     {
-        $user = $this->user(['collect_payment']);
+        $user = $this->user(['view_reports', 'collect_payment']);
         $this->pendingVisitFor($user->id, 150.0);
 
         $this->actingAs($user)
@@ -200,7 +185,7 @@ class DashboardTest extends TestCase
 
     public function test_user_without_collect_payment_gets_null_receivables(): void
     {
-        $this->actingAs($this->user(['view_clients']))
+        $this->actingAs($this->user(['view_reports']))
             ->get(route('dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('report.receivables', null)
@@ -209,7 +194,7 @@ class DashboardTest extends TestCase
 
     public function test_scoped_tech_receivables_filtered_to_own_visits(): void
     {
-        $alice = User::factory()->technician()->create(['permissions' => ['collect_payment']]);
+        $alice = User::factory()->technician()->create(['permissions' => ['view_reports', 'collect_payment']]);
         $bob   = User::factory()->technician()->create();
 
         $this->pendingVisitFor($alice->id, 100.0);

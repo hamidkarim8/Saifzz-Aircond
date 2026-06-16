@@ -176,8 +176,9 @@ const submit = () => form.post(route('service-records.store'));
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
                     Add another service
                 </button>
+                <!-- "Add line for each unit" — HIDDEN pending requirement discussion (see docs/UNITS-TODO.md). Re-enable: restore v-if="clientUnits.length". -->
                 <button
-                    v-if="clientUnits.length"
+                    v-if="false"
                     type="button"
                     class="flex w-full items-center justify-center gap-2 rounded-ral border-2 border-dashed border-primary/40 py-3 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary-50"
                     @click="addLinesForAllUnits"

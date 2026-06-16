@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-13 (session 24)
+> **Last updated:** 2026-06-16 (session 29 — Units feature parked: frontend hidden pending requirement discussion, see docs/UNITS-TODO.md)
 
 ---
 
@@ -68,7 +68,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 3. Deployment doc (Dockerfile/compose for prod) + go-live checklist.
 
 ## ⏸ On Hold
-- _(none)_
+- **Units feature (`ClientUnit`)** — frontend hidden session 29 (`v-if="false"` at 3 spots). Backend/DB/migrations/model/controller/routes intact, reversible. Reason: unit→service-record link feels half-built, requirement not mature. Discuss scope w/ Khalid, then re-enable. Full detail: `docs/UNITS-TODO.md`.
 
 ## 📋 Deferred (decided, not now)
 - Deployment doc (Dockerfile/compose for prod, GCP free VM → Linux VPS) — write AFTER core app stable.
