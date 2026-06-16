@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-13 (session 24)
+> **Last updated:** 2026-06-16 (session 28 — public UI redesign: landing/login/portal + aircond logo + mobile audit)
 
 ---
 

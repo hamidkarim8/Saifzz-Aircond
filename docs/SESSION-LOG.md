@@ -6,6 +6,28 @@
 
 ---
 
+## Session 28 — 2026-06-16 — Public-facing UI redesign + responsive audit
+
+**Goal:** Make the landing + login pages look like a real product (were plain/boring), unify branding on the aircond logo, improve the customer portal, then audit mobile/iPad responsiveness across all pages.
+
+**Done**
+- **Logo unified** — `IconAirConditioning` in a primary box replaces the plain `S` everywhere (landing header, `GuestLayout`, portal badge), matching the sidebar.
+- **Landing (`Welcome.vue`)** — rebuilt: navy gradient hero with airflow glow blobs + faint grid texture, badge → big gradient headline ("Cool comfort, fully tracked.") → service pills (Cleaning/Gas/Repair/Installation); two entry cards overlap the hero edge with hover-lift + expanding glow.
+- **Staff login (`GuestLayout.vue` + `Auth/Login.vue`)** — new `branded` prop on GuestLayout → desktop two-pane split (navy brand panel: logo, headline, 3 trust marks with icon tiles + form pane); mobile gets a centered logo badge, soft glow, and the form in a surface card. Default GuestLayout (forgot/reset/verify) unchanged except logo.
+- **Portal login (`Portal/Login.vue` + `PortalLayout.vue`)** — added `center` prop → login vertically centered (was top-anchored); aircond icon badge + business name header above the card; dark top bar hidden on the centered login (badge carries the brand); airflow glow added to the portal navy bg. `Portal/Show.vue` untouched (no prop).
+- **Dashboard responsive (`Dashboard.vue`)** — Outstanding Receivables raw table now `md:block`; added `md:hidden` mobile card stack (client+serial+date, amount, aging badge, View →). No more horizontal scroll on phones.
+
+**Responsive audit (all 43 pages)** — foundation is solid: DataTable (table on `md+` / card slot on mobile, all 6 consumers have `#card`), modals (bottom-sheet mobile / centered desktop / `max-h-[92vh]` scroll), responsive stat grids (`sm:grid-cols-*`), truncating headers. Only real gap was the Dashboard receivables table (fixed above). Considered adding `md:grid-cols-2` to `lg:grid-cols-3` blocks for iPad portrait but **withdrew** — those are layout splits with `lg:col-span-2`; forcing 2 cols at 768 breaks the 2/3+1/3 ratios. Stat rows already use `sm:` so iPad portrait already gets multi-column.
+
+**Notes**
+- App runs in **manifest mode** by default (no vite `public/hot`) — visual changes need `npm run build` OR a running `npm run dev` (writes the hot file → HMR). Caused a "change not showing" confusion mid-session until rebuilt.
+
+**Tests:** none touched (view-only changes).
+
+**Next:** Owner visual review of new landing/login/portal; SMTP; DB backups.
+
+---
+
 ## Session 27 — 2026-06-16 — Creator attribution + level-based dashboard gating
 
 **Goal:** Surface who handled each service/transaction, and make the dashboard L3-only with level-based menus for L1/L2.
