@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreAppointmentRequest extends FormRequest
 {
@@ -22,9 +21,6 @@ class StoreAppointmentRequest extends FormRequest
             'client_id' => ['nullable', 'exists:clients,id'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
-            'service_type' => ['nullable', 'string', Rule::exists('service_types', 'name')],
-            'units' => ['nullable', 'integer', 'min:1'],
-            'amount' => ['nullable', 'numeric', 'min:0'],
             'phone' => ['required', 'string', 'regex:/^01\d-?\d{7,8}$/'],
             'address' => ['required', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -50,9 +46,6 @@ class StoreAppointmentRequest extends FormRequest
         return [
             'client_id' => $this->input('client_id'),
             'datetime' => $this->datetime(),
-            'service_type' => $this->input('service_type'),
-            'units' => $this->input('units'),
-            'amount' => $this->input('amount'),
             'phone' => $this->input('phone'),
             'address' => $this->input('address'),
             'notes' => $this->input('notes'),

@@ -16,6 +16,7 @@ const props = defineProps({
     errors: { type: Object, default: () => ({}) },
     removable: Boolean,
     visitDate: { type: String, default: null },
+    hpTiers: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['remove']);
 
@@ -23,6 +24,22 @@ const isRepair = computed(() => props.line.service_type === 'Repair');
 const isGas = computed(() => props.line.service_type === 'Gas Top-Up');
 const carriesUnitType = computed(() => props.unitTypeServices.includes(props.line.service_type));
 const hasUnitSelected = computed(() => !!props.line.unit_id);
+
+const isHpBased = computed(() => {
+    if (!props.line.service_type) return false;
+    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
+    return t?.is_hp_based ?? false;
+});
+
+const currentServiceTypeId = computed(() => {
+    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
+    return t?.id ?? null;
+});
+
+const hpOptions = computed(() => {
+    if (!currentServiceTypeId.value) return [];
+    return props.hpTiers?.[currentServiceTypeId.value] ?? [];
+});
 
 const nextServiceMonths = ref(null);
 
@@ -38,6 +55,7 @@ watch(() => props.line.service_type, () => {
     props.line.unit_type = null;
     props.line.unit_id = null;
     props.line.gas_option = null;
+    props.line.hp_value = null;
     props.line.repair_desc = '';
     props.line.next_service_date = null;
     nextServiceMonths.value = null;
@@ -59,6 +77,11 @@ watch(() => props.line.unit_id, (unitId) => {
 
 watch([() => props.line.unit_type, () => props.line.gas_option], autofill);
 
+watch(() => props.line.hp_value, () => {
+    if (!isHpBased.value) return;
+    autofill();
+});
+
 watch(nextServiceMonths, (months) => {
     if (!months || !props.visitDate) { props.line.next_service_date = null; return; }
     const d = new Date(props.visitDate);
@@ -76,13 +99,23 @@ watch(() => props.visitDate, () => {
 function autofill() {
     if (isRepair.value || !props.line.service_type) return;
     const option = isGas.value ? props.line.gas_option : props.line.unit_type;
+    let baseRate;
     if (!option) {
         const flat = props.feeMap[props.line.service_type];
-        props.line.rate = flat != null ? flat : '';
-        return;
+        baseRate = flat != null ? Number(flat) : 0;
+    } else {
+        const r = props.feeMap[`${props.line.service_type}|${option}`];
+        baseRate = r != null ? Number(r) : 0;
     }
-    const rate = props.feeMap[`${props.line.service_type}|${option}`];
-    props.line.rate = rate != null ? rate : '';
+
+    if (isHpBased.value && props.line.hp_value) {
+        const tier = hpOptions.value.find(t => Number(t.hp_value) === Number(props.line.hp_value));
+        const hpPrice = tier ? Number(tier.price) : 0;
+        props.line.rate = baseRate + hpPrice;
+    } else if (!isHpBased.value) {
+        props.line.rate = baseRate !== 0 ? baseRate : '';
+    }
+    // If HP-based but no hp_value selected yet — leave rate as is
 }
 
 const subtotal = computed(() => {
@@ -167,6 +200,20 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                         <option v-for="g in gasOptions" :key="g" :value="g">{{ g }}</option>
                     </select>
                     <InputError :message="err('gas_option')" />
+                </div>
+
+                <!-- HP dropdown (HP-based service types) -->
+                <div v-if="isHpBased" class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-semibold text-ink">Horsepower (HP)</label>
+                    <select
+                        v-model.number="line.hp_value"
+                        class="w-full rounded-ra border border-line bg-surface text-sm text-ink shadow-card focus:border-primary focus:ring-1 focus:ring-primary"
+                    >
+                        <option :value="null" disabled>Choose HP…</option>
+                        <option v-for="tier in hpOptions" :key="tier.id" :value="Number(tier.hp_value)">
+                            {{ Number(tier.hp_value).toFixed(1) }} HP — RM {{ Number(tier.price).toFixed(2) }}
+                        </option>
+                    </select>
                 </div>
 
                 <!-- Repair description -->

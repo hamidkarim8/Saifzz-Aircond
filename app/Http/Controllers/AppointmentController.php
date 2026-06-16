@@ -6,7 +6,6 @@ use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\Client;
-use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -77,7 +76,6 @@ class AppointmentController extends Controller
             'today' => $today,
             'month' => $month,
             'stats' => $stats,
-            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
             'transitions' => Appointment::TRANSITIONS,
             // Optional pre-selected client (e.g. arriving from a client profile or reminder).
             'presetClient' => $request->filled('client')
@@ -111,11 +109,21 @@ class AppointmentController extends Controller
             );
         }
 
-        Appointment::create($request->appointmentData() + [
+        $apt = Appointment::create($request->appointmentData() + [
             'status' => 'pending',
             'technician_id' => $technicianId,
             'tenant_id' => $user->tenantId(),
         ]);
+
+        $tenantId = $user->tenantId();
+        $admins = \App\Models\User::where('role', \App\Models\User::ROLE_ADMIN)
+            ->where(fn ($q) => $tenantId ? $q->where('tenant_id', $tenantId) : $q->whereNull('tenant_id'))
+            ->where('id', '!=', $user->id)
+            ->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new \App\Notifications\NewAppointmentNotification($apt));
+        }
 
         return redirect()
             ->route('appointments.index', ['month' => substr($request->datetime(), 0, 7)])

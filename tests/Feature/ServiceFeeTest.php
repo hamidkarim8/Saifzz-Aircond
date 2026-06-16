@@ -35,16 +35,18 @@ class ServiceFeeTest extends TestCase
         $this->get(route('fees.index'))->assertRedirect(route('login'));
     }
 
-    public function test_technician_without_edit_fees_is_forbidden(): void
+    public function test_technician_without_edit_fees_is_redirected_to_service_settings(): void
     {
         $this->actingAs($this->techWithoutFees())
             ->get(route('fees.index'))
-            ->assertForbidden();
+            ->assertRedirect(route('service-types.index'));
     }
 
-    public function test_admin_can_view_price_book(): void
+    public function test_admin_is_redirected_to_service_settings(): void
     {
-        $this->actingAs($this->admin())->get(route('fees.index'))->assertOk();
+        $this->actingAs($this->admin())
+            ->get(route('fees.index'))
+            ->assertRedirect(route('service-types.index'));
     }
 
     public function test_admin_can_add_a_fixed_fee(): void

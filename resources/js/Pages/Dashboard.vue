@@ -213,7 +213,7 @@ const txnRows = computed(() =>
                         class="flex items-center gap-2 rounded-ra bg-surface-muted px-3 py-2 text-[13px]"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="text-ink">{{ a.client?.name ?? 'Walk-in' }} — {{ a.service_type }}</span>
+                        <span class="text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
                     </div>
                 </div>
                 <p v-else class="py-2 text-center text-sm text-ink-muted">No appointments.</p>

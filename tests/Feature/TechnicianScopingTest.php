@@ -93,8 +93,6 @@ class TechnicianScopingTest extends TestCase
         $client = Client::create(['name' => 'C', 'phone' => '011-0000000', 'address' => 'KL']);
         return $client->appointments()->create([
             'datetime' => '2026-06-20 10:00:00',
-            'service_type' => 'Cleaning',
-            'units' => 1,
             'status' => 'pending',
             'technician_id' => $technicianId,
         ]);
@@ -220,8 +218,6 @@ class TechnicianScopingTest extends TestCase
             'client_id' => $client->id,
             'date' => '2026-07-01',
             'time' => '09:00',
-            'service_type' => 'Cleaning',
-            'units' => 1,
             'phone' => '012-3456789',
             'address' => 'KL',
             'technician_id' => $bob->id, // forged
@@ -296,8 +292,8 @@ class TechnicianScopingTest extends TestCase
         $client = Client::create(['name' => 'Shared', 'phone' => '011-0000000', 'address' => 'KL']);
         $client->visits()->create(['visit_date' => '2026-06-01', 'warranty_months' => 0, 'total_amount' => 100, 'created_by' => $alice->id, 'technician_id' => $alice->id]);
         $client->visits()->create(['visit_date' => '2026-06-02', 'warranty_months' => 0, 'total_amount' => 200, 'created_by' => $bob->id, 'technician_id' => $bob->id]);
-        $client->appointments()->create(['datetime' => '2026-06-20 10:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'technician_id' => $alice->id]);
-        $client->appointments()->create(['datetime' => '2026-06-21 10:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'technician_id' => $bob->id]);
+        $client->appointments()->create(['datetime' => '2026-06-20 10:00:00', 'status' => 'pending', 'technician_id' => $alice->id]);
+        $client->appointments()->create(['datetime' => '2026-06-21 10:00:00', 'status' => 'pending', 'technician_id' => $bob->id]);
 
         // Alice (scoped) sees only her own visit + appointment on the profile.
         $this->actingAs($alice)->get(route('clients.show', $client))
@@ -328,11 +324,11 @@ class TechnicianScopingTest extends TestCase
         $alice = $this->aptTech();
         $bob = $this->aptTech();
         $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
-        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
 
         $this->actingAs($alice)->put(route('appointments.update', $appt), [
             'client_id' => $client->id, 'date' => '2026-07-02', 'time' => '10:00',
-            'service_type' => 'Cleaning', 'units' => 1, 'phone' => '012-3456789', 'address' => 'KL',
+            'phone' => '012-3456789', 'address' => 'KL',
         ])->assertForbidden();
     }
 
@@ -341,7 +337,7 @@ class TechnicianScopingTest extends TestCase
         $alice = $this->aptTech();
         $bob = $this->aptTech();
         $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
-        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
 
         $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'confirmed'])
             ->assertForbidden();
@@ -354,11 +350,11 @@ class TechnicianScopingTest extends TestCase
         $admin = User::factory()->admin()->create();
         $bob = $this->aptTech();
         $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
-        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'service_type' => 'Cleaning', 'units' => 1, 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => null]);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => null]);
 
         $this->actingAs($admin)->put(route('appointments.update', $appt), [
             'client_id' => $client->id, 'date' => '2026-07-01', 'time' => '09:00',
-            'service_type' => 'Cleaning', 'units' => 1, 'phone' => '012-3456789', 'address' => 'KL',
+            'phone' => '012-3456789', 'address' => 'KL',
             'technician_id' => $bob->id,
         ])->assertRedirect();
 

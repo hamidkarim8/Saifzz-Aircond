@@ -20,6 +20,7 @@ class ServiceLine extends Model
         'rate',
         'repair_desc',
         'discount',
+        'hp_value',
         'next_service_date',
         'notes',
         'subtotal',
@@ -31,6 +32,7 @@ class ServiceLine extends Model
             'units' => 'integer',
             'rate' => 'decimal:2',
             'discount' => 'decimal:2',
+            'hp_value' => 'decimal:1',
             'subtotal' => 'decimal:2',
             'next_service_date' => 'date',
         ];

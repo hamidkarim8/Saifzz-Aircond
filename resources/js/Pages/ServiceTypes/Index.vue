@@ -1,14 +1,25 @@
 <script setup>
+import { computed, ref } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
-import { useForm, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import Badge from '@/Components/Badge.vue';
+import FeeModal from './Partials/FeeModal.vue';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
+import { serviceVariant } from '@/lib/badges';
+import { confirmDanger } from '@/lib/swal';
 
 const props = defineProps({
     serviceTypes: Array,
+    feeGroups: { type: Object, default: () => ({}) },
+    modes: Array,
+    hpTiers: { type: Object, default: () => ({}) },
 });
 
+// --- Tabs ---
+const activeTab = ref('types');
+
+// --- Service Types ---
 const addForm = useForm({ name: '' });
 const showAdd = ref(false);
 
@@ -44,36 +55,147 @@ function toggleNextService(type) {
         requires_next_service: !type.requires_next_service,
     }, { preserveScroll: true });
 }
+
+// --- Fees ---
+const modalOpen = ref(false);
+const editing = ref(null);
+
+const openAdd = () => { editing.value = null; modalOpen.value = true; };
+const openEdit = (fee) => { editing.value = fee; modalOpen.value = true; };
+
+const remove = async (fee) => {
+    const label = fee.service_type + (fee.option ? ' · ' + fee.option : '');
+    const ok = await confirmDanger({
+        title: 'Delete this fee?',
+        body: `<strong>${label}</strong><br>Existing records keep their snapshotted price.`,
+        confirmText: 'Delete',
+    });
+    if (ok) {
+        router.delete(route('fees.destroy', fee.id), { preserveScroll: true });
+    }
+};
+
+const money = (v) => v == null ? '—' : 'RM ' + Number(v).toFixed(2);
+const modeLabel = { fixed_per_unit: 'per unit', flexible: 'Flexible' };
+const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
+const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false);
+
+// --- HP tier management ---
+const hpAddForms = ref({});
+
+function getHpForm(typeId) {
+    if (!hpAddForms.value[typeId]) {
+        hpAddForms.value[typeId] = { hp_value: '', price: '', processing: false, error: '' };
+    }
+    return hpAddForms.value[typeId];
+}
+
+function toggleHpBased(type) {
+    router.put(route('service-types.update', type.id), {
+        name: type.name,
+        is_hp_based: !type.is_hp_based,
+    }, { preserveScroll: true });
+}
+
+function addHpTier(typeId) {
+    const f = getHpForm(typeId);
+    f.error = '';
+    if (!f.hp_value || !f.price) { f.error = 'HP and price required.'; return; }
+    f.processing = true;
+    router.post(route('service-hp-tiers.store'), {
+        service_type_id: typeId,
+        hp_value: f.hp_value,
+        price: f.price,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { f.hp_value = ''; f.price = ''; f.processing = false; },
+        onError: () => { f.processing = false; },
+    });
+}
+
+function removeHpTier(tier) {
+    router.delete(route('service-hp-tiers.destroy', tier.id), { preserveScroll: true });
+}
+
+const STANDARD_HP = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0];
 </script>
 
 <template>
     <AdminLayout>
         <template #header>
-            <h1 class="text-base font-bold text-navy-800">Service Types</h1>
+            <div class="flex items-center justify-between gap-3">
+                <h1 class="text-base font-bold text-navy-800">Services</h1>
+                <!-- Show one button depending on active tab -->
+                <button
+                    v-if="activeTab === 'types'"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white shadow-card hover:bg-primary-hover"
+                    @click="showAdd = true"
+                >
+                    <IconPlus class="h-4 w-4" />
+                    <span class="hidden sm:inline">Add Service Type</span>
+                    <span class="sm:hidden">Add</span>
+                </button>
+                <button
+                    v-else-if="activeTab === 'fees' && canEditFees"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white shadow-card hover:bg-primary-hover"
+                    @click="openAdd"
+                >
+                    <IconPlus class="h-4 w-4" />
+                    <span class="hidden sm:inline">Set Fee</span>
+                    <span class="sm:hidden">Add</span>
+                </button>
+            </div>
         </template>
 
-        <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-            <Card>
+        <!-- Tabs -->
+        <div class="mb-6 border-b border-line">
+            <div class="flex gap-0">
+                <button
+                    class="border-b-2 px-5 py-3 text-sm font-semibold transition"
+                    :class="activeTab === 'types' ? 'border-primary text-primary' : 'border-transparent text-ink-soft hover:text-ink'"
+                    @click="activeTab = 'types'"
+                >
+                    Service Types
+                </button>
+                <button
+                    class="border-b-2 px-5 py-3 text-sm font-semibold transition"
+                    :class="activeTab === 'fees' ? 'border-primary text-primary' : 'border-transparent text-ink-soft hover:text-ink'"
+                    @click="activeTab = 'fees'"
+                >
+                    Fee Schedule
+                </button>
+            </div>
+        </div>
+
+        <!-- Service Types Tab -->
+        <div v-if="activeTab === 'types'">
+            <div class="overflow-hidden rounded-ral border border-line bg-surface shadow-card">
                 <div class="divide-y divide-line">
                     <div
                         v-for="type in serviceTypes"
                         :key="type.id"
-                        class="flex items-center gap-3 px-4 py-3"
+                        class="flex items-center gap-3 px-4 py-3.5"
                     >
                         <template v-if="editingId !== type.id">
                             <span class="flex-1 text-sm font-medium text-ink">{{ type.name }}</span>
                             <button
                                 type="button"
-                                class="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium transition"
-                                :class="type.requires_next_service ? 'bg-primary-50 text-primary' : 'bg-surface-muted text-ink-soft'"
+                                class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition"
+                                :class="type.requires_next_service ? 'bg-primary/10 text-primary' : 'bg-surface-muted text-ink-soft'"
                                 @click="toggleNextService(type)"
                             >
-                                <span class="h-3.5 w-3.5 rounded-full border-2 transition" :class="type.requires_next_service ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'" />
-                                {{ type.requires_next_service ? 'Next service' : 'No follow-up' }}
+                                <span
+                                    class="h-3 w-3 rounded-full border-2 transition"
+                                    :class="type.requires_next_service ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'"
+                                />
+                                <span class="hidden sm:inline">{{ type.requires_next_service ? 'Next service on' : 'No follow-up' }}</span>
+                                <span class="sm:hidden">{{ type.requires_next_service ? 'On' : 'Off' }}</span>
                             </button>
                             <button
                                 type="button"
-                                class="rounded p-1 text-ink-muted hover:text-primary"
+                                class="rounded p-1.5 text-ink-muted hover:text-primary hover:bg-surface-muted transition"
                                 @click="startEdit(type)"
                             >
                                 <IconPencil class="h-4 w-4" />
@@ -83,14 +205,15 @@ function toggleNextService(type) {
                         <template v-else>
                             <input
                                 v-model="editForm.name"
-                                class="flex-1 rounded-ra border-line bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:ring-primary"
+                                class="flex-1 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                 @keyup.enter="submitEdit(type)"
                                 @keyup.escape="cancelEdit"
+                                autofocus
                             />
                             <p v-if="editForm.errors.name" class="text-xs text-danger">{{ editForm.errors.name }}</p>
                             <button
                                 type="button"
-                                class="rounded p-1 text-success hover:text-success/80"
+                                class="rounded p-1.5 text-ok hover:bg-ok-bg transition"
                                 :disabled="editForm.processing"
                                 @click="submitEdit(type)"
                             >
@@ -98,7 +221,7 @@ function toggleNextService(type) {
                             </button>
                             <button
                                 type="button"
-                                class="rounded p-1 text-ink-muted hover:text-danger"
+                                class="rounded p-1.5 text-ink-muted hover:text-danger hover:bg-danger-bg transition"
                                 @click="cancelEdit"
                             >
                                 <IconX class="h-4 w-4" />
@@ -106,7 +229,8 @@ function toggleNextService(type) {
                         </template>
                     </div>
 
-                    <div class="px-4 py-3">
+                    <!-- Add row -->
+                    <div class="px-4 py-3.5">
                         <template v-if="!showAdd">
                             <button
                                 type="button"
@@ -114,21 +238,22 @@ function toggleNextService(type) {
                                 @click="showAdd = true"
                             >
                                 <IconPlus class="h-4 w-4" />
-                                Add type
+                                Add service type
                             </button>
                         </template>
                         <template v-else>
                             <div class="flex items-center gap-3">
                                 <input
                                     v-model="addForm.name"
-                                    placeholder="Type name…"
-                                    class="flex-1 rounded-ra border-line bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:ring-primary"
+                                    placeholder="Service type name…"
+                                    class="flex-1 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                     @keyup.enter="submitAdd"
                                     @keyup.escape="showAdd = false; addForm.reset()"
+                                    autofocus
                                 />
                                 <button
                                     type="button"
-                                    class="rounded p-1 text-success hover:text-success/80"
+                                    class="rounded p-1.5 text-ok hover:bg-ok-bg transition"
                                     :disabled="addForm.processing"
                                     @click="submitAdd"
                                 >
@@ -136,7 +261,7 @@ function toggleNextService(type) {
                                 </button>
                                 <button
                                     type="button"
-                                    class="rounded p-1 text-ink-muted hover:text-danger"
+                                    class="rounded p-1.5 text-ink-muted hover:text-danger hover:bg-danger-bg transition"
                                     @click="showAdd = false; addForm.reset()"
                                 >
                                     <IconX class="h-4 w-4" />
@@ -146,7 +271,146 @@ function toggleNextService(type) {
                         </template>
                     </div>
                 </div>
-            </Card>
+            </div>
         </div>
+
+        <!-- Fee Schedule Tab -->
+        <div v-else-if="activeTab === 'fees'">
+            <!-- Subtle info note -->
+            <p class="mb-5 text-sm text-ink-soft">
+                Rates are auto-applied when a technician picks a service type. Editing a rate only affects future service records — existing records already have the price locked in at time of job.
+            </p>
+
+            <div v-if="serviceTypes.length === 0" class="rounded-ral border border-line bg-surface p-10 text-center shadow-card">
+                <p class="text-sm font-medium text-ink-soft">No service types yet.</p>
+                <p class="mt-1 text-sm text-ink-muted">Add a service type first, then set fees.</p>
+            </div>
+
+            <div v-else class="space-y-4">
+                <div
+                    v-for="type in serviceTypes"
+                    :key="type.id"
+                    class="overflow-hidden rounded-ra border border-line bg-surface shadow-card"
+                >
+                    <!-- Card header: type badge + HP toggle -->
+                    <div class="flex items-center justify-between gap-3 border-b border-line bg-surface-muted px-4 py-2.5">
+                        <Badge :variant="serviceVariant(type.name)">{{ type.name }}</Badge>
+                        <button
+                            v-if="canEditFees"
+                            type="button"
+                            class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition"
+                            :class="type.is_hp_based
+                                ? 'bg-primary/10 text-primary'
+                                : 'border border-line bg-surface-muted text-ink-soft'"
+                            @click="toggleHpBased(type)"
+                        >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full border-2 transition"
+                                :class="type.is_hp_based ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'"
+                            />
+                            HP-based pricing
+                        </button>
+                    </div>
+
+                    <!-- Standard fee rows -->
+                    <div v-if="feeGroups[type.name]?.length" class="divide-y divide-line">
+                        <div
+                            v-for="f in feeGroups[type.name]"
+                            :key="f.id"
+                            class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3"
+                        >
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-ink">{{ f.option || 'Flat job' }}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <Badge v-if="f.pricing_mode === 'flexible'" variant="amber">Flexible</Badge>
+                                <span v-else class="font-mono font-semibold text-navy-800">
+                                    {{ money(f.rate) }}<span class="ml-1 text-xs font-normal text-ink-soft">/ {{ modeLabel[f.pricing_mode] ?? f.pricing_mode }}</span>
+                                </span>
+                                <div v-if="canEditFees" class="flex items-center gap-3">
+                                    <button type="button" class="text-sm font-medium text-primary hover:text-primary-hover" @click="openEdit(f)">Edit</button>
+                                    <button type="button" class="text-sm font-medium text-danger hover:underline" @click="remove(f)">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HP Tiers section (visible only when is_hp_based) -->
+                    <template v-if="type.is_hp_based">
+                        <div class="border-t border-line bg-surface-muted/50 px-4 py-2.5">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">HP Tiers</p>
+                        </div>
+
+                        <div class="divide-y divide-line">
+                            <!-- Existing tiers -->
+                            <div
+                                v-for="tier in (hpTiers[type.id] ?? [])"
+                                :key="tier.id"
+                                class="flex items-center justify-between px-4 py-2.5"
+                            >
+                                <span class="font-mono text-sm text-ink">{{ Number(tier.hp_value).toFixed(1) }} HP</span>
+                                <div class="flex items-center gap-4">
+                                    <span class="font-mono font-semibold text-navy-800">{{ money(tier.price) }}</span>
+                                    <button
+                                        v-if="canEditFees"
+                                        type="button"
+                                        class="text-sm font-medium text-danger hover:underline"
+                                        @click="removeHpTier(tier)"
+                                    >Delete</button>
+                                </div>
+                            </div>
+
+                            <!-- Add tier row (admin/edit_fees only) -->
+                            <div v-if="canEditFees" class="flex flex-wrap items-end gap-3 px-4 py-3">
+                                <div>
+                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">HP</label>
+                                    <input
+                                        v-model="getHpForm(type.id).hp_value"
+                                        type="number"
+                                        step="0.5"
+                                        min="0.5"
+                                        max="20"
+                                        placeholder="e.g. 1.5"
+                                        list="std-hp"
+                                        class="w-24 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
+                                    />
+                                    <datalist id="std-hp">
+                                        <option v-for="hp in STANDARD_HP" :key="hp" :value="hp" />
+                                    </datalist>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">Price (RM)</label>
+                                    <input
+                                        v-model="getHpForm(type.id).price"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        class="w-28 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                                    :disabled="getHpForm(type.id).processing"
+                                    @click="addHpTier(type.id)"
+                                >Add tier</button>
+                                <p v-if="getHpForm(type.id).error" class="w-full text-xs text-danger">
+                                    {{ getHpForm(type.id).error }}
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <FeeModal
+            :open="modalOpen"
+            :fee="editing"
+            :service-types="serviceTypeNames"
+            :modes="modes"
+            @close="modalOpen = false"
+        />
     </AdminLayout>
 </template>

@@ -4,8 +4,8 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
-    IconCurrencyDollar, IconCalendarEvent, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2, IconCategory,
+    IconCalendarEvent, IconUserCog,
+    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook, IconCreditCard,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -23,19 +23,22 @@ watch(() => page.url, () => { drawerOpen.value = false; });
 useFlashToast();
 
 const reminderCount = computed(() => page.props.reminderCount ?? 0);
+const notificationCount = computed(() => page.props.notificationCount ?? 0);
 
 // Grouped nav. Each item gated by a permission key (null = always).
 const sections = computed(() => {
     const def = [
         { title: 'Main', items: [
             { label: 'Dashboard', route: 'dashboard', icon: IconLayoutDashboard, permission: null },
-            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value },
-            { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
             { label: 'Appointments', route: 'appointments.index', match: 'appointments', icon: IconCalendarEvent, permission: 'set_appointment' },
+            { label: 'Catalog', route: 'catalog.index', match: 'catalog', icon: IconBook, permission: null },
+            { label: 'Service Records', route: 'service-records.index', match: 'service-records', icon: IconClipboardPlus, permission: 'record_service' },
+            { label: 'Reminders', route: 'reminders.index', match: 'reminders', icon: IconBell, permission: 'view_clients', badge: reminderCount.value, adminOnly: true },
+            { label: 'Transactions', route: 'transactions.index', match: 'transactions', icon: IconReceipt2, permission: 'view_reports', adminOnly: true },
         ]},
         { title: 'Settings', items: [
-            { label: 'Service Types', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
-            { label: 'Service Fees', route: 'fees.index', match: 'fees', icon: IconCurrencyDollar, permission: 'edit_fees', adminOnly: true },
+            { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types', adminOnly: true },
+            { label: 'Payment Settings', route: 'payment-settings.index', match: 'payment-settings', icon: IconCreditCard, adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
             { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients', adminOnly: true },
         ]},
@@ -127,6 +130,13 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
                 <div class="flex-1">
                     <slot name="header" />
                 </div>
+
+                <Link :href="route('notifications.index')" class="relative flex h-9 w-9 items-center justify-center rounded-ra border border-line bg-surface text-ink-soft hover:bg-surface-muted transition">
+                    <IconBell :size="18" />
+                    <span v-if="notificationCount > 0" class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white leading-none">
+                        {{ notificationCount > 9 ? '9+' : notificationCount }}
+                    </span>
+                </Link>
 
                 <!-- User menu -->
                 <div class="relative">

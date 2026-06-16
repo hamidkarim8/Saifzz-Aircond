@@ -42,6 +42,7 @@ class StoreServiceVisitRequest extends FormRequest
             'lines.*.next_service_date' => ['nullable', 'date'],
             'lines.*.notes' => ['nullable', 'string', 'max:1000'],
             'lines.*.unit_id' => ['nullable', 'integer', Rule::exists('client_units', 'id')->where('client_id', $this->input('client_id'))],
+            'lines.*.hp_value' => ['nullable', 'numeric', 'min:0.5', 'max:20'],
         ];
     }
 
@@ -72,10 +73,25 @@ class StoreServiceVisitRequest extends FormRequest
                         $v->errors()->add("$key.rate", 'Enter a price for this repair.');
                     }
                 } elseif ($type) {
-                    // R1 — a matching fee must exist so the rate can be snapshotted server-side.
-                    $option = $type === 'Gas Top-Up' ? ($line['gas_option'] ?? null) : ($line['unit_type'] ?? null);
-                    if ($option && ! ServiceFee::where('service_type', $type)->where('option', $option)->exists()) {
-                        $v->errors()->add("$key.service_type", "No fee configured for {$type} · {$option}.");
+                    $serviceTypeRow = \App\Models\ServiceType::where('name', $type)->first();
+                    $isHpBased = $serviceTypeRow?->is_hp_based ?? false;
+                    if (! $isHpBased) {
+                        // R1 — a matching fee must exist so the rate can be snapshotted server-side.
+                        $option = $type === 'Gas Top-Up' ? ($line['gas_option'] ?? null) : ($line['unit_type'] ?? null);
+                        if ($option && ! ServiceFee::where('service_type', $type)->where('option', $option)->exists()) {
+                            $v->errors()->add("$key.service_type", "No fee configured for {$type} · {$option}.");
+                        }
+                    }
+                    // R2 — if HP-based and hp_value submitted, the tier must exist in the fee book
+                    if (!empty($line['hp_value'])) {
+                        if ($serviceTypeRow && $serviceTypeRow->is_hp_based) {
+                            $tierExists = \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeRow->id)
+                                ->where('hp_value', (float) $line['hp_value'])
+                                ->exists();
+                            if (! $tierExists) {
+                                $v->errors()->add("$key.hp_value", "No HP tier configured for {$line['hp_value']} HP.");
+                            }
+                        }
                     }
                 }
             }

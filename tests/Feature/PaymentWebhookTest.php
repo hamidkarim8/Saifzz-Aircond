@@ -109,4 +109,75 @@ class PaymentWebhookTest extends TestCase
 
         $this->assertSame(0, Receipt::count());
     }
+
+    public function test_tenant_gateway_secret_is_used_for_webhook_verification(): void
+    {
+        $txn = $this->tenantTxn('TXN-20260616-001', 'STUB-T1', 'tenant-secret');
+
+        $fields  = ['STUB-T1', $txn->txn_id, '100.00', '3'];
+        $payload = [
+            'transaction_id' => 'STUB-T1',
+            'order_number'   => $txn->txn_id,
+            'amount'         => '100.00',
+            'status'         => 3,
+            'checksum'       => Checksum::make($fields, 'tenant-secret'),
+        ];
+
+        $this->post(route('webhooks.bayarcash'), $payload)->assertOk();
+        $this->assertSame('paid', $txn->fresh()->status);
+    }
+
+    public function test_wrong_tenant_secret_is_rejected(): void
+    {
+        $txn = $this->tenantTxn('TXN-20260616-002', 'STUB-T2', 'tenant-secret');
+
+        $fields  = ['STUB-T2', $txn->txn_id, '100.00', '3'];
+        $payload = [
+            'transaction_id' => 'STUB-T2',
+            'order_number'   => $txn->txn_id,
+            'amount'         => '100.00',
+            'status'         => 3,
+            'checksum'       => Checksum::make($fields, 'wrong-secret'),
+        ];
+
+        $this->post(route('webhooks.bayarcash'), $payload)->assertForbidden();
+        $this->assertSame('pending', $txn->fresh()->status);
+    }
+
+    private function tenantTxn(string $txnId, string $ref, string $secret): Transaction
+    {
+        $boss = \App\Models\User::factory()->admin()->create();
+        $boss->update(['tenant_id' => $boss->id]);
+
+        \App\Models\TenantGateway::create([
+            'tenant_id'  => $boss->id,
+            'api_token'  => 'tok',
+            'portal_key' => 'pkey',
+            'api_secret' => $secret,
+        ]);
+
+        $client = \App\Models\Client::create([
+            'name'      => 'T',
+            'phone'     => '012-0000000',
+            'address'   => 'KL',
+            'tenant_id' => $boss->tenantId(),
+        ]);
+
+        $visit = $client->visits()->create([
+            'visit_date'      => '2026-06-16',
+            'warranty_months' => 0,
+            'total_amount'    => 100,
+            'created_by'      => $boss->id,
+            'technician_id'   => null,
+            'tenant_id'       => $boss->tenantId(),
+        ]);
+
+        return $visit->transaction()->create([
+            'txn_id'      => $txnId,
+            'amount'      => 100,
+            'method'      => 'DuitNow QR',
+            'status'      => 'pending',
+            'gateway_ref' => $ref,
+        ]);
+    }
 }

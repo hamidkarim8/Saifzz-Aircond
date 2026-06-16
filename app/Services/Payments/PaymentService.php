@@ -1,22 +1,18 @@
 <?php
-
 namespace App\Services\Payments;
 
 use App\Models\Receipt;
+use App\Models\TenantGateway;
 use App\Models\Transaction;
 use App\Services\Documents\SnapshotBuilder;
-use App\Services\Payments\Contracts\PaymentGateway;
-use App\Services\Payments\Data\PaymentIntentData;
 use Illuminate\Support\Facades\DB;
 
 final class PaymentService
 {
     public function __construct(
-        private readonly PaymentGateway $gateway,
         private readonly SnapshotBuilder $snapshots,
     ) {}
 
-    /** Cash path: staff confirms manually (gated collect_payment). */
     public function confirmCash(Transaction $transaction): void
     {
         if ($transaction->status === 'paid') {
@@ -34,12 +30,12 @@ final class PaymentService
         });
     }
 
-    /** Create a gateway intent; persist gateway_ref; return the redirect URL. */
     public function startGateway(Transaction $transaction): string
     {
         $visit = $transaction->visit()->with('client')->first();
+        $gateway = TenantGateway::resolveGateway($visit->tenant_id);
 
-        $result = $this->gateway->createIntent(new PaymentIntentData(
+        $result = $gateway->createIntent(new Data\PaymentIntentData(
             orderNumber: $transaction->txn_id,
             amount: (float) $transaction->amount,
             payerName: $visit->client->name,
@@ -58,24 +54,33 @@ final class PaymentService
         return $result->paymentUrl;
     }
 
-    /** One Receipt per transaction (idempotent). PDF rendering = Module 6. */
     public function issueReceipt(Transaction $transaction): Receipt
     {
-        return Receipt::firstOrCreate(
-            ['transaction_id' => $transaction->id],
-            [
-                'number' => $this->nextReceiptNumber(),
-                'amount' => $transaction->amount,
-                'snapshot' => $this->snapshots->forTransaction($transaction),
-            ],
-        );
+        return DB::transaction(function () use ($transaction) {
+            $existing = Receipt::where('transaction_id', $transaction->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            return Receipt::create([
+                'transaction_id' => $transaction->id,
+                'number'         => $this->nextReceiptNumber(),
+                'amount'         => $transaction->amount,
+                'snapshot'       => $this->snapshots->forTransaction($transaction),
+            ]);
+        });
     }
 
-    /** RCP-YYYYMMDD-NNN — daily sequence, mirrors TXN numbering. */
     private function nextReceiptNumber(): string
     {
         $prefix = 'RCP-'.now()->format('Ymd').'-';
-        $last = Receipt::where('number', 'like', $prefix.'%')->orderByDesc('number')->value('number');
+        $last = Receipt::where('number', 'like', $prefix.'%')
+            ->lockForUpdate()
+            ->orderByDesc('number')
+            ->value('number');
         $n = $last ? ((int) substr($last, -3)) + 1 : 1;
 
         return $prefix.str_pad((string) $n, 3, '0', STR_PAD_LEFT);

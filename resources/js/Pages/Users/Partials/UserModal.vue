@@ -3,26 +3,20 @@ import { watch, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
+import { permLabels } from '@/permissionLabels';
 
 const props = defineProps({
     open: Boolean,
     user: { type: Object, default: null }, // null = create
     grantablePermissions: Array,
+    presets: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['close']);
 
 const isEdit = computed(() => !!props.user);
 
-const permLabels = {
-    view_clients: 'View clients & history',
-    record_service: 'Record service visits',
-    set_appointment: 'Schedule appointments',
-    collect_payment: 'Collect payments',
-    edit_client: 'Create & edit clients',
-    view_reports: 'View reports dashboard',
-    edit_fees: 'Manage price book',
-    export_data: 'Export data to CSV',
-    view_all_data: 'See all data (not just own jobs)',
+const applyLevel = (level) => {
+    form.permissions = [...(props.presets[level] ?? [])];
 };
 
 const form = useForm({
@@ -132,6 +126,17 @@ const submit = () => {
                     <!-- Permissions -->
                     <div>
                         <p class="mb-2 text-sm font-semibold text-ink">Permissions</p>
+                        <div class="mb-2 flex flex-wrap gap-2">
+                            <button
+                                v-for="lvl in [1, 2, 3]"
+                                :key="lvl"
+                                type="button"
+                                class="rounded-ra border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-primary hover:bg-primary-50 hover:text-primary"
+                                @click="applyLevel(lvl)"
+                            >
+                                Level {{ lvl }}
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <label
                                 v-for="perm in grantablePermissions"

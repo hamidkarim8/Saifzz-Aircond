@@ -5,28 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreServiceFeeRequest;
 use App\Http\Requests\UpdateServiceFeeRequest;
 use App\Models\ServiceFee;
-use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class ServiceFeeController extends Controller
 {
-    /**
-     * Price book — grouped by service type for the management screen.
-     * Editing a fee affects only future service lines (rates are snapshotted, R1).
-     */
-    public function index(): Response
+    public function index(): RedirectResponse
     {
-        abort_unless(request()->user()->hasPermission('edit_fees'), 403);
-
-        $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
-
-        return Inertia::render('Fees/Index', [
-            'feeGroups' => $fees->groupBy('service_type'),
-            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
-            'modes' => StoreServiceFeeRequest::MODES,
-        ]);
+        return redirect()->route('service-types.index');
     }
 
     public function store(StoreServiceFeeRequest $request): RedirectResponse

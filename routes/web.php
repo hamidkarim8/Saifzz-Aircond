@@ -1,19 +1,25 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ClientUnitController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PermissionPresetController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ServiceHpTierController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
+use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\StubGatewayController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -73,12 +79,21 @@ Route::middleware('auth')->group(function () {
         Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
     });
 
-    // Service Fees (module 3) — price book, all gated by edit_fees (P3)
+    Route::get('transactions', [TransactionController::class, 'index'])
+        ->middleware('can:view_reports')->name('transactions.index');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+
+    Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
+
+    // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
+    Route::redirect('fees', '/service-types')->name('fees.index');
     Route::middleware('can:edit_fees')->group(function () {
-        Route::get('fees', [ServiceFeeController::class, 'index'])->name('fees.index');
         Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
+        Route::post('service-hp-tiers', [ServiceHpTierController::class, 'store'])->name('service-hp-tiers.store');
+        Route::delete('service-hp-tiers/{tier}', [ServiceHpTierController::class, 'destroy'])->name('service-hp-tiers.destroy');
     });
 
     // Service Types (manage_service_types — admin + technician)
@@ -94,6 +109,7 @@ Route::middleware('auth')->group(function () {
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::patch('users/{user}/active', [UserController::class, 'toggleActive'])->name('users.active');
+        Route::put('permission-presets', [PermissionPresetController::class, 'update'])->name('permission-presets.update');
     });
 
     // Payments (module 5) — collection gated by collect_payment (P3)
@@ -120,6 +136,12 @@ Route::middleware('auth')->group(function () {
     // Reports (module 9) — transactions CSV export, gated export_data (P3).
     Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
         ->middleware('can:export_data')->name('reports.transactions.export');
+
+    // Payment Settings — admin-only gateway credential management.
+    Route::middleware('can:manage_users')->group(function () {
+        Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
+        Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
+    });
 });
 
 // Client Portal (module 10) — public, serial + phone-last-4 gated (P5). No RBAC.

@@ -62,7 +62,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Create', [
             'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->get(['name', 'requires_next_service'])->toArray(),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based'])->toArray(),
             'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
             'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
             'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
@@ -79,6 +79,9 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
+            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
+                ->get(['id', 'service_type_id', 'hp_value', 'price'])
+                ->groupBy('service_type_id'),
         ]);
     }
 
@@ -269,6 +272,15 @@ class ServiceVisitController extends Controller
         } else {
             $option = $isGas ? $gasOption : $unitType;
             $rate = (float) ServiceFee::where('service_type', $type)->where('option', $option)->value('rate');
+            if (!empty($line['hp_value'])) {
+                $serviceTypeId = \App\Models\ServiceType::where('name', $type)->value('id');
+                if ($serviceTypeId) {
+                    $hpRate = (float) \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeId)
+                        ->where('hp_value', (float) $line['hp_value'])
+                        ->value('price');
+                    $rate += $hpRate;
+                }
+            }
         }
 
         return [
@@ -284,6 +296,7 @@ class ServiceVisitController extends Controller
             'next_service_date' => ($carriesUnitType && !$hasUnit) ? ($line['next_service_date'] ?? null) : null,
             // R3 — no notes for Repair.
             'notes'            => $isRepair ? null : ($line['notes'] ?? null),
+            'hp_value'         => !empty($line['hp_value']) ? (float) $line['hp_value'] : null,
         ];
     }
 

@@ -129,10 +129,9 @@ const waLink = computed(() => wa(props.client.phone));
                 <div v-if="client.appointments.length" class="space-y-3">
                     <Card v-for="a in client.appointments" :key="a.id">
                         <div class="flex items-center justify-between">
-                            <span class="text-sm font-semibold text-ink">{{ a.service_type }}</span>
+                            <span class="text-sm font-semibold text-ink">{{ fmtDate(a.datetime) }}</span>
                             <Badge :variant="statusVariant(a.status)" class="capitalize">{{ a.status }}</Badge>
                         </div>
-                        <div class="mt-1 text-sm text-ink-soft">{{ fmtDate(a.datetime) }}</div>
                     </Card>
                 </div>
                 <p v-else class="rounded-ral border border-dashed border-line bg-surface py-8 text-center text-sm text-ink-soft">None scheduled.</p>

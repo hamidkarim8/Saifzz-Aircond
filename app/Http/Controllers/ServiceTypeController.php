@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreServiceFeeRequest;
+use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,8 +15,15 @@ class ServiceTypeController extends Controller
 {
     public function index(): Response
     {
+        $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
+
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service']),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based']),
+            'feeGroups'    => $fees->groupBy('service_type'),
+            'modes'        => StoreServiceFeeRequest::MODES,
+            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
+                ->get(['id', 'service_type_id', 'hp_value', 'price'])
+                ->groupBy('service_type_id'),
         ]);
     }
 
@@ -38,6 +47,7 @@ class ServiceTypeController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:100', "unique:service_types,name,{$serviceType->id}"],
             'requires_next_service' => ['boolean'],
+            'is_hp_based' => ['boolean'],
         ]);
 
         $oldName = $serviceType->name;
@@ -46,12 +56,12 @@ class ServiceTypeController extends Controller
         $serviceType->update([
             'name' => $newName,
             'requires_next_service' => $request->boolean('requires_next_service', $serviceType->requires_next_service),
+            'is_hp_based' => $request->boolean('is_hp_based', $serviceType->is_hp_based),
         ]);
 
         if ($oldName !== $newName) {
             DB::table('service_fees')->where('service_type', $oldName)->update(['service_type' => $newName]);
             DB::table('service_lines')->where('service_type', $oldName)->update(['service_type' => $newName]);
-            DB::table('appointments')->where('service_type', $oldName)->update(['service_type' => $newName]);
         }
 
         return back()->with('success', 'Service type updated.');

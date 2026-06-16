@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\PermissionPreset;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class UserController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'email', 'role', 'active', 'permissions']),
             'grantablePermissions' => array_values(array_diff(User::PERMISSIONS, User::ADMIN_ONLY_PERMISSIONS)),
+            'presets' => PermissionPreset::forTenant($tenantId),
         ]);
     }
 

@@ -6,17 +6,20 @@ import PageHeader from '@/Components/PageHeader.vue';
 import DataTable from '@/Components/DataTable.vue';
 import Badge from '@/Components/Badge.vue';
 import UserModal from './Partials/UserModal.vue';
+import PresetsModal from './Partials/PresetsModal.vue';
 import { confirmDanger, toast } from '@/lib/swal.js';
 
 const props = defineProps({
     users: Array,
     grantablePermissions: Array,
+    presets: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
 
 const modalOpen = ref(false);
 const editing = ref(null);
+const presetsOpen = ref(false);
 
 const openAdd = () => { editing.value = null; modalOpen.value = true; };
 const openEdit = (user) => { editing.value = user; modalOpen.value = true; };
@@ -60,6 +63,13 @@ const columns = [
 
         <PageHeader title="Users" subtitle="Staff accounts &amp; permissions">
             <template #actions>
+                <button
+                    type="button"
+                    class="rounded-ra border border-line px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-primary hover:text-primary"
+                    @click="presetsOpen = true"
+                >
+                    Permission levels
+                </button>
                 <button
                     class="inline-flex items-center gap-2 rounded-ra bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover"
                     @click="openAdd"
@@ -175,7 +185,14 @@ const columns = [
             :open="modalOpen"
             :user="editing"
             :grantable-permissions="grantablePermissions"
+            :presets="presets"
             @close="modalOpen = false"
+        />
+        <PresetsModal
+            :open="presetsOpen"
+            :grantable-permissions="grantablePermissions"
+            :presets="presets"
+            @close="presetsOpen = false"
         />
     </AdminLayout>
 </template>

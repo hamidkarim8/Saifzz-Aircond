@@ -31,6 +31,13 @@ class ReminderService
             ->when($tenantId !== null, fn ($q) => $q->where('c.tenant_id', $tenantId))
             ->where('cu.is_active', true)
             ->whereNotNull('cu.next_service_date')
+            ->whereNotExists(function ($q) use ($today) {
+                $q->select(DB::raw(1))
+                  ->from('appointments')
+                  ->whereColumn('appointments.client_id', 'c.id')
+                  ->whereNotIn('appointments.status', ['cancelled'])
+                  ->where('appointments.datetime', '>=', $today->toDateTimeString());
+            })
             ->groupBy('c.id', 'c.serial_no', 'c.name', 'c.phone', 'c.address')
             ->havingRaw('MAX(cu.next_service_date) <= ?', [$endOfMonth->toDateString()])
             ->orderByRaw('MAX(cu.next_service_date) asc')
@@ -57,6 +64,13 @@ class ReminderService
             ->whereNull('c.deleted_at')
             ->when($tenantId !== null, fn ($q) => $q->where('c.tenant_id', $tenantId))
             ->whereNotNull('sl.next_service_date')
+            ->whereNotExists(function ($q) use ($today) {
+                $q->select(DB::raw(1))
+                  ->from('appointments')
+                  ->whereColumn('appointments.client_id', 'c.id')
+                  ->whereNotIn('appointments.status', ['cancelled'])
+                  ->where('appointments.datetime', '>=', $today->toDateTimeString());
+            })
             ->when(!empty($coveredIds), fn ($q) => $q->whereNotIn('c.id', $coveredIds))
             ->groupBy('c.id', 'c.serial_no', 'c.name', 'c.phone', 'c.address')
             ->havingRaw('MAX(sl.next_service_date) <= ?', [$endOfMonth->toDateString()])
