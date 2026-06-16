@@ -13,6 +13,7 @@ const props = defineProps({
     serviceTypes: Array,
     feeGroups: { type: Object, default: () => ({}) },
     modes: Array,
+    hpTiers: { type: Object, default: () => ({}) },
 });
 
 // --- Tabs ---
@@ -78,6 +79,45 @@ const money = (v) => v == null ? '—' : 'RM ' + Number(v).toFixed(2);
 const modeLabel = { fixed_per_unit: 'per unit', flexible: 'Flexible' };
 const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
 const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false);
+
+// --- HP tier management ---
+const hpAddForms = ref({});
+
+function getHpForm(typeId) {
+    if (!hpAddForms.value[typeId]) {
+        hpAddForms.value[typeId] = { hp_value: '', price: '', processing: false, error: '' };
+    }
+    return hpAddForms.value[typeId];
+}
+
+function toggleHpBased(type) {
+    router.put(route('service-types.update', type.id), {
+        name: type.name,
+        is_hp_based: !type.is_hp_based,
+    }, { preserveScroll: true });
+}
+
+function addHpTier(typeId) {
+    const f = getHpForm(typeId);
+    f.error = '';
+    if (!f.hp_value || !f.price) { f.error = 'HP and price required.'; return; }
+    f.processing = true;
+    router.post(route('service-hp-tiers.store'), {
+        service_type_id: typeId,
+        hp_value: f.hp_value,
+        price: f.price,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { f.hp_value = ''; f.price = ''; f.processing = false; },
+        onError: () => { f.processing = false; },
+    });
+}
+
+function removeHpTier(tier) {
+    router.delete(route('service-hp-tiers.destroy', tier.id), { preserveScroll: true });
+}
+
+const STANDARD_HP = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0];
 </script>
 
 <template>
@@ -241,26 +281,41 @@ const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false
                 Rates are auto-applied when a technician picks a service type. Editing a rate only affects future service records — existing records already have the price locked in at time of job.
             </p>
 
-            <div v-if="Object.keys(feeGroups).length === 0" class="rounded-ral border border-line bg-surface p-10 text-center shadow-card">
-                <p class="text-sm font-medium text-ink-soft">No fee entries yet.</p>
-                <p class="mt-1 text-sm text-ink-muted">Click "Set Fee" to add your first pricing entry.</p>
+            <div v-if="serviceTypes.length === 0" class="rounded-ral border border-line bg-surface p-10 text-center shadow-card">
+                <p class="text-sm font-medium text-ink-soft">No service types yet.</p>
+                <p class="mt-1 text-sm text-ink-muted">Add a service type first, then set fees.</p>
             </div>
 
             <div v-else class="space-y-4">
                 <div
-                    v-for="(fees, type) in feeGroups"
-                    :key="type"
-                    class="overflow-hidden rounded-ral border border-line bg-surface shadow-card"
+                    v-for="type in serviceTypes"
+                    :key="type.id"
+                    class="overflow-hidden rounded-ra border border-line bg-surface shadow-card"
                 >
-                    <!-- Service type header -->
-                    <div class="flex items-center gap-3 border-b border-line bg-surface-muted px-4 py-2.5">
-                        <Badge :variant="serviceVariant(type)">{{ type }}</Badge>
+                    <!-- Card header: type badge + HP toggle -->
+                    <div class="flex items-center justify-between gap-3 border-b border-line bg-surface-muted px-4 py-2.5">
+                        <Badge :variant="serviceVariant(type.name)">{{ type.name }}</Badge>
+                        <button
+                            v-if="canEditFees"
+                            type="button"
+                            class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition"
+                            :class="type.is_hp_based
+                                ? 'bg-primary/10 text-primary'
+                                : 'border border-line bg-surface-muted text-ink-soft'"
+                            @click="toggleHpBased(type)"
+                        >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full border-2 transition"
+                                :class="type.is_hp_based ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'"
+                            />
+                            HP-based pricing
+                        </button>
                     </div>
 
-                    <!-- Fee rows -->
-                    <div class="divide-y divide-line">
+                    <!-- Standard fee rows -->
+                    <div v-if="feeGroups[type.name]?.length" class="divide-y divide-line">
                         <div
-                            v-for="f in fees"
+                            v-for="f in feeGroups[type.name]"
                             :key="f.id"
                             class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3"
                         >
@@ -279,6 +334,73 @@ const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false
                             </div>
                         </div>
                     </div>
+
+                    <!-- HP Tiers section (visible only when is_hp_based) -->
+                    <template v-if="type.is_hp_based">
+                        <div class="border-t border-line bg-surface-muted/50 px-4 py-2.5">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">HP Tiers</p>
+                        </div>
+
+                        <div class="divide-y divide-line">
+                            <!-- Existing tiers -->
+                            <div
+                                v-for="tier in (hpTiers[type.id] ?? [])"
+                                :key="tier.id"
+                                class="flex items-center justify-between px-4 py-2.5"
+                            >
+                                <span class="font-mono text-sm text-ink">{{ Number(tier.hp_value).toFixed(1) }} HP</span>
+                                <div class="flex items-center gap-4">
+                                    <span class="font-mono font-semibold text-navy-800">{{ money(tier.price) }}</span>
+                                    <button
+                                        v-if="canEditFees"
+                                        type="button"
+                                        class="text-sm font-medium text-danger hover:underline"
+                                        @click="removeHpTier(tier)"
+                                    >Delete</button>
+                                </div>
+                            </div>
+
+                            <!-- Add tier row (admin/edit_fees only) -->
+                            <div v-if="canEditFees" class="flex flex-wrap items-end gap-3 px-4 py-3">
+                                <div>
+                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">HP</label>
+                                    <input
+                                        v-model="getHpForm(type.id).hp_value"
+                                        type="number"
+                                        step="0.5"
+                                        min="0.5"
+                                        max="20"
+                                        placeholder="e.g. 1.5"
+                                        list="std-hp"
+                                        class="w-24 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
+                                    />
+                                    <datalist id="std-hp">
+                                        <option v-for="hp in STANDARD_HP" :key="hp" :value="hp" />
+                                    </datalist>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">Price (RM)</label>
+                                    <input
+                                        v-model="getHpForm(type.id).price"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        class="w-28 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                                    :disabled="getHpForm(type.id).processing"
+                                    @click="addHpTier(type.id)"
+                                >Add tier</button>
+                                <p v-if="getHpForm(type.id).error" class="w-full text-xs text-danger">
+                                    {{ getHpForm(type.id).error }}
+                                </p>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
