@@ -23,13 +23,13 @@ const submit = () => {
 <template>
     <Head title="Log in" />
 
-    <GuestLayout>
-        <h1 class="text-xl font-bold text-navy-900">Sign in</h1>
-        <p class="mt-1 text-sm text-ink-soft">Access the Saifzz Aircond Services system.</p>
+    <GuestLayout branded>
+        <h1 class="text-2xl font-extrabold tracking-tight text-navy-900">Welcome back</h1>
+        <p class="mt-1.5 text-sm text-ink-soft">Sign in to manage clients, services and reports.</p>
 
         <div v-if="status" class="mt-4 rounded-ra bg-ok-bg px-3 py-2 text-sm font-medium text-ok">{{ status }}</div>
 
-        <form class="mt-6 space-y-4" @submit.prevent="submit">
+        <form class="mt-7 space-y-4" @submit.prevent="submit">
             <div>
                 <label for="email" class="block text-sm font-semibold text-ink-soft">Email</label>
                 <input
@@ -68,11 +68,11 @@ const submit = () => {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="w-full rounded-ra bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
-            >Sign in</button>
+                class="w-full rounded-ra bg-primary px-4 py-3 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover hover:shadow-lift disabled:opacity-60"
+            >{{ form.processing ? 'Signing in…' : 'Sign in' }}</button>
         </form>
 
-        <div class="mt-6 border-t border-line pt-4 text-center text-sm text-ink-soft">
+        <div class="mt-7 border-t border-line pt-5 text-center text-sm text-ink-soft">
             Are you a customer?
             <a :href="route('portal.login')" class="font-semibold text-primary hover:text-primary-hover">View your service history →</a>
         </div>
