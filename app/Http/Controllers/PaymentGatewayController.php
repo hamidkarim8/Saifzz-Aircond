@@ -11,8 +11,6 @@ class PaymentGatewayController extends Controller
 {
     public function index(): Response
     {
-        abort_unless(request()->user()->isAdmin(), 403);
-
         $row = TenantGateway::where('tenant_id', request()->user()->id)->first();
 
         return Inertia::render('PaymentSettings/Index', [

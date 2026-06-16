@@ -36,7 +36,7 @@ class PaymentGatewaySettingsTest extends TestCase
             'api_token' => 'tok123',
             'portal_key' => 'pkey456',
             'api_secret' => 'sec789',
-        ])->assertRedirect();
+        ])->assertRedirect()->assertSessionHas('success');
 
         $row = TenantGateway::where('tenant_id', $boss->id)->first();
         $this->assertNotNull($row);
@@ -59,7 +59,7 @@ class PaymentGatewaySettingsTest extends TestCase
             'api_token' => '',
             'portal_key' => '',
             'api_secret' => '',
-        ])->assertRedirect();
+        ])->assertRedirect()->assertSessionHas('success');
 
         $row = TenantGateway::where('tenant_id', $boss->id)->first();
         $this->assertSame('original-tok', $row->api_token);
@@ -86,6 +86,39 @@ class PaymentGatewaySettingsTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame('b2-tok', TenantGateway::where('tenant_id', $boss2->id)->first()->api_token);
+        $this->assertNotNull(TenantGateway::where('tenant_id', $boss1->id)->first());
+    }
+
+    public function test_non_admin_cannot_update_payment_settings(): void
+    {
+        $tech = User::factory()->create(['role' => 'technician']);
+        $this->actingAs($tech)->put('/payment-settings', [
+            'api_token'  => 'tok',
+            'portal_key' => 'pkey',
+            'api_secret' => 'sec',
+        ])->assertForbidden();
+    }
+
+    public function test_partial_update_only_changes_filled_field(): void
+    {
+        $boss = $this->boss();
+        TenantGateway::create([
+            'tenant_id'  => $boss->id,
+            'api_token'  => 'original-tok',
+            'portal_key' => 'original-pkey',
+            'api_secret' => 'original-sec',
+        ]);
+
+        $this->actingAs($boss)->put('/payment-settings', [
+            'api_token'  => 'new-tok',
+            'portal_key' => '',
+            'api_secret' => '',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $row = TenantGateway::where('tenant_id', $boss->id)->first();
+        $this->assertSame('new-tok', $row->api_token);
+        $this->assertSame('original-pkey', $row->portal_key);
+        $this->assertSame('original-sec', $row->api_secret);
     }
 
     public function test_page_shows_configured_status(): void

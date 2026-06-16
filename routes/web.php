@@ -135,8 +135,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:export_data')->name('reports.transactions.export');
 
     // Payment Settings — admin-only gateway credential management.
-    Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
-    Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
+    Route::middleware('can:manage_users')->group(function () {
+        Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
+        Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
+    });
 });
 
 // Client Portal (module 10) — public, serial + phone-last-4 gated (P5). No RBAC.
