@@ -25,7 +25,7 @@ class TenantGateway extends Model
                     'api_token' => $row->api_token,
                     'portal_key' => $row->portal_key,
                     'api_secret' => $row->api_secret,
-                    'channel' => 5,
+                    'channel' => (int) config('services.bayarcash.channel'),
                     'base_url' => config('services.bayarcash.base_url'),
                     'driver' => 'live',
                 ]);
