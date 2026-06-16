@@ -18,6 +18,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
+use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\StubGatewayController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -132,6 +133,10 @@ Route::middleware('auth')->group(function () {
     // Reports (module 9) — transactions CSV export, gated export_data (P3).
     Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
         ->middleware('can:export_data')->name('reports.transactions.export');
+
+    // Payment Settings — admin-only gateway credential management.
+    Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
+    Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
 });
 
 // Client Portal (module 10) — public, serial + phone-last-4 gated (P5). No RBAC.
