@@ -13,7 +13,12 @@ class PaymentWebhookController extends Controller
     {
         $orderNumber = (string) $request->input('order_number', '');
         $transaction = Transaction::with('visit')->where('txn_id', $orderNumber)->first();
-        $tenantId = $transaction?->visit?->tenant_id;
+
+        if (! $transaction) {
+            return response('OK', 200);
+        }
+
+        $tenantId = $transaction->visit?->tenant_id;
         $gateway = TenantGateway::resolveGateway($tenantId);
 
         $result = $gateway->parseCallback($request);

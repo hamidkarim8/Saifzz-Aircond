@@ -56,20 +56,31 @@ final class PaymentService
 
     public function issueReceipt(Transaction $transaction): Receipt
     {
-        return Receipt::firstOrCreate(
-            ['transaction_id' => $transaction->id],
-            [
-                'number' => $this->nextReceiptNumber(),
-                'amount' => $transaction->amount,
-                'snapshot' => $this->snapshots->forTransaction($transaction),
-            ],
-        );
+        return DB::transaction(function () use ($transaction) {
+            $existing = Receipt::where('transaction_id', $transaction->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            return Receipt::create([
+                'transaction_id' => $transaction->id,
+                'number'         => $this->nextReceiptNumber(),
+                'amount'         => $transaction->amount,
+                'snapshot'       => $this->snapshots->forTransaction($transaction),
+            ]);
+        });
     }
 
     private function nextReceiptNumber(): string
     {
         $prefix = 'RCP-'.now()->format('Ymd').'-';
-        $last = Receipt::where('number', 'like', $prefix.'%')->orderByDesc('number')->value('number');
+        $last = Receipt::where('number', 'like', $prefix.'%')
+            ->lockForUpdate()
+            ->orderByDesc('number')
+            ->value('number');
         $n = $last ? ((int) substr($last, -3)) + 1 : 1;
 
         return $prefix.str_pad((string) $n, 3, '0', STR_PAD_LEFT);
