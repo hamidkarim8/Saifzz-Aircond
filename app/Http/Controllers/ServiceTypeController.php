@@ -44,6 +44,7 @@ class ServiceTypeController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:100', "unique:service_types,name,{$serviceType->id}"],
             'requires_next_service' => ['boolean'],
+            'is_hp_based' => ['boolean'],
         ]);
 
         $oldName = $serviceType->name;
@@ -52,6 +53,7 @@ class ServiceTypeController extends Controller
         $serviceType->update([
             'name' => $newName,
             'requires_next_service' => $request->boolean('requires_next_service', $serviceType->requires_next_service),
+            'is_hp_based' => $request->boolean('is_hp_based', $serviceType->is_hp_based),
         ]);
 
         if ($oldName !== $newName) {

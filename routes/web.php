@@ -16,6 +16,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ServiceHpTierController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\PaymentGatewayController;
@@ -91,6 +92,8 @@ Route::middleware('auth')->group(function () {
         Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
         Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
         Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
+        Route::post('service-hp-tiers', [ServiceHpTierController::class, 'store'])->name('service-hp-tiers.store');
+        Route::delete('service-hp-tiers/{tier}', [ServiceHpTierController::class, 'destroy'])->name('service-hp-tiers.destroy');
     });
 
     // Service Types (manage_service_types — admin + technician)
