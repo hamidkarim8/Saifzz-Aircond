@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Payments\HandleGatewayCallback;
+use App\Models\TenantGateway;
 use App\Models\Transaction;
-use App\Services\Payments\Contracts\PaymentGateway;
 use App\Services\Payments\Support\Checksum;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,10 +31,10 @@ class StubGatewayController extends Controller
     public function simulate(
         string $ref,
         Request $request,
-        PaymentGateway $gateway,
         HandleGatewayCallback $handle,
     ): RedirectResponse {
         $transaction = Transaction::where('txn_id', $request->input('order'))->firstOrFail();
+        $gateway = TenantGateway::resolveGateway(null);
 
         $statusCode = $request->input('outcome') === 'paid' ? 3 : 4;
         $amount = number_format((float) $transaction->amount, 2, '.', '');
