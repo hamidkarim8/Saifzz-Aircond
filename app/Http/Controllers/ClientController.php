@@ -31,6 +31,8 @@ class ClientController extends Controller
 
         $clients = Client::query()
             ->visibleTo($request->user())
+            // Scoped technicians (no view_all_data) see only clients they have serviced.
+            ->when(! $request->user()->seesAllData(), fn ($q) => $q->ownedBy($request->user()))
             ->withCount('visits')
             ->with(['latestVisit.lines'])
             ->when($search !== '', function ($q) use ($search) {

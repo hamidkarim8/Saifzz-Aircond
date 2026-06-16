@@ -29,10 +29,10 @@ class ReminderTest extends TestCase
         ]);
     }
 
-    private function dueClient(string $name = 'Due Dana'): Client
+    private function dueClient(string $name = 'Due Dana', ?int $technicianId = null): Client
     {
         $client = Client::create(['name' => $name, 'phone' => '011-22334455', 'address' => 'A']);
-        $visit = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0]);
+        $visit = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => '2026-05-01', 'warranty_months' => 0, 'technician_id' => $technicianId]);
         ServiceLine::create([
             'visit_id' => $visit->id,
             'service_type' => 'Cleaning',
@@ -59,9 +59,10 @@ class ReminderTest extends TestCase
 
     public function test_viewer_sees_the_derived_list(): void
     {
-        $this->dueClient();
+        $viewer = $this->viewer();
+        $this->dueClient(technicianId: $viewer->id); // scoped tech sees own client's reminder
 
-        $this->actingAs($this->viewer())
+        $this->actingAs($viewer)
             ->get(route('reminders.index'))
             ->assertInertia(fn ($page) => $page
                 ->component('Reminders/Index')
@@ -69,6 +70,32 @@ class ReminderTest extends TestCase
                 ->has('overdue', 0)
                 ->where('stats.due_this_month', 1)
             );
+    }
+
+    public function test_scoped_tech_only_sees_own_clients_reminders(): void
+    {
+        $alice = $this->viewer();
+        $bob   = $this->viewer();
+        $this->dueClient('Alice Client', technicianId: $alice->id);
+        $this->dueClient('Bob Client', technicianId: $bob->id);
+
+        $this->actingAs($alice)
+            ->get(route('reminders.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('due_this_month', 1)
+                ->where('due_this_month.0.name', 'Alice Client')
+            );
+    }
+
+    public function test_all_data_viewer_sees_every_clients_reminder(): void
+    {
+        $admin = $this->viewer(['view_clients', 'view_all_data']);
+        $this->dueClient('Alice Client', technicianId: User::factory()->technician()->create()->id);
+        $this->dueClient('Bob Client', technicianId: User::factory()->technician()->create()->id);
+
+        $this->actingAs($admin)
+            ->get(route('reminders.index'))
+            ->assertInertia(fn ($page) => $page->has('due_this_month', 2));
     }
 
     public function test_toggle_contacted_creates_then_removes_the_row(): void

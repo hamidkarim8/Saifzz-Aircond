@@ -63,8 +63,10 @@ class Client extends Model
     }
 
     /**
-     * Restrict to clients in the user's tenant. A granted technician sees all
-     * tenant clients (visibility is permission-gated upstream, not per-technician).
+     * Restrict to clients in the user's tenant. Used by both the client registry and
+     * the record-service picker, so it stays tenant-wide (a technician must be able to
+     * service any tenant client). Per-technician "own clients" filtering for the
+     * registry view lives in ClientController::index via scopeOwnedBy().
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
@@ -73,5 +75,14 @@ class Client extends Model
         }
 
         return $query;
+    }
+
+    /**
+     * Clients the technician has personally serviced (a visit assigned to them).
+     * Scopes the registry to "their own clients" without affecting the service picker.
+     */
+    public function scopeOwnedBy(Builder $query, User $user): Builder
+    {
+        return $query->whereHas('visits', fn ($q) => $q->where('technician_id', $user->id));
     }
 }

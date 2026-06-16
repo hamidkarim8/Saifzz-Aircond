@@ -29,6 +29,7 @@ class ServiceVisitController extends Controller
                 'client:id,serial_no,name',
                 'transaction:id,visit_id,status,method,txn_id',
                 'lines:id,visit_id,service_type',
+                'creator:id,name,role',
             ]);
 
         if ($search !== '') {

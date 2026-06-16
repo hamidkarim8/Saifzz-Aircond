@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Services\Reports\ReportService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,11 +12,18 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     /**
-     * Landing page. Reporting payload (module 9) is rendered only for users with view_reports;
-     * everyone else gets the module launcher.
+     * Reporting landing page (module 9). Gated by view_reports — users without it
+     * (L1/L2 technicians) have no dashboard and are redirected to their work surface.
      */
-    public function index(Request $request, ReportService $reports): Response
+    public function index(Request $request, ReportService $reports): Response|RedirectResponse
     {
+        $user = $request->user();
+        if (! $user->hasPermission('view_reports')) {
+            return redirect()->route(
+                $user->hasPermission('set_appointment') ? 'appointments.index' : 'catalog.index'
+            );
+        }
+
         $period = $request->input('period');
         if (! in_array($period, ReportService::PERIODS, true)) {
             $period = 'all';
@@ -26,10 +34,9 @@ class DashboardController extends Controller
             $month = now()->format('Y-m');
         }
 
-        $user      = $request->user();
         $scopeId   = $user->seesAllData() ? null : $user->id;
         $tenantId  = $user->tenantId();
-        $canReport  = $user->hasPermission('view_reports');
+        $canReport  = true; // gated above — only view_reports users reach here
         $canCollect = $user->hasPermission('collect_payment');
 
         return Inertia::render('Dashboard', [

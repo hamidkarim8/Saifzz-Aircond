@@ -37,13 +37,26 @@ class ServiceTypeTest extends TestCase
             );
     }
 
-    public function test_index_renders_for_technician(): void
+    public function test_index_renders_for_technician_with_permission(): void
     {
         ServiceType::create(['name' => 'Cleaning']);
 
-        $this->actingAs($this->tech())
+        // manage_service_types is L3-only by default; a tech granted it can manage.
+        $tech = User::factory()->create([
+            'role' => User::ROLE_TECHNICIAN,
+            'permissions' => [...User::DEFAULT_TECHNICIAN_PERMISSIONS, 'manage_service_types'],
+        ]);
+
+        $this->actingAs($tech)
             ->get('/service-types')
             ->assertOk();
+    }
+
+    public function test_default_technician_cannot_manage_service_types(): void
+    {
+        $this->actingAs($this->tech())
+            ->get('/service-types')
+            ->assertForbidden();
     }
 
     public function test_unauthenticated_redirected(): void

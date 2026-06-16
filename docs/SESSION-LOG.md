@@ -6,6 +6,30 @@
 
 ---
 
+## Session 27 — 2026-06-16 — Creator attribution + level-based dashboard gating
+
+**Goal:** Surface who handled each service/transaction, and make the dashboard L3-only with level-based menus for L1/L2.
+
+**Done**
+- **Creator columns** — "Created by: Name (Role)" added to Service Records table + Dashboard recent-transactions (admin/all-data only). Data already stored (`service_visits.created_by`); eager-loaded `creator:id,name,role`; `ReportService::transactions` joins `users` for `created_by`/`created_by_role`.
+- **Reminders "Last service by"** — handler (technician of the latest visit) shown under the Last-service date. Two correlated subqueries on both unit + legacy queries. Fixed latent inconsistency: legacy `last_service_date` now uses the all-visits subquery so date + handler always reference the same newest visit.
+- **Dashboard gated `view_reports`** — was `auth`-only with `permission: null` nav. Now L1/L2 have no dashboard; `/dashboard` redirects to Appointments (Catalog fallback). Nav link hidden.
+- **Level-based menus** — dropped `adminOnly` from Reminders/Clients/Services/Transactions nav (now pure permission gates), so granted technicians see them.
+- **Preset defaults** — `manage_service_types` moved to L3-only (out of L1/L2). `DEFAULT_TECHNICIAN_PERMISSIONS` aligned to L1 (added `manage_units`, dropped `manage_service_types`).
+- **Own-clients scoping** — non-`view_all_data` users see only clients they serviced on the Clients registry (`Client::scopeOwnedBy`) and Reminders (`dueList` technician param + badge). Service picker stays tenant-wide.
+
+**Decisions**
+- Landing for L1/L2 = Appointments (Catalog fallback).
+- `manage_service_types` = L3 only.
+- "Own clients" scoping applies to registry + reminders, NOT the record-service picker (techs must be able to service any client).
+- Per-technician customization unchanged (UserModal checkboxes + editable L1/L2/L3 baselines) — fully dynamic.
+
+**Tests:** 290 passed / 1101 assertions. Rewrote 5 DashboardTest + 1 ReminderTest + 1 ServiceTypeTest to the new model; added 3 scoping tests.
+
+**Next:** Owner visual review (eyeball L1 vs L3 menus via `npm run dev`).
+
+---
+
 ## Session 18 — 2026-06-12 — Hot fixes (migration + soft-deleted client crash)
 
 **Goal:** Fix runtime errors found during first visual review of the live app after technician-scoping ship.
