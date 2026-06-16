@@ -138,8 +138,8 @@ const waLink = computed(() => wa(props.client.phone));
             </section>
         </div>
 
-        <!-- Units -->
-        <div class="mt-6">
+        <!-- Units — HIDDEN pending requirement discussion (see docs/UNITS-TODO.md). Backend/DB intact; re-enable by removing v-if="false". -->
+        <div v-if="false" class="mt-6">
             <UnitsSection :client="client" :can-manage="canManageUnits" />
         </div>
     </AdminLayout>

@@ -6,6 +6,25 @@
 
 ---
 
+## Session 29 — 2026-06-16 — Park Units feature (frontend hidden)
+
+**Goal:** Units feature feels half-built — unit lives on client page but link to service records is unclear. Hide until requirement matures, without breaking anything.
+
+**Done**
+- Confirmed hiding is safe: `service_lines.unit_id` nullable end-to-end (FK `nullOnDelete`), `StoreServiceVisitRequest` validates `unit_id` nullable, `SnapshotBuilder` (invoices/receipts) uses `unit_type`+`units` count — not `unit_id`. Reminders keep firing via fallback path (`service_lines.next_service_date`) since count mode lands the date on the line.
+- Hid 3 frontend spots with `v-if="false"` + inline re-enable notes: `Clients/Show.vue` (UnitsSection), `ServiceRecords/Partials/ServiceLineCard.vue` (unit selector), `ServiceRecords/Create.vue` ("+ Add line for each unit").
+- Backend, DB, migrations, model, controller, routes all left intact — no data loss, reversible.
+- Wrote `docs/UNITS-TODO.md` — why parked, what's hidden, what's intact, open questions for discussion.
+
+**Decisions**
+- Units PARKED, not removed. Re-enable = restore original `v-if` conditions (documented inline + in UNITS-TODO).
+
+**Next**
+- Discuss Units requirement with Khalid (is unit→record link required or optional? per-unit vs count mode default? reminders/warranty/invoice interaction? portal self-register?).
+- Still pending: Khalid visual review of public UI, SMTP, DB backups.
+
+---
+
 ## Session 28 — 2026-06-16 — Public-facing UI redesign + responsive audit
 
 **Goal:** Make the landing + login pages look like a real product (were plain/boring), unify branding on the aircond logo, improve the customer portal, then audit mobile/iPad responsiveness across all pages.

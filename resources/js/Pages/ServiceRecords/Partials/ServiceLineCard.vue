@@ -162,8 +162,8 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
         <!-- Fields -->
         <div class="p-4 sm:p-5">
             <div class="grid gap-4 sm:grid-cols-2">
-                <!-- Unit selector (shown when client has units and service uses unit_type) -->
-                <div v-if="clientUnits.length && carriesUnitType" class="sm:col-span-2">
+                <!-- Unit selector — HIDDEN pending requirement discussion (see docs/UNITS-TODO.md). Re-enable: restore v-if="clientUnits.length && carriesUnitType". -->
+                <div v-if="false" class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Unit <span class="font-normal text-xs text-ink-muted">(optional — skip to use count mode)</span></label>
                     <select v-model="line.unit_id"
                             class="w-full rounded-ra border border-line bg-surface px-3 py-2 text-sm text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
