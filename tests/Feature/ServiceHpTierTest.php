@@ -102,4 +102,75 @@ class ServiceHpTierTest extends TestCase
             'price' => 25.00,
         ])->assertForbidden();
     }
+
+    public function test_service_record_line_rate_includes_hp_surcharge(): void
+    {
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+
+        $type = ServiceType::where('name', 'Gas Top-Up')->first();
+        $type->update(['is_hp_based' => true]);
+
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Gas Top-Up', 'option' => 'Full Top-Up', 'rate' => 50.00, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        ServiceHpTier::create(['service_type_id' => $type->id, 'hp_value' => 1.5, 'price' => 20.00]);
+
+        $admin = $this->admin();
+        $admin->update(['tenant_id' => $admin->id]);
+        $client = \App\Models\Client::create(['name' => 'C', 'phone' => '012-0000000', 'address' => 'KL', 'tenant_id' => $admin->tenantId()]);
+
+        $this->actingAs($admin)->post(route('service-records.store'), [
+            'client_mode' => 'existing',
+            'client_id' => $client->id,
+            'visit_date' => '2026-06-16',
+            'warranty_months' => 0,
+            'payment_method' => 'DuitNow QR',
+            'lines' => [[
+                'service_type' => 'Gas Top-Up',
+                'unit_type' => null,
+                'gas_option' => 'Full Top-Up',
+                'units' => 1,
+                'rate' => 0,
+                'discount' => 0,
+                'hp_value' => 1.5,
+            ]],
+        ])->assertRedirect();
+
+        $line = \App\Models\ServiceLine::latest('id')->first();
+        $this->assertSame('70.00', $line->rate);
+        $this->assertSame('1.5', $line->hp_value);
+    }
+
+    public function test_line_without_hp_value_uses_base_fee_only(): void
+    {
+        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+
+        \App\Models\ServiceFee::insert([
+            ['service_type' => 'Gas Top-Up', 'option' => 'Full Top-Up', 'rate' => 50.00, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $admin = $this->admin();
+        $admin->update(['tenant_id' => $admin->id]);
+        $client = \App\Models\Client::create(['name' => 'C', 'phone' => '012-0000000', 'address' => 'KL', 'tenant_id' => $admin->tenantId()]);
+
+        $this->actingAs($admin)->post(route('service-records.store'), [
+            'client_mode' => 'existing',
+            'client_id' => $client->id,
+            'visit_date' => '2026-06-16',
+            'warranty_months' => 0,
+            'payment_method' => 'DuitNow QR',
+            'lines' => [[
+                'service_type' => 'Gas Top-Up',
+                'gas_option' => 'Full Top-Up',
+                'units' => 1,
+                'rate' => 0,
+                'discount' => 0,
+            ]],
+        ])->assertRedirect();
+
+        $line = \App\Models\ServiceLine::latest('id')->first();
+        $this->assertSame('50.00', $line->rate);
+        $this->assertNull($line->hp_value);
+    }
 }

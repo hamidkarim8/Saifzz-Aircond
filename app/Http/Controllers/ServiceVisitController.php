@@ -272,6 +272,15 @@ class ServiceVisitController extends Controller
         } else {
             $option = $isGas ? $gasOption : $unitType;
             $rate = (float) ServiceFee::where('service_type', $type)->where('option', $option)->value('rate');
+            if (!empty($line['hp_value'])) {
+                $serviceTypeId = \App\Models\ServiceType::where('name', $type)->value('id');
+                if ($serviceTypeId) {
+                    $hpRate = (float) \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeId)
+                        ->where('hp_value', (float) $line['hp_value'])
+                        ->value('price');
+                    $rate += $hpRate;
+                }
+            }
         }
 
         return [
@@ -287,6 +296,7 @@ class ServiceVisitController extends Controller
             'next_service_date' => ($carriesUnitType && !$hasUnit) ? ($line['next_service_date'] ?? null) : null,
             // R3 — no notes for Repair.
             'notes'            => $isRepair ? null : ($line['notes'] ?? null),
+            'hp_value'         => !empty($line['hp_value']) ? (float) $line['hp_value'] : null,
         ];
     }
 
