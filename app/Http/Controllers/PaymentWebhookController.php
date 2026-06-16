@@ -18,7 +18,10 @@ class PaymentWebhookController extends Controller
             return response('OK', 200);
         }
 
-        $tenantId = $transaction->visit?->tenant_id;
+        if (! $transaction->visit) {
+            return response('OK', 200);
+        }
+        $tenantId = $transaction->visit->tenant_id;
         $gateway = TenantGateway::resolveGateway($tenantId);
 
         $result = $gateway->parseCallback($request);
