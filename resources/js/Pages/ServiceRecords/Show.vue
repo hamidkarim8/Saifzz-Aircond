@@ -1,14 +1,20 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { confirmAction } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
 import WarrantyPill from '@/Components/WarrantyPill.vue';
+import Modal from '@/Components/Modal.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
 
-const props = defineProps({ visit: Object });
+const props = defineProps({
+    visit: Object,
+    googleReview: { type: Object, default: () => ({ qrUrl: null, url: null }) },
+});
+
+const showReview = ref(false);
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -156,9 +162,25 @@ const cancelRecord = async () => {
                     <span class="flex flex-wrap items-center gap-3">
                         <a :href="route('documents.receipt', txn.id)" target="_blank" class="text-sm font-semibold text-ok underline hover:text-ok/80 transition">View receipt</a>
                         <a :href="route('documents.receipt.pdf', txn.id)" class="text-sm font-semibold text-ok underline hover:text-ok/80 transition">Download PDF</a>
+                        <button
+                            v-if="googleReview.qrUrl"
+                            type="button"
+                            class="inline-flex items-center rounded-ra border border-ok/50 bg-white px-3 py-1.5 text-sm font-semibold text-ok transition hover:bg-ok/10"
+                            @click="showReview = true"
+                        >Google Review</button>
                     </span>
                 </div>
             </div>
         </div>
+        <Modal :show="showReview" @close="showReview = false">
+            <div class="space-y-4 p-6 text-center">
+                <h3 class="text-base font-bold text-navy-800">Rate us on Google</h3>
+                <p class="text-sm text-ink-soft">Scan the QR code to leave a review.</p>
+                <img v-if="googleReview.qrUrl" :src="googleReview.qrUrl" alt="Google Review QR" class="mx-auto h-56 w-56 object-contain" />
+                <a v-if="googleReview.url" :href="googleReview.url" target="_blank" rel="noopener"
+                    class="block text-sm font-semibold text-primary underline">Open review page</a>
+                <button type="button" class="rounded-ra border border-line px-4 py-2 text-sm font-semibold text-ink-soft hover:bg-surface" @click="showReview = false">Close</button>
+            </div>
+        </Modal>
     </AdminLayout>
 </template>

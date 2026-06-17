@@ -161,8 +161,14 @@ class ServiceVisitController extends Controller
 
         $serviceRecord->load(['client', 'lines', 'transaction', 'creator:id,name']);
 
+        $biz = \App\Models\BusinessSetting::forTenant($serviceRecord->tenant_id);
+        $qrUrl = $biz['google_review_qr_path']
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
+            : null;
+
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
+            'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
         ]);
     }
 

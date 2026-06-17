@@ -139,4 +139,31 @@ class BusinessSettingTest extends TestCase
             'business_name' => 'Hax',
         ])->assertForbidden();
     }
+
+    public function test_show_passes_google_review_qr_url(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $boss = $this->bossAdmin();
+        BusinessSetting::create([
+            'tenant_id' => $boss->id,
+            'google_review_qr_path' => 'qr/sample.png',
+            'google_review_url' => 'https://g.page/r/test',
+        ]);
+        \Illuminate\Support\Facades\Storage::disk('public')->put('qr/sample.png', 'x');
+
+        $client = \App\Models\Client::create([
+            'name' => 'QR Client', 'phone' => '0123', 'address' => 'Addr',
+            'tenant_id' => $boss->id,
+        ]);
+        $visit = \App\Models\ServiceVisit::create([
+            'client_id' => $client->id, 'visit_date' => now()->toDateString(),
+            'tenant_id' => $boss->id, 'technician_id' => $boss->id, 'created_by' => $boss->id,
+        ]);
+
+        $this->actingAs($boss)
+            ->get(route('service-records.show', $visit->id))
+            ->assertInertia(fn ($page) => $page
+                ->where('googleReview.url', 'https://g.page/r/test')
+                ->whereNot('googleReview.qrUrl', null));
+    }
 }
