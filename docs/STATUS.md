@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-16 (session 29 — Units feature parked: frontend hidden pending requirement discussion, see docs/UNITS-TODO.md)
+> **Last updated:** 2026-06-17 (session 30 — Business Settings hub: per-tenant dynamic invoice identity + SSM, Google Review QR, official logo + favicon; payment API token relocated here. Suite 299, not pushed)
 
 ---
 
@@ -23,6 +23,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 ---
 
 ## ✅ Completed
+- **Business Settings hub (session 30)** — per-tenant `business_settings` table + `BusinessSetting::forTenant` (config fallback). Admin page (Settings → Business Settings, adminOnly), 3 tabs: Identity (name/address/phone/SSM + live invoice preview) / Google Review (link + QR upload) / Payment (BayarCash creds relocated from old Payment Settings). Invoice/receipt now render per-tenant identity + SSM + logo (base64). Google Review QR button + modal on paid service records. Official logo swapped app-wide (`logo-256.png`) + favicon. Saifzz seeded (SSM + QR). Suite 299.
 - Product docs written (`docs/01`–`06`) + clickable mockup (`index.html`, Service System v4).
 - Product & architecture decisions locked (2026-06-10).
 - Tech stack chosen: Laravel + Inertia/Vue + Postgres (Docker-first).

@@ -6,6 +6,37 @@
 
 ---
 
+## Session 30 — 2026-06-17 — Business Settings hub (dynamic identity, Google Review QR, logo)
+
+**Goal:** Make business-facing details dynamic + admin-editable per-tenant: official logo swap + favicon, dynamic invoice/receipt identity (name/address/phone/SSM) with live preview, Google Review QR on payment-received, all under one consolidated nav hub. Also answered: per-tenant payment API token setting was already shipped (session 41 in memory numbering) — relocated into the new hub.
+
+**Done** (subagent-driven, 10 tasks, suite 290→**299**, build clean, NOT pushed)
+- `business_settings` table (per-tenant, unique `tenant_id` FK, mirrors `tenant_gateways`). `BusinessSetting::forTenant(?int)` resolver → row or `config('business.*')` fallback (null-tenant safe).
+- `SnapshotBuilder` freezes per-tenant identity + `ssm_no` into each document.
+- Logo on invoice/receipt PDFs via `App\Support\BrandAssets::logoDataUri()` (base64 data-URI, per-request cached, null-safe if asset missing). Wired into `DocumentController` (invoice+receipt) + `PortalController` (receipt).
+- `BusinessSettingController` (GET show / PUT update), `can:manage_users` route group, `tenant_id` server-sourced. QR upload → public disk `qr/tenant-{id}.png`. `UpdateBusinessSettingRequest` (nullable identity + `url` + `image` max 2MB).
+- `BusinessSettings/Index.vue` — 3 tabs: Identity (fields + live `InvoicePreview.vue`) / Google Review (URL + QR upload + thumbnail) / Payment (BayarCash creds, posts to existing `payment-settings.update`).
+- Nav: "Business Settings" (`IconBuildingStore`, adminOnly) replaces "Payment Settings"; `PaymentSettings/Index.vue` deleted; `/payment-settings` GET → redirect to hub (route name kept). `PaymentGatewayController` untouched.
+- Google Review button on `ServiceRecords/Show.vue` paid block → `Modal` (`:show`/`@close`) with QR + review link. Controller passes `googleReview:{qrUrl,url}` via `forTenant($visit->tenant_id)`.
+- Official logo: source `public/img/logo.png` (2.5MB) → GD-resized `logo-256.png` (107KB) + `favicon.png`/`.ico`. Swapped `IconAirConditioning` → `<img>` in AdminLayout, GuestLayout, Welcome, Portal/Login; favicon links in `app.blade.php`.
+- Seeder: Saifzz tenant business identity + SSM `202603093151 (003839732-K)` + bundled Google Review QR (idempotent `updateOrCreate`).
+- Tests: `BusinessSettingTest` (9 cases — resolver, snapshot, view/save, QR upload, tenant_id-not-honored, non-admin 403, Show props). `PaymentGatewaySettingsTest` made redirect-aware.
+
+**Problems hit & fixes**
+- No model factories exist → tests use direct `Model::create()` (Client needs name/phone/address; ServiceVisit client_id/visit_date; Transaction txn_id/visit_id/amount/method).
+- `/payment-settings` redirect broke 2 existing payment tests → updated to `assertRedirect`/hit new hub.
+
+**Decisions**
+- Logo static-swap now (dynamic upload deferred); logo DOES render on PDFs; per-tenant identity + QR (consistent with payment gateway); live Vue preview (not server-rendered).
+- Spec `docs/superpowers/specs/2026-06-17-business-settings-design.md`, plan `docs/superpowers/plans/2026-06-17-business-settings.md`.
+
+**Deploy needs (on merge):** `php artisan migrate` (business_settings), `db:seed` (Saifzz identity+QR), `storage:link` present, `npm run build`.
+
+**Next**
+- Push for Khalid testing (incl. new Business Settings + logo). Discuss Units scope. SMTP, DB backups.
+
+---
+
 ## Session 29 — 2026-06-16 — Park Units feature (frontend hidden)
 
 **Goal:** Units feature feels half-built — unit lives on client page but link to service records is unclear. Hide until requirement matures, without breaking anything.
