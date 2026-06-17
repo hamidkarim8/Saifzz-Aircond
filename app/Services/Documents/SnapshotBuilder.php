@@ -15,11 +15,15 @@ final class SnapshotBuilder
         $visit = $transaction->visit()->with(['client', 'lines'])->first();
 
         return [
-            'business' => [
-                'name' => config('business.name'),
-                'address' => config('business.address'),
-                'phone' => config('business.phone'),
-            ],
+            'business' => (function () use ($visit) {
+                $b = \App\Models\BusinessSetting::forTenant($visit->tenant_id);
+                return [
+                    'name' => $b['name'],
+                    'address' => $b['address'],
+                    'phone' => $b['phone'],
+                    'ssm_no' => $b['ssm_no'],
+                ];
+            })(),
             'txn_id' => $transaction->txn_id,
             'method' => $transaction->method,
             'paid_at' => optional($transaction->paid_at)->toIso8601String(),
