@@ -45,15 +45,19 @@ const shiftMonth = (delta) => {
     router.get(route('appointments.index', { month: next }), {}, { preserveState: false });
 };
 
+// datetime is a UTC-tagged ISO string but represents local wall-clock intent;
+// parse the raw date part so `new Date()` tz-conversion can't shift the day (off-by-one).
+const wallDate  = (dt) => { const [y, m, d] = (dt ?? '').slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+
 // Selected-day panel
 const dayList   = computed(() =>
     selectedDay.value === null ? [] :
-    props.appointments.filter((a) => new Date(a.datetime).getDate() === selectedDay.value)
+    props.appointments.filter((a) => wallDate(a.datetime).getDate() === selectedDay.value)
 );
 const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? null : day; };
 
 // Formatters
-const fmtDate   = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtDate   = (dt) => wallDate(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
 const cap       = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const monthLabel = computed(() => {

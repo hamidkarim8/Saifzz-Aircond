@@ -6,6 +6,22 @@
 
 ---
 
+## Session 31 — 2026-06-18 — BUG-001 appointment date off-by-one (timezone)
+
+**Goal:** Fix 17-Jun feedback BUG-001 — picking 17/6 recorded/displayed as 18/6.
+
+**Root cause:** `Appointment.datetime` cast→Carbon→serialized as UTC-tagged ISO (`...Z`). Frontend `new Date(a.datetime)` converts to browser tz (Malaysia UTC+8), bumping afternoon/evening appointments to the next calendar day. The edit modal already dodged it with `slice()`; the calendar + day-panel + table date did not.
+
+**Done:**
+- `Appointments/Index.vue` — added `wallDate()` helper (parses raw `YYYY-MM-DD` parts, no tz conversion); applied to `dayList` filter + `fmtDate`. `fmtTime` already `slice`d — untouched.
+- `Appointments/Partials/MonthCalendar.vue` — `byDay` grouping parses raw date parts instead of `new Date()`.
+- Frontend-only, no backend/migration/test change. Needs `npm run build` (CI builds on PR merge).
+- `FEEDBACK-17062026.md`: BUG-001 OPEN → TESTING (only Khalid closes to DONE).
+
+**Next:** push sessions 47+48+this for Khalid; then CHG-005 HP overhaul cluster.
+
+---
+
 ## Session 30 — 2026-06-17 — Business Settings hub (dynamic identity, Google Review QR, logo)
 
 **Goal:** Make business-facing details dynamic + admin-editable per-tenant: official logo swap + favicon, dynamic invoice/receipt identity (name/address/phone/SSM) with live preview, Google Review QR on payment-received, all under one consolidated nav hub. Also answered: per-tenant payment API token setting was already shipped (session 41 in memory numbering) — relocated into the new hub.
