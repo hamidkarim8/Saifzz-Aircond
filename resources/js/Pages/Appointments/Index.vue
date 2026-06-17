@@ -55,6 +55,7 @@ const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? nul
 // Formatters
 const fmtDate   = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
+const cap       = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const monthLabel = computed(() => {
     const [y, m] = props.month.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -175,8 +176,8 @@ const columns = [
                         @click="openEdit(a)"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="font-medium text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
-                        <Badge class="ml-auto" :variant="statusVariant(a.status.charAt(0).toUpperCase() + a.status.slice(1))">{{ a.status }}</Badge>
+                        <span class="font-medium text-ink">{{ a.client?.name ?? a.customer_name ?? 'Walk-in' }}</span>
+                        <Badge class="ml-auto" :variant="statusVariant(cap(a.status))">{{ cap(a.status) }}</Badge>
                     </button>
                 </div>
                 <p v-else-if="selectedDay !== null" class="py-3 text-center text-sm text-ink-muted">No appointments on this date.</p>
@@ -195,7 +196,7 @@ const columns = [
                         @click="openEdit(a)"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
+                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? a.customer_name ?? 'Walk-in' }}</span>
                     </button>
                 </div>
                 <p v-else class="mt-3 text-sm text-ink-muted">No appointments today.</p>
@@ -225,7 +226,7 @@ const columns = [
 
                 <!-- Client -->
                 <template #cell-client="{ row }">
-                    <div class="font-medium text-ink">{{ row.client?.name ?? 'Walk-in' }}</div>
+                    <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
                     <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
                 </template>
 
@@ -250,7 +251,7 @@ const columns = [
 
                 <!-- Status -->
                 <template #cell-status="{ value }">
-                    <Badge :variant="statusVariant(value.charAt(0).toUpperCase() + value.slice(1))">{{ value }}</Badge>
+                    <Badge :variant="statusVariant(cap(value))">{{ cap(value) }}</Badge>
                 </template>
 
                 <!-- Actions -->
@@ -277,10 +278,10 @@ const columns = [
                     <div class="rounded-ral border border-line bg-surface p-4 shadow-card">
                         <div class="mb-2 flex items-start justify-between gap-2">
                             <div>
-                                <div class="font-medium text-ink">{{ row.client?.name ?? 'Walk-in' }}</div>
+                                <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
                                 <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
                             </div>
-                            <Badge :variant="statusVariant(row.status.charAt(0).toUpperCase() + row.status.slice(1))">{{ row.status }}</Badge>
+                            <Badge :variant="statusVariant(cap(row.status))">{{ cap(row.status) }}</Badge>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                             <span class="font-mono font-semibold text-primary">{{ fmtDate(row.datetime) }} {{ fmtTime(row.datetime) }}</span>

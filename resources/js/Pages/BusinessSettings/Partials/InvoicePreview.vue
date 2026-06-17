@@ -13,7 +13,6 @@ defineProps({
             <img src="/img/logo-256.png" alt="" class="mx-auto mb-2.5 h-16 w-16 rounded-full object-cover" />
             <div class="text-[19px] font-bold text-navy-800">{{ name || 'Business Name' }}</div>
             <div class="mt-1 text-[10.5px] leading-relaxed text-ink-soft">
-                {{ address || 'Business address' }}<br />
                 {{ phone || 'Phone number' }}
                 <template v-if="ssm"><br />SSM: {{ ssm }}</template>
             </div>

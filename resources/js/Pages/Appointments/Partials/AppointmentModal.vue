@@ -16,6 +16,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
 
 const form = useForm({
     client_id: null,
+    customer_name: '',
     date: '',
     time: '',
     phone: '',
@@ -65,6 +66,7 @@ watch(() => props.open, (open) => {
     if (props.appointment) {
         const a = props.appointment;
         form.client_id = a.client_id ?? null;
+        form.customer_name = a.customer_name ?? '';
         form.date = (a.datetime ?? '').slice(0, 10);   // 'YYYY-MM-DD' — slice avoids tz drift
         form.time = (a.datetime ?? '').slice(11, 16);  // 'HH:MM'
         form.phone = a.phone ?? '';
@@ -123,6 +125,13 @@ const submit = () => {
                             </ul>
                             <p v-if="searching" class="mt-1 text-xs text-ink-muted">Searching…</p>
                         </div>
+                    </div>
+
+                    <!-- Customer name (manual lead — only when no existing client picked) -->
+                    <div v-if="!chosen">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Customer name <span class="font-normal text-ink-muted">(for a manual lead)</span></label>
+                        <input v-model="form.customer_name" type="text" placeholder="e.g. Encik Ali" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                        <p v-if="form.errors.customer_name" class="mt-1 text-sm text-danger">{{ form.errors.customer_name }}</p>
                     </div>
 
                     <!-- Date + time -->

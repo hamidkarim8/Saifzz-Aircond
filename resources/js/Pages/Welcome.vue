@@ -36,7 +36,7 @@ const services = [
                 <!-- Brand bar -->
                 <header class="flex items-center justify-between py-6">
                     <div class="flex items-center gap-3">
-                        <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-10 w-10 rounded-ra object-cover shadow-lift" />
+                        <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-12 w-12 rounded-ra object-cover shadow-lift" />
                         <div class="leading-tight">
                             <div class="font-bold tracking-tight text-white">Saifzz Aircond</div>
                             <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-primary-300/70">Service System</div>

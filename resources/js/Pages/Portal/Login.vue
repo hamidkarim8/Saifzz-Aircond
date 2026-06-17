@@ -16,7 +16,7 @@ const submit = () => form.post(route('portal.authenticate'));
     <PortalLayout :business="business" center>
         <!-- Logo badge above card -->
         <div class="mb-6 flex flex-col items-center">
-            <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-16 w-16 rounded-rax object-cover shadow-lift" />
+            <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-20 w-20 rounded-rax object-cover shadow-lift" />
             <h2 class="mt-4 text-lg font-bold tracking-tight text-white">{{ business?.name ?? 'Service Portal' }}</h2>
             <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-primary-300/70">Customer Portal</p>
         </div>

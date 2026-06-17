@@ -38,7 +38,7 @@ const sections = computed(() => {
         ]},
         { title: 'Settings', items: [
             { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
-            { label: 'Business Settings', route: 'business-settings.show', match: 'business-settings', icon: IconBuildingStore, adminOnly: true },
+            { label: 'Business', route: 'business-settings.show', match: 'business-settings', icon: IconBuildingStore, permission: null, adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
             { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
         ]},
@@ -81,7 +81,7 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
         >
             <!-- Logo -->
             <div class="flex h-16 items-center gap-3 px-5">
-                <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-9 w-9 rounded-ra object-cover" />
+                <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-11 w-11 rounded-ra object-cover" />
                 <div class="leading-tight">
                     <div class="text-sm font-bold text-white">Saifzz Aircond</div>
                     <div class="font-mono text-[10px] uppercase tracking-widest text-primary-300/60">Service System</div>

@@ -65,7 +65,6 @@
             @endif
             <div class="co">{{ $snapshot['business']['name'] ?? config('business.name') }}</div>
             <div class="co-sub">
-                {{ $snapshot['business']['address'] ?? '' }}<br>
                 {{ $snapshot['business']['phone'] ?? '' }}
                 @if(!empty($snapshot['business']['ssm_no']))
                     <br>SSM: {{ $snapshot['business']['ssm_no'] }}

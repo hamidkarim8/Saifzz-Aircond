@@ -81,6 +81,29 @@ class AppointmentTest extends TestCase
         $this->assertSame(1, Appointment::whereNull('client_id')->count());
     }
 
+    public function test_store_keeps_manual_customer_name_for_a_clientless_lead(): void
+    {
+        $this->actingAs($this->setter())
+            ->post(route('appointments.store'), $this->payload(['customer_name' => 'Encik Ali']))
+            ->assertRedirect();
+
+        $this->assertSame('Encik Ali', Appointment::whereNull('client_id')->value('customer_name'));
+    }
+
+    public function test_store_drops_customer_name_when_a_client_is_linked(): void
+    {
+        $client = Client::create(['name' => 'Kavitha', 'phone' => '011-22334455', 'address' => 'Unit 3A']);
+
+        $this->actingAs($this->setter())
+            ->post(route('appointments.store'), $this->payload([
+                'client_id' => $client->id,
+                'customer_name' => 'Should Be Ignored',
+            ]))
+            ->assertRedirect();
+
+        $this->assertNull(Appointment::whereNotNull('client_id')->value('customer_name'));
+    }
+
     public function test_store_validates_required_fields(): void
     {
         $this->actingAs($this->setter())
