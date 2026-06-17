@@ -74,4 +74,69 @@ class BusinessSettingTest extends TestCase
         $this->assertSame('Tenant Cooling Co', $snap['business']['name']);
         $this->assertSame('SSM-123', $snap['business']['ssm_no']);
     }
+
+    private function bossAdmin(): User
+    {
+        $boss = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $boss->update(['tenant_id' => $boss->id]);
+        return $boss;
+    }
+
+    public function test_admin_can_view_business_settings(): void
+    {
+        $this->actingAs($this->bossAdmin())
+            ->get(route('business-settings.show'))
+            ->assertOk();
+    }
+
+    public function test_admin_can_save_identity(): void
+    {
+        $boss = $this->bossAdmin();
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'business_name' => 'New Name Sdn Bhd',
+            'ssm_no' => '202603093151 (003839732-K)',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', [
+            'tenant_id' => $boss->id,
+            'business_name' => 'New Name Sdn Bhd',
+            'ssm_no' => '202603093151 (003839732-K)',
+        ]);
+    }
+
+    public function test_qr_upload_stores_file_and_path(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $boss = $this->bossAdmin();
+
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'google_review_qr' => \Illuminate\Http\UploadedFile::fake()->image('qr.png', 200, 200),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', [
+            'tenant_id' => $boss->id,
+            'google_review_qr_path' => "qr/tenant-{$boss->id}.png",
+        ]);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists("qr/tenant-{$boss->id}.png");
+    }
+
+    public function test_tenant_id_not_honored_from_input(): void
+    {
+        $boss = $this->bossAdmin();
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'tenant_id' => 99999,
+            'business_name' => 'X',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', ['tenant_id' => $boss->id]);
+        $this->assertDatabaseMissing('business_settings', ['tenant_id' => 99999]);
+    }
+
+    public function test_non_admin_cannot_update(): void
+    {
+        $tech = User::factory()->create(['role' => User::ROLE_TECHNICIAN]);
+        $this->actingAs($tech)->put(route('business-settings.update'), [
+            'business_name' => 'Hax',
+        ])->assertForbidden();
+    }
 }

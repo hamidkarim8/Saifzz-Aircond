@@ -137,9 +137,11 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
         ->middleware('can:export_data')->name('reports.transactions.export');
 
-    // Payment Settings — admin-only gateway credential management.
+    // Business Settings (identity, QR) + Payment Settings — admin-only.
     Route::middleware('can:manage_users')->group(function () {
-        Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
+        Route::get('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'show'])->name('business-settings.show');
+        Route::put('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'update'])->name('business-settings.update');
+        Route::redirect('/payment-settings', '/business-settings')->name('payment-settings.index');
         Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
     });
 });

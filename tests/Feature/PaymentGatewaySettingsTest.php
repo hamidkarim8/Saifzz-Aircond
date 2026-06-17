@@ -20,7 +20,8 @@ class PaymentGatewaySettingsTest extends TestCase
     public function test_admin_can_view_payment_settings_page(): void
     {
         $boss = $this->boss();
-        $this->actingAs($boss)->get('/payment-settings')->assertOk();
+        // /payment-settings now redirects to /business-settings (the hub page)
+        $this->actingAs($boss)->get('/payment-settings')->assertRedirect('/business-settings');
     }
 
     public function test_non_admin_cannot_view_payment_settings(): void
@@ -131,11 +132,12 @@ class PaymentGatewaySettingsTest extends TestCase
             'api_secret' => 'sec',
         ]);
 
-        $response = $this->actingAs($boss)->get('/payment-settings');
+        // Payment settings data now lives on the business-settings hub page.
+        $response = $this->actingAs($boss)->get('/business-settings');
         $response->assertInertia(fn ($page) => $page
-            ->component('PaymentSettings/Index')
-            ->where('isConfigured', true)
-            ->where('portalKeyHint', '1234')
+            ->component('BusinessSettings/Index')
+            ->where('payment.isConfigured', true)
+            ->where('payment.portalKeyHint', '1234')
         );
     }
 }
