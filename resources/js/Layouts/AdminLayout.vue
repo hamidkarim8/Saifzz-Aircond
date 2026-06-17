@@ -5,7 +5,7 @@ import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
     IconCalendarEvent, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook, IconCreditCard,
+    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook, IconBuildingStore,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -38,7 +38,7 @@ const sections = computed(() => {
         ]},
         { title: 'Settings', items: [
             { label: 'Services', route: 'service-types.index', match: 'service-types', icon: IconCategory, permission: 'manage_service_types' },
-            { label: 'Payment Settings', route: 'payment-settings.index', match: 'payment-settings', icon: IconCreditCard, adminOnly: true },
+            { label: 'Business Settings', route: 'business-settings.show', match: 'business-settings', icon: IconBuildingStore, adminOnly: true },
             { label: 'Users', route: 'users.index', match: 'users', icon: IconUserCog, permission: 'manage_users', adminOnly: true },
             { label: 'Clients', route: 'clients.index', match: 'clients', icon: IconUsers, permission: 'view_clients' },
         ]},
