@@ -2,7 +2,6 @@
 import { Head, useForm } from '@inertiajs/vue3';
 import PortalLayout from './PortalLayout.vue';
 import { waLink } from '@/lib/whatsapp';
-import { IconAirConditioning } from '@tabler/icons-vue';
 
 const props = defineProps({ business: Object });
 
@@ -17,9 +16,7 @@ const submit = () => form.post(route('portal.authenticate'));
     <PortalLayout :business="business" center>
         <!-- Logo badge above card -->
         <div class="mb-6 flex flex-col items-center">
-            <div class="grid h-16 w-16 place-items-center rounded-rax bg-primary text-white shadow-lift">
-                <IconAirConditioning :size="34" :stroke="2" />
-            </div>
+            <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-16 w-16 rounded-rax object-cover shadow-lift" />
             <h2 class="mt-4 text-lg font-bold tracking-tight text-white">{{ business?.name ?? 'Service Portal' }}</h2>
             <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-primary-300/70">Customer Portal</p>
         </div>

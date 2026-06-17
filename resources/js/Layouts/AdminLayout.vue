@@ -5,7 +5,7 @@ import { useFlashToast } from '@/composables/useFlashToast';
 import {
     IconLayoutDashboard, IconUsers, IconBell, IconClipboardPlus,
     IconCalendarEvent, IconUserCog,
-    IconAirConditioning, IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook, IconBuildingStore,
+    IconLogout, IconMenu2, IconCategory, IconReceipt2, IconBook, IconBuildingStore,
 } from '@tabler/icons-vue';
 
 const page = usePage();
@@ -81,7 +81,7 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
         >
             <!-- Logo -->
             <div class="flex h-16 items-center gap-3 px-5">
-                <div class="grid h-9 w-9 place-items-center rounded-ra bg-primary text-white"><IconAirConditioning :size="20" /></div>
+                <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-9 w-9 rounded-ra object-cover" />
                 <div class="leading-tight">
                     <div class="text-sm font-bold text-white">Saifzz Aircond</div>
                     <div class="font-mono text-[10px] uppercase tracking-widest text-primary-300/60">Service System</div>
