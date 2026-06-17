@@ -60,10 +60,16 @@
 <body>
     <div class="doc">
         <div class="head">
+            @if(!empty($logo))
+                <img src="{{ $logo }}" alt="" style="height:64px;width:64px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 10px;">
+            @endif
             <div class="co">{{ $snapshot['business']['name'] ?? config('business.name') }}</div>
             <div class="co-sub">
                 {{ $snapshot['business']['address'] ?? '' }}<br>
                 {{ $snapshot['business']['phone'] ?? '' }}
+                @if(!empty($snapshot['business']['ssm_no']))
+                    <br>SSM: {{ $snapshot['business']['ssm_no'] }}
+                @endif
             </div>
             <div class="kind">@yield('kind')</div>
         </div>

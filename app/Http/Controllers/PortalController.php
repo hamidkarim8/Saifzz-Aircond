@@ -80,13 +80,15 @@ class PortalController extends Controller
     {
         $this->authorizeReceipt($request, $transaction);
 
-        return response(view('documents.receipt', $this->documents->receiptViewModel($transaction)));
+        return response(view('documents.receipt', $this->documents->receiptViewModel($transaction)
+            + ['logo' => \App\Support\BrandAssets::logoDataUri()]));
     }
 
     public function receiptPdf(Request $request, Transaction $transaction): Response
     {
         $this->authorizeReceipt($request, $transaction);
-        $data = $this->documents->receiptViewModel($transaction);
+        $data = $this->documents->receiptViewModel($transaction)
+            + ['logo' => \App\Support\BrandAssets::logoDataUri()];
 
         return Pdf::loadView('documents.receipt', $data)->download($data['number'].'.pdf');
     }

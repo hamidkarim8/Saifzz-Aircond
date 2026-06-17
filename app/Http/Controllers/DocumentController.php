@@ -65,12 +65,14 @@ class DocumentController extends Controller
             'issuedAt' => $invoice->created_at,
             'dueDate' => Carbon::parse($snapshot['visit_date'])->addDays((int) config('business.invoice_due_days')),
             'status' => $transaction->status,
+            'logo' => \App\Support\BrandAssets::logoDataUri(),
         ];
     }
 
     /** Receipt view-model — delegates to the shared renderer (404 if unpaid). */
     private function receiptData(Transaction $transaction): array
     {
-        return $this->documents->receiptViewModel($transaction);
+        return $this->documents->receiptViewModel($transaction)
+            + ['logo' => \App\Support\BrandAssets::logoDataUri()];
     }
 }
