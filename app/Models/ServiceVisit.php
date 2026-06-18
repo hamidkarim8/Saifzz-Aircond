@@ -14,6 +14,7 @@ class ServiceVisit extends Model
     use HasFactory;
 
     protected $fillable = [
+        'appointment_id',
         'client_id',
         'visit_date',
         'warranty_months',
@@ -53,6 +54,11 @@ class ServiceVisit extends Model
     {
         $this->total_amount = $this->lines()->sum('subtotal');
         $this->save();
+    }
+
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class);
     }
 
     public function client(): BelongsTo
