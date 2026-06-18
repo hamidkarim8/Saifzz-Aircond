@@ -81,9 +81,12 @@ class AppointmentController extends Controller
             'presetClient' => $request->filled('client')
                 ? Client::visibleTo($request->user())->where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
                 : null,
+            // Include the current all-data user (e.g. an admin) so they can act as the
+            // technician — the modal defaults the dropdown to their own name (CHG-003).
             'technicians' => $request->user()->seesAllData()
-                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
-                    ->where('active', true)
+                ? \App\Models\User::where('active', true)
+                    ->where(fn ($q) => $q->where('role', \App\Models\User::ROLE_TECHNICIAN)
+                        ->orWhere('id', $request->user()->id))
                     ->when($request->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', $request->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
