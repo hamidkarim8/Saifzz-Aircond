@@ -37,6 +37,14 @@ const openNew  = () => { editing.value = null; modalOpen.value = true; };
 const openEdit = (a) => { editing.value = a;   modalOpen.value = true; };
 if (props.presetClient) openNew();
 
+const onModalClose = () => {
+    modalOpen.value = false;
+    // Opened from a client profile (or reminder) → return there on cancel.
+    if (props.presetClient && !editing.value) {
+        router.visit(route('clients.show', props.presetClient.id));
+    }
+};
+
 // Month navigation
 const shiftMonth = (delta) => {
     const [y, m] = props.month.split('-').map(Number);
@@ -324,7 +332,8 @@ const columns = [
             :appointment="editing"
             :preset-client="presetClient"
             :technicians="technicians"
-            @close="modalOpen = false"
+            @saved="modalOpen = false"
+            @close="onModalClose"
         />
     </AdminLayout>
 </template>
