@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceFee;
 use App\Models\ServiceType;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,6 +81,66 @@ class AppointmentPaymentCompletionTest extends TestCase
                 ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1],
             ],
         ], $overrides);
+    }
+
+    /**
+     * A ServiceVisit (carrying the given appointment_id) plus a pending cash
+     * Transaction for it. Boss is an admin so it implicitly holds
+     * collect_payment (see User::hasPermission).
+     */
+    private function pendingCashTransactionForVisitWith(Client $client, User $boss, array $attrs = []): Transaction
+    {
+        $visit = $client->visits()->create(array_merge([
+            'visit_date' => '2026-06-11',
+            'warranty_months' => 0,
+            'total_amount' => 60,
+            'created_by' => $boss->id,
+            'technician_id' => null,
+            'tenant_id' => $boss->tenantId(),
+        ], $attrs));
+
+        $visit->lines()->create([
+            'service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted',
+            'units' => 1, 'rate' => 60, 'discount' => 0,
+        ]);
+
+        return $visit->transaction()->create([
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount' => 60,
+            'method' => 'Cash',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_cash_payment_completes_linked_appointment(): void
+    {
+        [$boss, $client] = $this->bossWithClient();
+        $appt = $this->makeAppointmentFor($client, $boss);     // status pending
+        $txn  = $this->pendingCashTransactionForVisitWith($client, $boss, ['appointment_id' => $appt->id]);
+
+        $this->actingAs($boss)->post(route('payments.cash', $txn))->assertRedirect();
+
+        $this->assertSame('completed', $appt->fresh()->status);
+    }
+
+    public function test_cancelled_appointment_stays_cancelled_after_payment(): void
+    {
+        [$boss, $client] = $this->bossWithClient();
+        $appt = $this->makeAppointmentFor($client, $boss, ['status' => 'cancelled']);
+        $txn  = $this->pendingCashTransactionForVisitWith($client, $boss, ['appointment_id' => $appt->id]);
+
+        $this->actingAs($boss)->post(route('payments.cash', $txn))->assertRedirect();
+
+        $this->assertSame('cancelled', $appt->fresh()->status);
+    }
+
+    public function test_payment_without_linked_appointment_is_noop(): void
+    {
+        [$boss, $client] = $this->bossWithClient();
+        $txn = $this->pendingCashTransactionForVisitWith($client, $boss, ['appointment_id' => null]);
+
+        $this->actingAs($boss)->post(route('payments.cash', $txn))->assertRedirect();
+        $this->assertSame('paid', $txn->fresh()->status);
     }
 
     public function test_store_persists_valid_appointment_id_on_visit(): void

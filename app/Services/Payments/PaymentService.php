@@ -27,7 +27,28 @@ final class PaymentService
             ])->save();
 
             $this->issueReceipt($transaction);
+            $this->completeLinkedAppointment($transaction);
         });
+    }
+
+    public function completeLinkedAppointment(Transaction $transaction): void
+    {
+        $visit = $transaction->visit()->first();
+        if (! $visit || ! $visit->appointment_id) {
+            return;
+        }
+
+        $appointment = $visit->appointment()->first();
+        if (! $appointment || $appointment->status === 'cancelled') {
+            return;
+        }
+
+        // Reached via the visit's own FK; assert same tenant before mutating.
+        if ($appointment->tenant_id !== $visit->tenant_id) {
+            return;
+        }
+
+        $appointment->update(['status' => 'completed']);
     }
 
     public function startGateway(Transaction $transaction): string

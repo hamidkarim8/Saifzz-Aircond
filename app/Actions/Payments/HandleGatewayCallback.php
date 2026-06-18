@@ -45,6 +45,7 @@ final class HandleGatewayCallback
                 ])->save();
 
                 $this->payments->issueReceipt($transaction);
+                $this->payments->completeLinkedAppointment($transaction);
             } elseif ($result->status === PaymentStatus::FAILED) {
                 $transaction->forceFill([
                     'status' => 'failed',
