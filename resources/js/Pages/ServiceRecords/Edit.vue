@@ -3,8 +3,8 @@ import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
-import Badge from '@/Components/Badge.vue';
-import { serviceVariant } from '@/lib/badges';
+import FormErrorSummary from '@/Components/FormErrorSummary.vue';
+import ServiceLineCard from './Partials/ServiceLineCard.vue';
 
 const page = usePage();
 const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
@@ -12,6 +12,27 @@ const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 const props = defineProps({
     visit: Object,
     technicians: { type: Array, default: null },
+    serviceTypes: Array,
+    clientUnits: { type: Array, default: () => [] },
+});
+
+const blankLine = () => ({
+    unit_id: null, service_type: '', unit_type: null, hp_value: null, repair_desc: '',
+    units: 1, rate: '', discount: 0, next_service_date: null, notes: '',
+});
+
+// Map persisted lines back to the editor shape (coerce decimals to numbers).
+const seedLine = (l) => ({
+    unit_id: l.unit_id ?? null,
+    service_type: l.service_type ?? '',
+    unit_type: l.unit_type ?? null,
+    hp_value: l.hp_value != null ? Number(l.hp_value) : null,
+    repair_desc: l.repair_desc ?? '',
+    units: Number(l.units) || 1,
+    rate: l.rate != null ? Number(l.rate) : '',
+    discount: Number(l.discount) || 0,
+    next_service_date: l.next_service_date ? String(l.next_service_date).slice(0, 10) : null,
+    notes: l.notes ?? '',
 });
 
 const form = useForm({
@@ -19,7 +40,20 @@ const form = useForm({
     warranty_months: props.visit.warranty_months ?? 0,
     payment_method: props.visit.transaction?.method ?? (canCollectCash ? 'Cash' : 'DuitNow QR'),
     technician_id: props.visit.technician_id ?? null,
+    lines: (props.visit.lines?.length ? props.visit.lines.map(seedLine) : [blankLine()]),
 });
+
+const addLine = () => form.lines.push(blankLine());
+const removeLine = (i) => form.lines.splice(i, 1);
+
+const lineSubtotal = (l) => {
+    const units = l.unit_id ? 1 : (Number(l.units) || 0);
+    return Math.max(0, (Number(l.rate) || 0) * units - (Number(l.discount) || 0));
+};
+const grandTotal = computed(() => form.lines.reduce((s, l) => s + lineSubtotal(l), 0));
+const totalServices = computed(() => form.lines.filter(l => l.service_type).length);
+const totalUnits = computed(() => form.lines.reduce((s, l) => s + (l.unit_id ? 1 : (Number(l.units) || 0)), 0));
+const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 
 const warrantyEnd = computed(() => {
     if (!form.warranty_months || !form.visit_date) return null;
@@ -27,8 +61,6 @@ const warrantyEnd = computed(() => {
     d.setMonth(d.getMonth() + Number(form.warranty_months));
     return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
 });
-
-const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 
 const submit = () => form.patch(route('service-records.update', props.visit.id));
 </script>
@@ -44,7 +76,10 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
             </div>
         </template>
 
-        <form class="mx-auto max-w-3xl space-y-5 pb-16" @submit.prevent="submit">
+        <form class="mx-auto max-w-3xl space-y-5 pb-32" @submit.prevent="submit">
+
+            <FormErrorSummary :errors="form.errors" />
+
             <!-- Client (read-only) -->
             <Card title="Client">
                 <div class="flex items-center gap-3">
@@ -78,25 +113,33 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
                 </div>
             </Card>
 
-            <!-- Services (read-only) -->
-            <Card title="Services (read-only)">
-                <div class="-mx-4 -mt-4">
-                    <ul class="divide-y divide-line">
-                        <li v-for="l in visit.lines" :key="l.id" class="flex items-center justify-between px-5 py-3">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <Badge :variant="serviceVariant(l.service_type)">{{ l.service_type }}</Badge>
-                                <span v-if="l.unit_type" class="text-sm text-ink-soft">{{ l.unit_type }}</span>
-                                <span class="text-xs text-ink-muted">× {{ l.units }}</span>
-                            </div>
-                            <span class="shrink-0 font-mono text-sm font-semibold text-navy-800">{{ money(l.subtotal) }}</span>
-                        </li>
-                    </ul>
-                    <div class="flex items-center justify-between border-t border-line bg-surface-muted px-5 py-3">
-                        <span class="text-sm font-semibold text-ink-soft">Total</span>
-                        <span class="font-mono text-base font-bold text-navy-800">{{ money(visit.total_amount) }}</span>
-                    </div>
+            <!-- Service lines -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between px-0.5">
+                    <h2 class="text-sm font-bold uppercase tracking-wide text-ink-soft">Services</h2>
+                    <span v-if="form.errors.lines" class="text-sm text-danger">{{ form.errors.lines }}</span>
                 </div>
-            </Card>
+                <ServiceLineCard
+                    v-for="(line, i) in form.lines"
+                    :key="i"
+                    :line="line"
+                    :index="i"
+                    :service-types="serviceTypes"
+                    :client-units="clientUnits"
+                    :errors="form.errors"
+                    :removable="form.lines.length > 1"
+                    :visit-date="form.visit_date"
+                    @remove="removeLine(i)"
+                />
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-center gap-2 rounded-ral border-2 border-dashed border-line py-3.5 text-sm font-semibold text-ink-soft transition hover:border-primary hover:bg-primary-50 hover:text-primary"
+                    @click="addLine"
+                >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg>
+                    Add another service
+                </button>
+            </div>
 
             <!-- Payment method -->
             <Card title="Payment method">
@@ -119,17 +162,33 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
                 </div>
                 <p v-if="form.errors.payment_method" class="mt-2 text-sm text-danger">{{ form.errors.payment_method }}</p>
             </Card>
-
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <Link :href="route('service-records.show', visit.id)" class="text-sm font-medium text-ink-soft hover:text-ink transition">Cancel</Link>
-                <button
-                    type="submit"
-                    :disabled="form.processing"
-                    class="rounded-ra bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60"
-                >
-                    Save changes
-                </button>
-            </div>
         </form>
+
+        <!-- Sticky total bar (navy) -->
+        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-navy-900/60 bg-navy-800 lg:pl-64">
+            <div class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+                <div class="flex items-center gap-5">
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-navy-300">Grand total</div>
+                        <div class="font-mono text-2xl font-bold text-white">{{ money(grandTotal) }}</div>
+                    </div>
+                    <div v-if="totalServices > 0" class="hidden sm:block border-l border-navy-600 pl-5">
+                        <div class="text-xs text-navy-300">{{ totalServices }} service{{ totalServices !== 1 ? 's' : '' }}</div>
+                        <div class="text-xs text-navy-300">{{ totalUnits }} unit{{ totalUnits !== 1 ? 's' : '' }}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <Link :href="route('service-records.show', visit.id)" class="text-sm font-medium text-navy-300 hover:text-white transition">Cancel</Link>
+                    <button
+                        type="button"
+                        :disabled="form.processing"
+                        class="rounded-ra bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-card transition hover:bg-primary-hover disabled:opacity-60"
+                        @click="submit"
+                    >
+                        Save changes
+                    </button>
+                </div>
+            </div>
+        </div>
     </AdminLayout>
 </template>
