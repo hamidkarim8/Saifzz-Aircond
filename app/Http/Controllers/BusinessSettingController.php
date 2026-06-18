@@ -29,6 +29,9 @@ class BusinessSettingController extends Controller
             'qrUrl' => $row?->google_review_qr_path
                 ? Storage::disk('public')->url($row->google_review_qr_path)
                 : null,
+            'paymentQrUrl' => $row?->payment_qr_path
+                ? Storage::disk('public')->url($row->payment_qr_path)
+                : null,
             'payment' => [
                 'isConfigured' => $gateway !== null,
                 'portalKeyHint' => $gateway ? substr($gateway->portal_key, -4) : null,
@@ -46,6 +49,12 @@ class BusinessSettingController extends Controller
             $path = "qr/tenant-{$tenantId}.png";
             Storage::disk('public')->put($path, file_get_contents($request->file('google_review_qr')->getRealPath()));
             $data['google_review_qr_path'] = $path;
+        }
+
+        if ($request->hasFile('payment_qr')) {
+            $path = "payment-qr/tenant-{$tenantId}.png";
+            Storage::disk('public')->put($path, file_get_contents($request->file('payment_qr')->getRealPath()));
+            $data['payment_qr_path'] = $path;
         }
 
         BusinessSetting::updateOrCreate(['tenant_id' => $tenantId], $data);

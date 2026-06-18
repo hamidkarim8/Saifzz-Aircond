@@ -10,6 +10,7 @@ class BusinessSetting extends Model
     protected $fillable = [
         'tenant_id', 'business_name', 'address', 'phone',
         'ssm_no', 'google_review_url', 'google_review_qr_path',
+        'payment_qr_path',
     ];
 
     public function tenant(): BelongsTo
@@ -21,7 +22,7 @@ class BusinessSetting extends Model
      * Resolve a tenant's business identity, falling back to global config
      * when no row exists (or tenant is null — test fixtures / legacy rows).
      *
-     * @return array{name:string,address:string,phone:string,ssm_no:?string,google_review_url:?string,google_review_qr_path:?string}
+     * @return array{name:string,address:string,phone:string,ssm_no:?string,google_review_url:?string,google_review_qr_path:?string,payment_qr_path:?string}
      */
     public static function forTenant(?int $tenantId): array
     {
@@ -36,6 +37,7 @@ class BusinessSetting extends Model
             'ssm_no' => $row?->ssm_no,
             'google_review_url' => $row?->google_review_url,
             'google_review_qr_path' => $row?->google_review_qr_path,
+            'payment_qr_path' => $row?->payment_qr_path,
         ];
     }
 }

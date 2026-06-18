@@ -8,6 +8,8 @@ use App\Models\ServiceVisit;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BusinessSettingTest extends TestCase
@@ -165,5 +167,26 @@ class BusinessSettingTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('googleReview.url', 'https://g.page/r/test')
                 ->whereNot('googleReview.qrUrl', null));
+    }
+
+    public function test_admin_uploads_payment_qr_and_show_exposes_url(): void
+    {
+        Storage::fake('public');
+        $admin = \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->put(route('business-settings.update'), [
+                'payment_qr' => UploadedFile::fake()->image('myqr.png', 300, 300),
+            ])
+            ->assertRedirect();
+
+        $row = \App\Models\BusinessSetting::where('tenant_id', $admin->id)->first();
+        $this->assertSame("payment-qr/tenant-{$admin->id}.png", $row->payment_qr_path);
+        Storage::disk('public')->assertExists($row->payment_qr_path);
+
+        $this->actingAs($admin)
+            ->get(route('business-settings.show'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('paymentQrUrl', fn ($url) => $url !== null));
     }
 }

@@ -20,6 +20,7 @@ class UpdateBusinessSettingRequest extends FormRequest
             'ssm_no' => ['nullable', 'string', 'max:100'],
             'google_review_url' => ['nullable', 'url', 'max:500'],
             'google_review_qr' => ['nullable', 'image', 'max:2048'],
+            'payment_qr' => ['nullable', 'image', 'max:2048'],
         ];
     }
 }
