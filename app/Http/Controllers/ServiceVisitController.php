@@ -249,8 +249,7 @@ class ServiceVisitController extends Controller
             $serviceRecord->recalculateTotal();
 
             $serviceRecord->transaction->update([
-                'method' => $data['payment_method'],
-                'amount' => $serviceRecord->total_amount,
+                'amount' => $serviceRecord->total_amount, // method preserved; set at payment collection
             ]);
         });
 

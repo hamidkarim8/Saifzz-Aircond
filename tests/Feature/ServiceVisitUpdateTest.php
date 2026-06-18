@@ -103,6 +103,24 @@ class ServiceVisitUpdateTest extends TestCase
         $this->assertCount(1, $visit->lines);
     }
 
+    public function test_update_without_payment_method_preserves_existing_method(): void
+    {
+        $owner = $this->recorder();
+        $visit = $this->makePendingVisit($owner);
+        $visit->transaction->update(['method' => 'Cash']); // CHG-008 — method set earlier, must survive update
+
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 2, 'discount' => 0],
+        ]);
+        unset($data['payment_method']); // form no longer sends it
+
+        $this->actingAs($owner)
+            ->patch(route('service-records.update', $visit), $data)
+            ->assertRedirect(route('service-records.show', $visit));
+
+        $this->assertSame('Cash', $visit->transaction->fresh()->method);
+    }
+
     public function test_update_can_add_a_line(): void
     {
         $owner = $this->recorder();
