@@ -12,14 +12,13 @@ class Appointment extends Model
 {
     use HasFactory;
 
-    /** Status lifecycle (docs/04 §7): pending → confirmed → done / cancelled. */
-    public const STATUSES = ['pending', 'confirmed', 'done', 'cancelled'];
+    /** Status lifecycle: pending → completed / cancelled. */
+    public const STATUSES = ['pending', 'completed', 'cancelled'];
 
-    /** Allowed forward transitions per state; done/cancelled are terminal. */
+    /** Allowed forward transitions per state; completed/cancelled are terminal. */
     public const TRANSITIONS = [
-        'pending' => ['confirmed', 'cancelled'],
-        'confirmed' => ['done', 'cancelled'],
-        'done' => [],
+        'pending'   => ['completed', 'cancelled'],
+        'completed' => [],
         'cancelled' => [],
     ];
 
