@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
     // Payments (module 5) — collection gated by collect_payment (P3)
     Route::get('payments/{transaction}', [PaymentController::class, 'show'])->middleware('can:collect_payment')->name('payments.show');
     Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
+    Route::post('payments/{transaction}/manual-qr', [PaymentController::class, 'manualQr'])->middleware('can:collect_payment')->name('payments.manualQr');
     Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
     Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->middleware('can:collect_payment')->name('payments.return');
 

@@ -31,6 +31,24 @@ final class PaymentService
         });
     }
 
+    public function confirmManualQr(Transaction $transaction): void
+    {
+        if ($transaction->status === 'paid') {
+            return;
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $transaction->forceFill([
+                'status' => 'paid',
+                'method' => 'Manual QR',
+                'paid_at' => now(),
+            ])->save();
+
+            $this->issueReceipt($transaction);
+            $this->completeLinkedAppointment($transaction);
+        });
+    }
+
     public function completeLinkedAppointment(Transaction $transaction): void
     {
         $visit = $transaction->visit()->first();
