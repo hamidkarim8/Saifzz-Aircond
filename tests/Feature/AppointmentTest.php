@@ -138,6 +138,25 @@ class AppointmentTest extends TestCase
         $this->assertSame('New address', $a->address);
     }
 
+    public function test_admin_can_set_status_directly_via_update(): void
+    {
+        $appt = Appointment::create([
+            'datetime' => '2026-06-16 10:00',
+            'phone' => '012-3456789',
+            'address' => 'KL',
+            'status' => 'pending',
+        ]);
+
+        // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
+        $this->actingAs(User::factory()->admin()->create())
+            ->put(route('appointments.update', $appt), $this->payload([
+                'status' => 'completed',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame('completed', $appt->fresh()->status);
+    }
+
     public function test_status_transitions_follow_new_model(): void
     {
         $appt = Appointment::make(['status' => 'pending']);

@@ -41,7 +41,7 @@ class AppointmentController extends Controller
 
         $stats = [
             'month_total' => $appointments->count(),
-            'month_confirmed' => $appointments->where('status', 'confirmed')->count(),
+            'month_completed' => $appointments->where('status', 'completed')->count(),
             'month_pending' => $appointments->where('status', 'pending')->count(),
             'today_total' => $today->count(),
         ];
@@ -156,7 +156,8 @@ class AppointmentController extends Controller
             );
         }
 
-        // Status is owned by the lifecycle endpoint, not the edit form.
+        // The edit form may carry a status override (admin-only, no transition
+        // guard); appointmentData() folds it in only when present.
         $appointment->update($data);
 
         return redirect()
