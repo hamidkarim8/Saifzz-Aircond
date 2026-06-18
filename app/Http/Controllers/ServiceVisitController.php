@@ -140,7 +140,7 @@ class ServiceVisitController extends Controller
             $visit->transaction()->create([
                 'txn_id' => $this->nextTxnId(),
                 'amount' => $visit->total_amount,
-                'method' => $data['payment_method'],
+                'method' => 'DuitNow QR', // pending placeholder; PaymentService sets real method at collection
                 'status' => 'pending',
             ]);
 

@@ -105,6 +105,21 @@ class ServiceVisitTest extends TestCase
         $this->assertSame('110.00', $visit->transaction->amount);
     }
 
+    public function test_store_without_payment_method_defaults_pending_method(): void
+    {
+        $this->seedFees();
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0],
+        ]);
+        unset($data['payment_method']); // CHG-008 — form no longer sends it
+
+        $this->actingAs($this->recorder())->post(route('service-records.store'), $data)->assertRedirect();
+
+        $visit = ServiceVisit::with('transaction')->latest('id')->first();
+        $this->assertSame('pending', $visit->transaction->status);
+        $this->assertSame('DuitNow QR', $visit->transaction->method); // placeholder, overwritten at collection
+    }
+
     public function test_repair_uses_manual_rate_and_drops_unit_type_and_notes(): void
     {
         $this->seedFees();

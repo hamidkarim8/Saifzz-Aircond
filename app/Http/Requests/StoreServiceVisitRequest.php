@@ -29,7 +29,6 @@ class StoreServiceVisitRequest extends FormRequest
 
             'visit_date' => ['required', 'date'],
             'warranty_months' => ['required', 'integer', 'between:0,6'],
-            'payment_method' => ['required', Rule::in(['Cash', 'DuitNow QR'])],
 
             'technician_id' => ['nullable', 'integer', 'exists:users,id'],
 
