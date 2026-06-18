@@ -1,9 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
-import FeeModal from './Partials/FeeModal.vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
 import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
 import { serviceVariant } from '@/lib/badges';
@@ -11,9 +10,7 @@ import { confirmDanger } from '@/lib/swal';
 
 const props = defineProps({
     serviceTypes: Array,
-    feeGroups: { type: Object, default: () => ({}) },
     modes: Array,
-    hpTiers: { type: Object, default: () => ({}) },
 });
 
 // --- Tabs ---
@@ -57,66 +54,65 @@ function toggleNextService(type) {
 }
 
 // --- Fees ---
-const modalOpen = ref(false);
-const editing = ref(null);
-
-const openAdd = () => { editing.value = null; modalOpen.value = true; };
-const openEdit = (fee) => { editing.value = fee; modalOpen.value = true; };
-
-const remove = async (fee) => {
-    const label = fee.service_type + (fee.option ? ' · ' + fee.option : '');
-    const ok = await confirmDanger({
-        title: 'Delete this fee?',
-        body: `<strong>${label}</strong><br>Existing records keep their snapshotted price.`,
-        confirmText: 'Delete',
-    });
-    if (ok) {
-        router.delete(route('fees.destroy', fee.id), { preserveScroll: true });
-    }
-};
-
-const money = (v) => v == null ? '—' : 'RM ' + Number(v).toFixed(2);
-const modeLabel = { fixed_per_unit: 'per unit', flexible: 'Flexible' };
-const serviceTypeNames = computed(() => props.serviceTypes.map((t) => t.name));
 const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false);
 
-// --- HP tier management ---
-const hpAddForms = ref({});
-
-function getHpForm(typeId) {
-    if (!hpAddForms.value[typeId]) {
-        hpAddForms.value[typeId] = { hp_value: '', price: '', processing: false, error: '' };
+function buildEditor(type) {
+    const mode = type.pricing_mode;
+    let unitBlocks = [];
+    if (mode === 'hp_tiered') {
+        const byUnit = {};
+        for (const f of type.fees) {
+            (byUnit[f.unit_type] ??= []).push({ hp_value: Number(f.hp_value), price: Number(f.price) });
+        }
+        unitBlocks = Object.entries(byUnit).map(([unit_type, tiers]) => ({ unit_type, tiers }));
+    } else if (mode === 'flat') {
+        unitBlocks = type.fees.map(f => ({ unit_type: f.unit_type, price: Number(f.price) }));
     }
-    return hpAddForms.value[typeId];
+    return reactive({ pricing_mode: mode, unitBlocks, saving: false, errors: {} });
 }
 
-function toggleHpBased(type) {
-    router.put(route('service-types.update', type.id), {
-        name: type.name,
-        is_hp_based: !type.is_hp_based,
-    }, { preserveScroll: true });
+const editors = reactive({});
+for (const t of props.serviceTypes) editors[t.id] = buildEditor(t);
+
+function addUnit(ed) {
+    ed.unitBlocks.push(ed.pricing_mode === 'hp_tiered'
+        ? { unit_type: '', tiers: [{ hp_value: '', price: '' }] }
+        : { unit_type: '', price: '' });
+}
+function removeUnit(ed, i) { ed.unitBlocks.splice(i, 1); }
+function addTier(block) { block.tiers.push({ hp_value: '', price: '' }); }
+function removeTier(block, i) { block.tiers.splice(i, 1); }
+
+function onModeChange(ed) {
+    // Reset blocks when switching mode so flat<->hp_tiered shapes stay valid.
+    ed.unitBlocks = [];
 }
 
-function addHpTier(typeId) {
-    const f = getHpForm(typeId);
-    f.error = '';
-    if (!f.hp_value || !f.price) { f.error = 'HP and price required.'; return; }
-    f.processing = true;
-    router.post(route('service-hp-tiers.store'), {
-        service_type_id: typeId,
-        hp_value: f.hp_value,
-        price: f.price,
+function flatten(ed) {
+    if (ed.pricing_mode === 'flexible') return [];
+    if (ed.pricing_mode === 'flat') {
+        return ed.unitBlocks.map(b => ({ unit_type: b.unit_type, hp_value: null, price: b.price }));
+    }
+    const rows = [];
+    for (const b of ed.unitBlocks) {
+        for (const t of b.tiers) rows.push({ unit_type: b.unit_type, hp_value: t.hp_value, price: t.price });
+    }
+    return rows;
+}
+
+function saveFees(type) {
+    const ed = editors[type.id];
+    ed.saving = true;
+    ed.errors = {};
+    router.put(route('service-types.fees.sync', type.id), {
+        pricing_mode: ed.pricing_mode,
+        fees: flatten(ed),
     }, {
         preserveScroll: true,
-        onSuccess: () => { f.hp_value = ''; f.price = ''; f.processing = false; },
-        onError: () => { f.processing = false; },
+        onError: (e) => { ed.errors = e; ed.saving = false; },
+        onSuccess: () => { ed.saving = false; },
     });
 }
-
-function removeHpTier(tier) {
-    router.delete(route('service-hp-tiers.destroy', tier.id), { preserveScroll: true });
-}
-
 </script>
 
 <template>
@@ -124,7 +120,7 @@ function removeHpTier(tier) {
         <template #header>
             <div class="flex items-center justify-between gap-3">
                 <h1 class="text-base font-bold text-navy-800">Services</h1>
-                <!-- Show one button depending on active tab -->
+                <!-- Show Add Service Type button only on types tab -->
                 <button
                     v-if="activeTab === 'types'"
                     type="button"
@@ -133,16 +129,6 @@ function removeHpTier(tier) {
                 >
                     <IconPlus class="h-4 w-4" />
                     <span class="hidden sm:inline">Add Service Type</span>
-                    <span class="sm:hidden">Add</span>
-                </button>
-                <button
-                    v-else-if="activeTab === 'fees' && canEditFees"
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white shadow-card hover:bg-primary-hover"
-                    @click="openAdd"
-                >
-                    <IconPlus class="h-4 w-4" />
-                    <span class="hidden sm:inline">Set Fee</span>
                     <span class="sm:hidden">Add</span>
                 </button>
             </div>
@@ -275,137 +261,62 @@ function removeHpTier(tier) {
 
         <!-- Fee Schedule Tab -->
         <div v-else-if="activeTab === 'fees'">
-            <!-- Subtle info note -->
             <p class="mb-5 text-sm text-ink-soft">
-                Rates are auto-applied when a technician picks a service type. Editing a rate only affects future service records — existing records already have the price locked in at time of job.
+                Set each service's pricing. HP-tiered services price every unit type by HP. Flexible services let the technician enter price + description per job. Changes apply to future records only.
             </p>
 
-            <div v-if="serviceTypes.length === 0" class="rounded-ral border border-line bg-surface p-10 text-center shadow-card">
-                <p class="text-sm font-medium text-ink-soft">No service types yet.</p>
-                <p class="mt-1 text-sm text-ink-muted">Add a service type first, then set fees.</p>
-            </div>
-
-            <div v-else class="space-y-4">
-                <div
-                    v-for="type in serviceTypes"
-                    :key="type.id"
-                    class="overflow-hidden rounded-ra border border-line bg-surface shadow-card"
-                >
-                    <!-- Card header: type badge + HP toggle -->
+            <div class="space-y-5">
+                <div v-for="type in serviceTypes" :key="type.id" class="overflow-hidden rounded-ra border border-line bg-surface shadow-card">
                     <div class="flex items-center justify-between gap-3 border-b border-line bg-surface-muted px-4 py-2.5">
                         <Badge :variant="serviceVariant(type.name)">{{ type.name }}</Badge>
-                        <button
-                            v-if="canEditFees"
-                            type="button"
-                            class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition"
-                            :class="type.is_hp_based
-                                ? 'bg-primary/10 text-primary'
-                                : 'border border-line bg-surface-muted text-ink-soft'"
-                            @click="toggleHpBased(type)"
-                        >
-                            <span
-                                class="h-2.5 w-2.5 rounded-full border-2 transition"
-                                :class="type.is_hp_based ? 'border-primary bg-primary' : 'border-ink-muted bg-transparent'"
-                            />
-                            HP-based pricing
-                        </button>
+                        <select v-if="canEditFees" v-model="editors[type.id].pricing_mode" @change="onModeChange(editors[type.id])"
+                            class="rounded-ra border-line bg-surface text-sm text-ink shadow-card focus:border-primary focus:ring-primary">
+                            <option value="flat">Flat (per unit type)</option>
+                            <option value="hp_tiered">HP-tiered</option>
+                            <option value="flexible">Flexible (manual)</option>
+                        </select>
                     </div>
 
-                    <!-- Standard fee rows -->
-                    <div v-if="feeGroups[type.name]?.length" class="divide-y divide-line">
-                        <div
-                            v-for="f in feeGroups[type.name]"
-                            :key="f.id"
-                            class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3"
-                        >
+                    <p v-if="editors[type.id].errors.pricing_mode" class="px-4 pt-2 text-xs text-danger">{{ editors[type.id].errors.pricing_mode }}</p>
+                    <p v-if="editors[type.id].errors.fees" class="px-4 pt-2 text-xs text-danger">{{ editors[type.id].errors.fees }}</p>
+
+                    <div v-if="editors[type.id].pricing_mode === 'flexible'" class="px-4 py-4 text-sm text-ink-soft">
+                        No fixed prices — technician enters price and description at time of job.
+                    </div>
+
+                    <div v-else class="divide-y divide-line">
+                        <div v-for="(block, bi) in editors[type.id].unitBlocks" :key="bi" class="px-4 py-3">
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-medium text-ink">{{ f.option || 'Flat job' }}</span>
+                                <input v-model="block.unit_type" placeholder="Unit type (e.g. Wall Mounted)"
+                                    class="flex-1 rounded-ra border-line bg-surface text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
+                                <input v-if="editors[type.id].pricing_mode === 'flat'" v-model.number="block.price" type="number" step="0.01" min="0" placeholder="Price"
+                                    class="w-28 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
+                                <button v-if="canEditFees" type="button" class="text-sm font-medium text-danger hover:underline" @click="removeUnit(editors[type.id], bi)">Remove</button>
                             </div>
-                            <div class="flex items-center gap-4">
-                                <Badge v-if="f.pricing_mode === 'flexible'" variant="amber">Flexible</Badge>
-                                <span v-else class="font-mono font-semibold text-navy-800">
-                                    {{ money(f.rate) }}<span class="ml-1 text-xs font-normal text-ink-soft">/ {{ modeLabel[f.pricing_mode] ?? f.pricing_mode }}</span>
-                                </span>
-                                <div v-if="canEditFees" class="flex items-center gap-3">
-                                    <button type="button" class="text-sm font-medium text-primary hover:text-primary-hover" @click="openEdit(f)">Edit</button>
-                                    <button type="button" class="text-sm font-medium text-danger hover:underline" @click="remove(f)">Delete</button>
+
+                            <div v-if="editors[type.id].pricing_mode === 'hp_tiered'" class="mt-3 space-y-2 pl-1">
+                                <div v-for="(tier, ti) in block.tiers" :key="ti" class="flex items-center gap-3">
+                                    <input v-model.number="tier.hp_value" type="number" step="0.5" min="0.5" max="20" placeholder="HP"
+                                        class="w-24 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
+                                    <input v-model.number="tier.price" type="number" step="0.01" min="0" placeholder="Price"
+                                        class="w-28 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
+                                    <button type="button" class="text-xs text-danger hover:underline" @click="removeTier(block, ti)">×</button>
                                 </div>
+                                <button type="button" class="text-sm text-primary hover:underline" @click="addTier(block)">+ Add HP tier</button>
                             </div>
+                        </div>
+
+                        <div v-if="canEditFees" class="flex items-center justify-between px-4 py-3">
+                            <button type="button" class="flex items-center gap-1.5 text-sm text-primary hover:underline" @click="addUnit(editors[type.id])">
+                                <IconPlus class="h-4 w-4" /> Add unit type
+                            </button>
+                            <button type="button" :disabled="editors[type.id].saving"
+                                class="rounded-ra bg-primary px-4 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                                @click="saveFees(type)">Save fees</button>
                         </div>
                     </div>
-
-                    <!-- HP Tiers section (visible only when is_hp_based) -->
-                    <template v-if="type.is_hp_based">
-                        <div class="border-t border-line bg-surface-muted/50 px-4 py-2.5">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">HP Tiers</p>
-                        </div>
-
-                        <div class="divide-y divide-line">
-                            <!-- Existing tiers -->
-                            <div
-                                v-for="tier in (hpTiers[type.id] ?? [])"
-                                :key="tier.id"
-                                class="flex items-center justify-between px-4 py-2.5"
-                            >
-                                <span class="font-mono text-sm text-ink">{{ Number(tier.hp_value).toFixed(1) }} HP</span>
-                                <div class="flex items-center gap-4">
-                                    <span class="font-mono font-semibold text-navy-800">{{ money(tier.price) }}</span>
-                                    <button
-                                        v-if="canEditFees"
-                                        type="button"
-                                        class="text-sm font-medium text-danger hover:underline"
-                                        @click="removeHpTier(tier)"
-                                    >Delete</button>
-                                </div>
-                            </div>
-
-                            <!-- Add tier row (admin/edit_fees only) -->
-                            <div v-if="canEditFees" class="flex flex-wrap items-end gap-3 px-4 py-3">
-                                <div>
-                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">HP</label>
-                                    <input
-                                        v-model="getHpForm(type.id).hp_value"
-                                        type="number"
-                                        step="0.5"
-                                        min="0.5"
-                                        max="20"
-                                        placeholder="e.g. 1.5"
-                                        class="w-24 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-xs font-semibold text-ink-muted">Price (RM)</label>
-                                    <input
-                                        v-model="getHpForm(type.id).price"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0.00"
-                                        class="w-28 rounded-ra border border-line bg-surface px-3 py-1.5 text-sm text-ink shadow-card focus:border-primary focus:outline-none"
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    class="rounded-ra bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
-                                    :disabled="getHpForm(type.id).processing"
-                                    @click="addHpTier(type.id)"
-                                >Add tier</button>
-                                <p v-if="getHpForm(type.id).error" class="w-full text-xs text-danger">
-                                    {{ getHpForm(type.id).error }}
-                                </p>
-                            </div>
-                        </div>
-                    </template>
                 </div>
             </div>
         </div>
-
-        <FeeModal
-            :open="modalOpen"
-            :fee="editing"
-            :service-types="serviceTypeNames"
-            :modes="modes"
-            @close="modalOpen = false"
-        />
     </AdminLayout>
 </template>
