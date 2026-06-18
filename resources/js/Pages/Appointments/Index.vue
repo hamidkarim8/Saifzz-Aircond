@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import StatCard from '@/Components/StatCard.vue';
@@ -67,7 +67,7 @@ const monthLabel = computed(() => {
 
 // Status actions
 const setStatus = async (a, status) => {
-    const label = { confirmed: 'confirm', done: 'mark as done', cancelled: 'cancel' }[status] ?? status;
+    const label = { cancelled: 'cancel', completed: 'complete' }[status] ?? status;
     const ok = await confirmAction({
         title: 'Update appointment?',
         body:  `This will <strong>${label}</strong> the appointment.`,
@@ -87,6 +87,7 @@ const setStatus = async (a, status) => {
 const columns = [
     { key: 'datetime',     label: 'Date / Time',  sortable: true },
     { key: 'client',       label: 'Client' },
+    { key: 'serial',       label: 'Serial' },
     { key: 'phone',        label: 'Contact' },
     { key: 'technician',   label: 'Technician' },
     { key: 'address',      label: 'Address' },
@@ -119,7 +120,7 @@ const columns = [
         <!-- Stat cards -->
         <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="This month" :value="stats.month_total ?? 0" variant="primary"
-                :sub="`${stats.month_confirmed ?? 0} confirmed`">
+                :sub="`${stats.month_completed ?? 0} completed`">
                 <template #icon>
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round" />
@@ -134,8 +135,8 @@ const columns = [
                     </svg>
                 </template>
             </StatCard>
-            <StatCard label="Confirmed" :value="stats.month_confirmed ?? 0" variant="ok"
-                :sub="'ready to go'">
+            <StatCard label="Completed" :value="stats.month_completed ?? 0" variant="ok"
+                :sub="'done this month'">
                 <template #icon>
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
@@ -231,7 +232,12 @@ const columns = [
                 <!-- Client -->
                 <template #cell-client="{ row }">
                     <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
-                    <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
+                </template>
+
+                <!-- Serial -->
+                <template #cell-serial="{ row }">
+                    <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
+                    <span v-else class="text-xs text-ink-soft">Non client</span>
                 </template>
 
                 <!-- Contact -->
@@ -263,17 +269,15 @@ const columns = [
                     <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-medium">
                         <Link
                             v-if="row.client"
-                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })"
+                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })"
                             class="text-ok hover:text-ok/80"
-                        >+ Service record</Link>
+                        >Add Record</Link>
                         <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                         <button
-                            v-for="next in (transitions[row.status] ?? [])"
-                            :key="next"
-                            class="hover:underline"
-                            :class="next === 'cancelled' ? 'text-danger' : 'text-ok'"
-                            @click="setStatus(row, next)"
-                        >{{ { confirmed: 'Confirm', done: 'Mark done', cancelled: 'Cancel' }[next] }}</button>
+                            v-if="(transitions[row.status] ?? []).includes('cancelled')"
+                            class="text-danger hover:underline"
+                            @click="setStatus(row, 'cancelled')"
+                        >Cancel Appointment</button>
                     </div>
                 </template>
 
@@ -283,7 +287,8 @@ const columns = [
                         <div class="mb-2 flex items-start justify-between gap-2">
                             <div>
                                 <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
-                                <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
+                                <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
+                                <span v-else class="font-mono text-xs text-ink-soft">Non client</span>
                             </div>
                             <Badge :variant="statusVariant(cap(row.status))">{{ cap(row.status) }}</Badge>
                         </div>
@@ -299,15 +304,13 @@ const columns = [
                             · {{ row.address }}
                         </div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">
-                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">+ Record</Link>
+                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })" class="text-ok hover:text-ok/80">Add Record</Link>
                             <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                             <button
-                                v-for="next in (transitions[row.status] ?? [])"
-                                :key="next"
-                                class="hover:underline"
-                                :class="next === 'cancelled' ? 'text-danger' : 'text-ok'"
-                                @click="setStatus(row, next)"
-                            >{{ { confirmed: 'Confirm', done: 'Mark done', cancelled: 'Cancel' }[next] }}</button>
+                                v-if="(transitions[row.status] ?? []).includes('cancelled')"
+                                class="text-danger hover:underline"
+                                @click="setStatus(row, 'cancelled')"
+                            >Cancel Appointment</button>
                         </div>
                     </div>
                 </template>
