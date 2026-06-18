@@ -205,18 +205,6 @@ class ServiceVisitUpdateTest extends TestCase
         $this->assertSame('60.00', $visit->refresh()->total_amount);
     }
 
-    public function test_cash_method_blocked_without_collect_payment(): void
-    {
-        $owner = $this->recorder();
-        $visit = $this->makePendingVisit($owner);
-
-        $this->actingAs($owner)
-            ->patch(route('service-records.update', $visit), $this->payload([
-                ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'discount' => 0],
-            ], ['payment_method' => 'Cash']))
-            ->assertSessionHasErrors('payment_method');
-    }
-
     public function test_update_forbidden_for_non_owner_scoped_tech(): void
     {
         $owner = $this->recorder();

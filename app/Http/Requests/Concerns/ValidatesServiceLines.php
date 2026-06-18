@@ -5,15 +5,15 @@ namespace App\Http\Requests\Concerns;
 trait ValidatesServiceLines
 {
     /**
-     * Per-line conditional rules (R2/R3) + fee existence (R1) + cash-permission gate.
+     * Per-line conditional rules (R2/R3) + fee existence (R1).
      * Shared by StoreServiceVisitRequest and UpdateServiceVisitRequest.
+     *
+     * Payment method is no longer selected at record creation (CHG-008); the real
+     * method + collect_payment permission are enforced at the payment-collection
+     * routes (payments.cash / payments.manualQr / payments.pay, all `can:collect_payment`).
      */
     protected function validateServiceLines($v): void
     {
-        if ($this->input('payment_method') === 'Cash' && ! $this->user()->hasPermission('collect_payment')) {
-            $v->errors()->add('payment_method', 'Cash payment is not permitted for your account.');
-        }
-
         foreach ((array) $this->input('lines', []) as $i => $line) {
             $type = $line['service_type'] ?? null;
             $key = "lines.$i";
