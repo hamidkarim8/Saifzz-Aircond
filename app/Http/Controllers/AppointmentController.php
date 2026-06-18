@@ -169,7 +169,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Lifecycle transition (pending → confirmed → done / cancelled), guarded server-side.
+     * Lifecycle transition (pending → completed / cancelled), guarded server-side.
      */
     public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
     {

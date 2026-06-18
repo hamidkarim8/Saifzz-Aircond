@@ -345,7 +345,7 @@ class TechnicianScopingTest extends TestCase
         $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
         $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
 
-        $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'confirmed'])
+        $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'completed'])
             ->assertForbidden();
     }
 
