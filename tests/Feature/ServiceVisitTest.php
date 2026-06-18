@@ -120,6 +120,28 @@ class ServiceVisitTest extends TestCase
         $this->assertSame('DuitNow QR', $visit->transaction->method); // placeholder, overwritten at collection
     }
 
+    public function test_create_page_receives_google_review_when_configured(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->seedFees();
+        $user = $this->recorder();
+        $user->update(['tenant_id' => $user->id]); // become a tenant so forTenant() resolves the row
+
+        \App\Models\BusinessSetting::updateOrCreate(
+            ['tenant_id' => $user->tenantId()],
+            ['google_review_qr_path' => 'qr/review.png', 'google_review_url' => 'https://g.page/r/abc']
+        );
+
+        $this->actingAs($user)
+            ->get(route('service-records.create'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('ServiceRecords/Create')
+                ->where('googleReview.url', 'https://g.page/r/abc')
+                ->where('googleReview.qrUrl', fn ($v) => is_string($v) && str_contains($v, 'qr/review.png'))
+            );
+    }
+
     public function test_repair_uses_manual_rate_and_drops_unit_type_and_notes(): void
     {
         $this->seedFees();

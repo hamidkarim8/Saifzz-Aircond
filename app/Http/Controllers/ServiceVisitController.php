@@ -62,7 +62,13 @@ class ServiceVisitController extends Controller
             ? Client::visibleTo(request()->user())->where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
             : null;
 
+        $biz = \App\Models\BusinessSetting::forTenant(request()->user()->tenantId());
+        $qrUrl = $biz['google_review_qr_path']
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
+            : null;
+
         return Inertia::render('ServiceRecords/Create', [
+            'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
             'serviceTypes' => ServiceType::orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
