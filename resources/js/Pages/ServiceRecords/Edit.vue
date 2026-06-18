@@ -7,7 +7,6 @@ import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
 
 const page = usePage();
-const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
     visit: Object,
@@ -38,7 +37,6 @@ const seedLine = (l) => ({
 const form = useForm({
     visit_date: props.visit.visit_date?.slice(0, 10) ?? '',
     warranty_months: props.visit.warranty_months ?? 0,
-    payment_method: props.visit.transaction?.method ?? (canCollectCash ? 'Cash' : 'DuitNow QR'),
     technician_id: props.visit.technician_id ?? null,
     lines: (props.visit.lines?.length ? props.visit.lines.map(seedLine) : [blankLine()]),
 });
@@ -141,27 +139,6 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
                 </button>
             </div>
 
-            <!-- Payment method -->
-            <Card title="Payment method">
-                <div class="grid gap-3" :class="canCollectCash ? 'grid-cols-2' : 'grid-cols-1'">
-                    <label
-                        v-if="canCollectCash"
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="Cash" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">Cash</span>
-                    </label>
-                    <label
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'DuitNow QR' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="DuitNow QR" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">DuitNow QR</span>
-                    </label>
-                </div>
-                <p v-if="form.errors.payment_method" class="mt-2 text-sm text-danger">{{ form.errors.payment_method }}</p>
-            </Card>
         </form>
 
         <!-- Sticky total bar (navy) -->
