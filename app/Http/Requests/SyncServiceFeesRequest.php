@@ -20,13 +20,13 @@ class SyncServiceFeesRequest extends FormRequest
         return [
             'pricing_mode' => ['required', Rule::in(ServiceType::MODES)],
             'fees' => ['array', Rule::requiredIf($mode !== 'flexible')],
-            'fees.*.unit_type' => ['required_with:fees.*', 'string', 'max:255'],
+            'fees.*.unit_type' => ['required_with:fees.*', 'filled', 'string', 'max:255'],
             'fees.*.price' => ['required_with:fees.*', 'numeric', 'min:0'],
             'fees.*.hp_value' => $this->hpValueRules($mode),
         ];
     }
 
-    private function hpValueRules(string $mode): array
+    private function hpValueRules(?string $mode): array
     {
         if ($mode === 'hp_tiered') {
             return ['required', 'numeric', 'min:0.5', 'max:20'];
