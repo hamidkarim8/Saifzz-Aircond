@@ -152,10 +152,13 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                 <!-- Unit type (flat / hp_tiered service types) -->
                 <div v-if="carriesUnitType">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Unit type</label>
-                    <select v-model="line.unit_type" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                    <select v-if="unitTypeOptions.length > 0" v-model="line.unit_type" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
                         <option :value="null" disabled>Choose…</option>
                         <option v-for="u in unitTypeOptions" :key="u" :value="u">{{ u }}</option>
                     </select>
+                    <p v-if="unitTypeOptions.length === 0" class="mt-1.5 text-xs text-warn">
+                        No pricing configured for this service yet — ask an admin to set fees in Services.
+                    </p>
                     <InputError :message="err('unit_type')" />
                 </div>
 
