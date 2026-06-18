@@ -6,6 +6,30 @@
 
 ---
 
+## Session 32 — 2026-06-18 — CHG-005 service pricing unification (HP overhaul)
+
+**Goal:** 17-Jun feedback CHG-005 cluster — restructure service fees so each unit type owns its own HP→price set, set dynamically in one form. Includes BUG-002 (flexible editable price + description) + FEAT-003 (HP tier add/edit). Subagent-driven, 7 tasks, spec+plan in `docs/superpowers/`.
+
+**Model (full unification):** each `service_type` has ONE `pricing_mode` ∈ {flat, hp_tiered, flexible}. Single rebuilt `service_fees(service_type_id FK, unit_type, hp_value nullable, price)` (unique service_type_id+unit_type+hp_value) ABSORBS the old `service_hp_tiers` table. Price = direct `(unit_type, hp_value)` lookup — NOT base+surcharge (the old additive model). Killed all hardcoded pricing: `is_hp_based`, `UNIT_TYPES`/`GAS_OPTIONS`/`UNIT_TYPE_SERVICES` constants, `'Repair'`=flexible / `'Gas Top-Up'`=gas name-checks, `service_lines.gas_option` column. `service_types`/`service_fees` stay GLOBAL (no tenant_id).
+
+**Done** (suite 299→**297** — `ServiceHpTierTest` removed (8), `ServiceFeeTest` rewritten, `ServicePricingTest` added (6); build clean; NOT pushed):
+- **Schema** (4 migrations `2026_06_18_000010-000013`): `pricing_mode` on service_types (backfill, drop is_hp_based); rebuild service_fees; drop service_hp_tiers; drop service_lines.gas_option. Seeders updated to new shape (Cleaning=hp_tiered, Gas/Install/Troubleshoot=flat, Repair/Dismantle=flexible).
+- **Fee-sync endpoint**: `PUT service-types/{id}/fees` → `ServiceTypeController::syncFees` (transactional delete-then-insert of whole price set), `SyncServiceFeesRequest` (per-mode validation + duplicate guard). Deleted `ServiceFeeController`/`ServiceHpTierController`/`StoreServiceFeeRequest`/`UpdateServiceFeeRequest`.
+- **Record pricing**: `normalizeLine()` + `StoreServiceVisitRequest` resolve rate by `pricing_mode` (server-authoritative for flat/hp; manual for flexible). BUG-002: flexible = editable rate + required description.
+- **Controllers**: index/create/edit/catalog pass `serviceTypes` with eager-loaded `fees`; dropped old props. `gas_option` out of `SnapshotBuilder`/`PortalService`/invoice+receipt blades.
+- **Frontend**: `ServiceTypes/Index.vue` dynamic per-service fee editor (mode select → repeatable unit-type blocks → HP/price tiers; one "Save fees" PUT). `ServiceLineCard.vue` driven by pricing_mode (unit-type dropdown from fees, HP dropdown filtered by unit_type, flexible editable+desc, empty-state hint). `FeeModal.vue` deleted. `Catalog/Index.vue` new shape.
+- **Tests**: fixed stale fee/line fixtures (ServiceVisitTest/MultiTenant/TechnicianScoping/ClientUnit) to new schema.
+
+**Reviews:** each task got spec + code-quality subagent review; review-driven fixes applied (null-safe hp rule, stale-editor re-sync, stable v-for keys, empty-state hint). Final opus whole-branch review: ready to merge, no blockers.
+
+**Decisions:** one axis per service (a unit type owns its HP set; NOT a 2D matrix and NOT additive base+surcharge) — confirmed by Khalid via Hamid. CHG-006 (catalog grouping polish) deferred.
+
+**Prod deploy on merge:** `php artisan migrate` (4 migrations) + RESEED price book (`db:seed --class=ServiceTypeSeeder` + `--class=ServiceFeeSeeder`) — service_fees rebuilt destructively, data disposable. + `npm run build`.
+
+**Next:** push sessions 47+48+49+this for Khalid. Then remaining 17-Jun: appointment flow (CHG-002/003/004), FEAT-001/002, payment Manual-QR (FEAT-004), FEAT-007 (edit-record-edits-services), transaction/reminder filters.
+
+---
+
 ## Session 31 — 2026-06-18 — BUG-001 appointment date off-by-one (timezone)
 
 **Goal:** Fix 17-Jun feedback BUG-001 — picking 17/6 recorded/displayed as 18/6.
