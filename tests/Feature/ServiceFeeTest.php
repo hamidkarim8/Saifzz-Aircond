@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ServiceFee;
+use App\Models\ServiceType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,18 +12,12 @@ class ServiceFeeTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
-    }
-
     private function admin(): User
     {
-        return User::factory()->create(['role' => User::ROLE_ADMIN]);
+        return User::factory()->admin()->create();
     }
 
-    private function techWithoutFees(): User
+    private function techWithoutEditFees(): User
     {
         return User::factory()->create([
             'role' => User::ROLE_TECHNICIAN,
@@ -30,103 +25,113 @@ class ServiceFeeTest extends TestCase
         ]);
     }
 
-    public function test_guest_is_redirected(): void
+    public function test_sync_saves_flat_unit_type_rows(): void
     {
-        $this->get(route('fees.index'))->assertRedirect(route('login'));
-    }
+        $type = ServiceType::create(['name' => 'Gas Top-Up', 'pricing_mode' => 'flat', 'requires_next_service' => false]);
 
-    public function test_technician_without_edit_fees_is_redirected_to_service_settings(): void
-    {
-        $this->actingAs($this->techWithoutFees())
-            ->get(route('fees.index'))
-            ->assertRedirect(route('service-types.index'));
-    }
-
-    public function test_admin_is_redirected_to_service_settings(): void
-    {
         $this->actingAs($this->admin())
-            ->get(route('fees.index'))
-            ->assertRedirect(route('service-types.index'));
-    }
-
-    public function test_admin_can_add_a_fixed_fee(): void
-    {
-        $this->actingAs($this->admin())
-            ->post(route('fees.store'), [
-                'service_type' => 'Cleaning',
-                'option' => 'Ceiling',
-                'pricing_mode' => 'fixed_per_unit',
-                'rate' => 75,
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'flat',
+                'fees' => [
+                    ['unit_type' => '20 PSI', 'hp_value' => null, 'price' => 80],
+                    ['unit_type' => 'Full Top-Up', 'hp_value' => null, 'price' => 280],
+                ],
             ])->assertRedirect();
 
-        $this->assertDatabaseHas('service_fees', ['service_type' => 'Cleaning', 'option' => 'Ceiling', 'rate' => 75]);
+        $this->assertDatabaseHas('service_fees', ['service_type_id' => $type->id, 'unit_type' => '20 PSI', 'hp_value' => null, 'price' => 80]);
+        $this->assertEquals('flat', $type->fresh()->pricing_mode);
+        $this->assertCount(2, ServiceFee::where('service_type_id', $type->id)->get());
     }
 
-    public function test_rate_required_unless_flexible(): void
+    public function test_sync_saves_hp_tiered_per_unit_type(): void
     {
+        $type = ServiceType::create(['name' => 'Cleaning', 'pricing_mode' => 'flat', 'requires_next_service' => true]);
+
         $this->actingAs($this->admin())
-            ->post(route('fees.store'), [
-                'service_type' => 'Cleaning',
-                'option' => 'NoRate',
-                'pricing_mode' => 'fixed_per_unit',
-            ])->assertSessionHasErrors('rate');
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'hp_tiered',
+                'fees' => [
+                    ['unit_type' => 'Wall Mounted', 'hp_value' => 1.0, 'price' => 50],
+                    ['unit_type' => 'Wall Mounted', 'hp_value' => 1.5, 'price' => 60],
+                    ['unit_type' => 'Cassette', 'hp_value' => 1.0, 'price' => 70],
+                ],
+            ])->assertRedirect();
+
+        $this->assertEquals('hp_tiered', $type->fresh()->pricing_mode);
+        $this->assertDatabaseHas('service_fees', ['service_type_id' => $type->id, 'unit_type' => 'Cassette', 'hp_value' => 1.0, 'price' => 70]);
+        $this->assertCount(3, ServiceFee::where('service_type_id', $type->id)->get());
     }
 
-    public function test_flexible_fee_allows_null_rate(): void
+    public function test_sync_replaces_existing_rows(): void
     {
-        $this->actingAs($this->admin())
-            ->post(route('fees.store'), [
-                'service_type' => 'Repair',
-                'option' => null,
-                'pricing_mode' => 'flexible',
-            ])->assertSessionHasNoErrors();
+        $type = ServiceType::create(['name' => 'Cleaning', 'pricing_mode' => 'flat', 'requires_next_service' => true]);
+        ServiceFee::create(['service_type_id' => $type->id, 'unit_type' => 'Old', 'hp_value' => null, 'price' => 999]);
 
-        $this->assertDatabaseHas('service_fees', ['service_type' => 'Repair', 'pricing_mode' => 'flexible', 'rate' => null]);
+        $this->actingAs($this->admin())
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'flat',
+                'fees' => [['unit_type' => 'New', 'hp_value' => null, 'price' => 10]],
+            ])->assertRedirect();
+
+        $this->assertDatabaseMissing('service_fees', ['service_type_id' => $type->id, 'unit_type' => 'Old']);
+        $this->assertDatabaseHas('service_fees', ['service_type_id' => $type->id, 'unit_type' => 'New']);
     }
 
-    public function test_duplicate_type_option_is_rejected(): void
+    public function test_flexible_clears_all_rows(): void
     {
-        ServiceFee::create(['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit']);
+        $type = ServiceType::create(['name' => 'Repair', 'pricing_mode' => 'flat', 'requires_next_service' => false]);
+        ServiceFee::create(['service_type_id' => $type->id, 'unit_type' => 'x', 'hp_value' => null, 'price' => 5]);
 
         $this->actingAs($this->admin())
-            ->post(route('fees.store'), [
-                'service_type' => 'Cleaning',
-                'option' => 'Wall Mounted',
-                'pricing_mode' => 'fixed_per_unit',
-                'rate' => 99,
-            ])->assertSessionHasErrors('option');
-    }
-
-    public function test_admin_can_update_rate(): void
-    {
-        $fee = ServiceFee::create(['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit']);
-
-        $this->actingAs($this->admin())
-            ->put(route('fees.update', $fee), ['pricing_mode' => 'fixed_per_unit', 'rate' => 70])
+            ->put(route('service-types.fees.sync', $type), ['pricing_mode' => 'flexible', 'fees' => []])
             ->assertRedirect();
 
-        $this->assertSame('70.00', $fee->fresh()->rate);
+        $this->assertEquals('flexible', $type->fresh()->pricing_mode);
+        $this->assertCount(0, ServiceFee::where('service_type_id', $type->id)->get());
     }
 
-    public function test_switching_to_flexible_nulls_the_rate(): void
+    public function test_hp_tiered_requires_hp_value(): void
     {
-        $fee = ServiceFee::create(['service_type' => 'Repair', 'option' => null, 'rate' => 50, 'pricing_mode' => 'fixed_per_unit']);
+        $type = ServiceType::create(['name' => 'Cleaning', 'pricing_mode' => 'flat', 'requires_next_service' => true]);
 
         $this->actingAs($this->admin())
-            ->put(route('fees.update', $fee), ['pricing_mode' => 'flexible'])
-            ->assertRedirect();
-
-        $this->assertNull($fee->fresh()->rate);
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'hp_tiered',
+                'fees' => [['unit_type' => 'Wall Mounted', 'hp_value' => null, 'price' => 50]],
+            ])->assertSessionHasErrors('fees.0.hp_value');
     }
 
-    public function test_admin_can_delete_a_fee(): void
+    public function test_flat_rejects_hp_value(): void
     {
-        $fee = ServiceFee::create(['service_type' => 'Cleaning', 'option' => 'Temp', 'rate' => 10, 'pricing_mode' => 'fixed_per_unit']);
+        $type = ServiceType::create(['name' => 'Gas Top-Up', 'pricing_mode' => 'flat', 'requires_next_service' => false]);
 
         $this->actingAs($this->admin())
-            ->delete(route('fees.destroy', $fee))
-            ->assertRedirect();
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'flat',
+                'fees' => [['unit_type' => '20 PSI', 'hp_value' => 1.0, 'price' => 50]],
+            ])->assertSessionHasErrors('fees.0.hp_value');
+    }
 
-        $this->assertDatabaseMissing('service_fees', ['id' => $fee->id]);
+    public function test_duplicate_unit_type_hp_pair_rejected(): void
+    {
+        $type = ServiceType::create(['name' => 'Cleaning', 'pricing_mode' => 'flat', 'requires_next_service' => true]);
+
+        $this->actingAs($this->admin())
+            ->put(route('service-types.fees.sync', $type), [
+                'pricing_mode' => 'hp_tiered',
+                'fees' => [
+                    ['unit_type' => 'Wall Mounted', 'hp_value' => 1.0, 'price' => 50],
+                    ['unit_type' => 'Wall Mounted', 'hp_value' => 1.0, 'price' => 60],
+                ],
+            ])->assertSessionHasErrors('fees');
+    }
+
+    public function test_non_edit_fees_user_forbidden(): void
+    {
+        $type = ServiceType::create(['name' => 'Cleaning', 'pricing_mode' => 'flat', 'requires_next_service' => true]);
+
+        $this->actingAs($this->techWithoutEditFees())
+            ->put(route('service-types.fees.sync', $type), ['pricing_mode' => 'flexible', 'fees' => []])
+            ->assertForbidden();
     }
 }

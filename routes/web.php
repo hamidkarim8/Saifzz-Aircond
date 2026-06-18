@@ -13,10 +13,8 @@ use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\ServiceHpTierController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\PaymentGatewayController;
@@ -86,14 +84,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
 
-    // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
-    Route::redirect('fees', '/service-types')->name('fees.index');
+    // Service Fees (module 3) — fee-set sync endpoint, gated by edit_fees.
     Route::middleware('can:edit_fees')->group(function () {
-        Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
-        Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
-        Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
-        Route::post('service-hp-tiers', [ServiceHpTierController::class, 'store'])->name('service-hp-tiers.store');
-        Route::delete('service-hp-tiers/{tier}', [ServiceHpTierController::class, 'destroy'])->name('service-hp-tiers.destroy');
+        Route::put('service-types/{serviceType}/fees', [ServiceTypeController::class, 'syncFees'])->name('service-types.fees.sync');
     });
 
     // Service Types (manage_service_types — admin + technician)

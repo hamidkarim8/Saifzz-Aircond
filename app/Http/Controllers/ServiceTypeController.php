@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreServiceFeeRequest;
+use App\Http\Requests\SyncServiceFeesRequest;
 use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
@@ -15,15 +15,12 @@ class ServiceTypeController extends Controller
 {
     public function index(): Response
     {
-        $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
+        $fees = ServiceFee::orderBy('unit_type')->get();
 
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based']),
-            'feeGroups'    => $fees->groupBy('service_type'),
-            'modes'        => StoreServiceFeeRequest::MODES,
-            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
-                ->get(['id', 'service_type_id', 'hp_value', 'price'])
-                ->groupBy('service_type_id'),
+            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'pricing_mode']),
+            'feeGroups'    => $fees->groupBy('service_type_id'),
+            'modes'        => ServiceType::MODES,
         ]);
     }
 
@@ -65,5 +62,27 @@ class ServiceTypeController extends Controller
         }
 
         return back()->with('success', 'Service type updated.');
+    }
+
+    public function syncFees(SyncServiceFeesRequest $request, ServiceType $serviceType): RedirectResponse
+    {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($serviceType, $data) {
+            $serviceType->update(['pricing_mode' => $data['pricing_mode']]);
+            $serviceType->fees()->delete();
+
+            if ($data['pricing_mode'] !== 'flexible') {
+                foreach ($data['fees'] as $fee) {
+                    $serviceType->fees()->create([
+                        'unit_type' => $fee['unit_type'],
+                        'hp_value'  => $data['pricing_mode'] === 'hp_tiered' ? $fee['hp_value'] : null,
+                        'price'     => $fee['price'],
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Fees updated.');
     }
 }
