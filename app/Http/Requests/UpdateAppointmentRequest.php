@@ -9,8 +9,10 @@ use Illuminate\Validation\Rule;
  * Same shape and authorization as creating one — edits replace every field.
  *
  * Unlike create (which always starts an appointment as 'pending'), the edit
- * form lets an admin set the status directly — an intentional override with no
- * transition guard (the guarded lifecycle path is updateStatus()).
+ * form lets an all-data user (admin) set the status directly — an intentional
+ * override with no transition guard (the guarded lifecycle path is
+ * updateStatus()). Scoped technicians cannot set status here: the rule and the
+ * persisted attribute are both gated on seesAllData().
  */
 class UpdateAppointmentRequest extends StoreAppointmentRequest
 {
@@ -19,6 +21,10 @@ class UpdateAppointmentRequest extends StoreAppointmentRequest
      */
     public function rules(): array
     {
+        if (! $this->user()?->seesAllData()) {
+            return parent::rules();
+        }
+
         return parent::rules() + [
             'status' => ['sometimes', Rule::in(Appointment::STATUSES)],
         ];
@@ -34,7 +40,7 @@ class UpdateAppointmentRequest extends StoreAppointmentRequest
     {
         $data = parent::appointmentData();
 
-        if ($this->filled('status')) {
+        if ($this->user()?->seesAllData() && $this->filled('status')) {
             $data['status'] = $this->input('status');
         }
 

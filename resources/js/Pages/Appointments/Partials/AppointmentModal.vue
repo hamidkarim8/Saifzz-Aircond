@@ -183,8 +183,8 @@ const submit = () => {
                         <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>
                     </div>
 
-                    <!-- Status (edit only) -->
-                    <div v-if="isEdit">
+                    <!-- Status (edit only, all-data users — `technicians` is null for scoped techs) -->
+                    <div v-if="isEdit && technicians">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Status</label>
                         <select v-model="form.status" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
                             <option value="pending">Pending</option>

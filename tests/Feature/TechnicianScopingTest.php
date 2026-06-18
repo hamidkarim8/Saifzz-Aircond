@@ -366,4 +366,22 @@ class TechnicianScopingTest extends TestCase
 
         $this->assertSame($bob->id, $appt->fresh()->technician_id);
     }
+
+    public function test_scoped_technician_cannot_override_status_via_update(): void
+    {
+        $bob = $this->aptTech(); // scoped tech (no view_all_data), can edit own appointments
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+
+        $this->actingAs($bob)->put(route('appointments.update', $appt), [
+            'client_id' => $client->id, 'date' => '2026-07-01', 'time' => '11:30',
+            'phone' => '012-3456789', 'address' => 'KL',
+            'status' => 'completed',
+        ])->assertRedirect();
+
+        // The edit succeeds (time changed) but the status override is ignored for scoped techs.
+        $appt->refresh();
+        $this->assertSame('pending', $appt->status);
+        $this->assertSame('11:30', \Illuminate\Support\Carbon::parse($appt->datetime)->format('H:i'));
+    }
 }
