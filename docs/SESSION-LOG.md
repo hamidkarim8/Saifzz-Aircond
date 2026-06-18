@@ -6,6 +6,28 @@
 
 ---
 
+## Session 33 — 2026-06-18 — Appointment flow cluster (BUG-003/004, CHG-002/003/004, FEAT-001/002)
+
+**Branch:** `dev`, NOT pushed. Suite **307/307**, build clean. Whole-branch review "ready to merge" (one minor security finding caught + fixed). Spec `docs/superpowers/specs/2026-06-18-appointment-flow-cluster-design.md`, plan `docs/superpowers/plans/2026-06-18-appointment-flow-cluster.md`. Subagent-driven (9 tasks + spec/quality review each + final review). Commits `9f3680e`→`6e3d708`.
+
+Closes 7 feedback items (all → TESTING):
+- **CHG-004 (P1):** appointment status enum collapsed `pending→confirmed→done/cancelled` ⇒ `pending→completed/cancelled`. Data migration `2026_06_18_000020` maps `confirmed→pending`, `done→completed`. Collecting payment now auto-Completes the appointment.
+- **Appointment↔payment link:** migration `2026_06_18_000021` adds nullable `appointment_id` FK on `service_visits` (nullOnDelete). Threaded: appointment "Add Record" link passes `appointment=row.id` → `ServiceVisitController::create` resolves `presetAppointmentId` via `Appointment::visibleTo` → `Create.vue` form carries `appointment_id` → `StoreServiceVisitRequest` validates tenant-scoped → `store()` persists. `PaymentService::completeLinkedAppointment()` (cash **+ webhook** paths) completes the linked appointment using the `Appointment` state machine (`canTransitionTo('completed')`) + tenant guard. Idempotent, skips cancelled/terminal.
+- **BUG-003/004:** root cause = `AppointmentModal` open-watcher not `immediate`, so modal opened during Index setup never autofilled until a second open. Fixed with `{ immediate: true }` (body early-returns on `!open`). Cancel/close from a client booking now returns to the client profile (`saved` vs `close` emit split avoids double-nav on save).
+- **CHG-002:** per-row actions = Add Record / Edit / Cancel Appointment (dropped Confirm/Mark-done). "Confirmed" stat → "Completed" (`month_completed`).
+- **CHG-003:** technician dropdown defaults to current admin, "Unassigned" removed; `AppointmentController` technicians prop now includes the current all-data user (so self-default resolves to a real option).
+- **FEAT-001:** Add Record autofills client + technician + appointment_id.
+- **FEAT-002:** dedicated Serial column (hyperlink to client / "Non client" for walk-ins). Removed serial sub-line under client name.
+- **Status-edit override:** `UpdateAppointmentRequest` accepts `status` (admin override, no transition guard) — gated to `seesAllData()` users (scoped techs cannot override; regression-tested). CREATE always forces `pending`. `updateStatus()` quick-action keeps its transition guard.
+
+**Bugs caught in review:** latent `Link`-not-imported in Index.vue (was broken), `orWhereKey` typo (not a real Eloquent method → 500), scoped-tech status-override hole.
+
+**Tests:** new `AppointmentPaymentCompletionTest` (8: persist + cross-tenant reject + cash/webhook completion + cancelled-stays + no-op + tenant-mismatch guard). `AppointmentTest` + `TechnicianScopingTest` updated to new enum; +scoped-tech-cannot-override-status. Net 297→307.
+
+**Prod deploy on merge:** `php artisan migrate` (2: status collapse + appointment_id). No reseed for this cluster. `npm run build`. (Still pending from sessions 47/48/50: their migrations + price-book reseed.)
+
+---
+
 ## Session 32 — 2026-06-18 — CHG-005 service pricing unification (HP overhaul)
 
 **Goal:** 17-Jun feedback CHG-005 cluster — restructure service fees so each unit type owns its own HP→price set, set dynamically in one form. Includes BUG-002 (flexible editable price + description) + FEAT-003 (HP tier add/edit). Subagent-driven, 7 tasks, spec+plan in `docs/superpowers/`.
