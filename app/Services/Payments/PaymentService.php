@@ -39,7 +39,7 @@ final class PaymentService
         }
 
         $appointment = $visit->appointment()->first();
-        if (! $appointment || $appointment->status === 'cancelled') {
+        if (! $appointment) {
             return;
         }
 
@@ -48,7 +48,11 @@ final class PaymentService
             return;
         }
 
-        $appointment->update(['status' => 'completed']);
+        // The Appointment state machine is authoritative: only pending → completed is legal;
+        // cancelled / already-completed are terminal and become no-ops.
+        if ($appointment->canTransitionTo('completed')) {
+            $appointment->update(['status' => 'completed']);
+        }
     }
 
     public function startGateway(Transaction $transaction): string

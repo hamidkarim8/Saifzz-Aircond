@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Payments\HandleGatewayCallback;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Payments\Data\CallbackResult;
+use App\Services\Payments\PaymentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -166,5 +169,45 @@ class AppointmentPaymentCompletionTest extends TestCase
         $this->actingAs($boss)->post(route('service-records.store'), $this->validVisitPayload($client, [
             'appointment_id' => $otherAppt->id,
         ]))->assertSessionHasErrors('appointment_id');
+    }
+
+    public function test_gateway_paid_callback_completes_linked_appointment(): void
+    {
+        [$boss, $client] = $this->bossWithClient();
+        $appt = $this->makeAppointmentFor($client, $boss);     // status pending
+        $txn  = $this->pendingCashTransactionForVisitWith($client, $boss, ['appointment_id' => $appt->id]);
+
+        // Drive the webhook action directly with a verified PAID result whose
+        // orderNumber matches the txn and whose amount matches.
+        $result = new CallbackResult(
+            verified: true,
+            orderNumber: $txn->txn_id,
+            gatewayRef: 'STUB-REF',
+            status: PaymentStatus::PAID,
+            amount: (float) $txn->amount,
+            raw: [],
+        );
+
+        $accepted = app(HandleGatewayCallback::class)($result);
+
+        $this->assertTrue($accepted);
+        $this->assertSame('paid', $txn->fresh()->status);
+        $this->assertSame('completed', $appt->fresh()->status);
+    }
+
+    public function test_tenant_mismatch_guard_blocks_completion(): void
+    {
+        [$boss, $client] = $this->bossWithClient();
+        // Appointment belongs to a DIFFERENT tenant; we attach its id to a visit
+        // owned by boss A so visit.tenant_id !== appointment.tenant_id and the
+        // guard must fire. (The HTTP store path validates against this, so we
+        // wire the mismatched appointment_id straight onto the visit instead.)
+        $otherAppt = $this->makeAppointmentForOtherTenant();
+        $txn = $this->pendingCashTransactionForVisitWith($client, $boss, ['appointment_id' => $otherAppt->id]);
+
+        $this->actingAs($boss)->post(route('payments.cash', $txn))->assertRedirect();
+
+        $this->assertSame('paid', $txn->fresh()->status);
+        $this->assertSame('pending', $otherAppt->fresh()->status);
     }
 }
