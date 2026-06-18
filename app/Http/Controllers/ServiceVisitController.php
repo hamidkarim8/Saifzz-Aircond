@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceVisitRequest;
+use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceType;
 use App\Models\ServiceVisit;
@@ -71,6 +72,9 @@ class ServiceVisitController extends Controller
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
             'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
+            'presetAppointmentId' => request('appointment')
+                ? Appointment::visibleTo(request()->user())->whereKey(request('appointment'))->value('id')
+                : null,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
                     ->where('active', true)
@@ -109,6 +113,7 @@ class ServiceVisitController extends Controller
                 'created_by' => $user->id,
                 'technician_id' => $technicianId,
                 'tenant_id' => $user->tenantId(),
+                'appointment_id' => $data['appointment_id'] ?? null,
             ]);
 
             foreach ($data['lines'] as $line) {

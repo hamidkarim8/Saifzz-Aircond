@@ -30,6 +30,16 @@ class StoreServiceVisitRequest extends FormRequest
 
             'technician_id' => ['nullable', 'integer', 'exists:users,id'],
 
+            'appointment_id' => [
+                'nullable', 'integer',
+                Rule::exists('appointments', 'id')->where(function ($q) {
+                    $tenantId = $this->user()?->tenantId();
+                    if ($tenantId !== null) {
+                        $q->where('tenant_id', $tenantId);
+                    }
+                }),
+            ],
+
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
             'lines.*.unit_type' => ['nullable', 'string', 'max:255'],
