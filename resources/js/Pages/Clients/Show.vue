@@ -92,7 +92,7 @@ const waLink = computed(() => wa(props.client.phone));
                             <li v-for="l in v.lines" :key="l.id" class="flex items-center justify-between py-2.5 text-sm">
                                 <div class="flex items-center gap-2">
                                     <Badge :variant="serviceVariant(l.service_type)">{{ l.service_type }}</Badge>
-                                    <span v-if="l.unit_type || l.gas_option" class="text-ink-soft">{{ l.unit_type || l.gas_option }}</span>
+                                    <span v-if="l.unit_type" class="text-ink-soft">{{ l.unit_type }}</span>
                                     <span class="text-ink-muted">× {{ l.units }}</span>
                                 </div>
                                 <span class="font-mono font-semibold text-ink">{{ money(l.subtotal) }}</span>

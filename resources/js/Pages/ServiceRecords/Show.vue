@@ -42,7 +42,7 @@ const warrantyLabel = computed(() => {
     return warranty.value.label;
 });
 
-const lineLabel = (l) => [l.unit_type, l.gas_option].filter(Boolean).join(' ') || (l.service_type === 'Repair' ? 'Flat job' : '');
+const lineLabel = (l) => l.unit_type || '';
 
 const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? false);
 

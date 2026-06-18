@@ -11,32 +11,17 @@ const page = usePage();
 const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
-    fees: Array,
     serviceTypes: Array,
-    unitTypes: Array,
-    gasOptions: Array,
-    unitTypeServices: Array,
     presetClient: { type: Object, default: null },
     presetClientUnits: { type: Array, default: () => [] },
     presetTechnicianId: { type: Number, default: null },
     technicians: { type: Array, default: null },
-    hpTiers: { type: Object, default: () => ({}) },
-});
-
-// Fee lookup map for client-side rate preview ("type|option" -> rate).
-const feeMap = computed(() => {
-    const m = {};
-    for (const f of props.fees) {
-        if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
-        else if (f.rate != null) m[f.service_type] = Number(f.rate);
-    }
-    return m;
 });
 
 const clientUnits = ref(props.presetClientUnits);
 
 const blankLine = () => ({
-    unit_id: null, service_type: '', unit_type: null, gas_option: null, hp_value: null, repair_desc: '',
+    unit_id: null, service_type: '', unit_type: null, hp_value: null, repair_desc: '',
     units: 1, rate: '', discount: 0, next_service_date: null, notes: '',
 });
 
@@ -72,7 +57,6 @@ const addLinesForAllUnits = () => {
             unit_id: unit.id,
             service_type: '',
             unit_type: unit.unit_type,
-            gas_option: null,
             hp_value: null,
             repair_desc: '',
             units: 1,
@@ -156,13 +140,8 @@ const submit = () => form.post(route('service-records.store'));
                     :key="i"
                     :line="line"
                     :index="i"
-                    :fee-map="feeMap"
                     :service-types="serviceTypes"
-                    :unit-types="unitTypes"
-                    :gas-options="gasOptions"
-                    :unit-type-services="unitTypeServices"
                     :client-units="clientUnits"
-                    :hp-tiers="hpTiers"
                     :errors="form.errors"
                     :removable="form.lines.length > 1"
                     :visit-date="form.visit_date"

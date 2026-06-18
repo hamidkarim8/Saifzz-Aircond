@@ -7,60 +7,53 @@ import { serviceVariant } from '@/lib/badges';
 const props = defineProps({
     line: { type: Object, required: true },
     index: { type: Number, required: true },
-    feeMap: { type: Object, required: true },
     serviceTypes: Array,
-    unitTypes: Array,
-    gasOptions: Array,
-    unitTypeServices: Array,
     clientUnits: { type: Array, default: () => [] },
     errors: { type: Object, default: () => ({}) },
     removable: Boolean,
     visitDate: { type: String, default: null },
-    hpTiers: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['remove']);
 
-const isRepair = computed(() => props.line.service_type === 'Repair');
-const isGas = computed(() => props.line.service_type === 'Gas Top-Up');
-const carriesUnitType = computed(() => props.unitTypeServices.includes(props.line.service_type));
+const serviceType = computed(() => props.serviceTypes?.find(t => t.name === props.line.service_type) ?? null);
+const mode = computed(() => serviceType.value?.pricing_mode ?? null);
+const isFlexible = computed(() => mode.value === 'flexible');
+const isHp = computed(() => mode.value === 'hp_tiered');
+const carriesUnitType = computed(() => mode.value === 'flat' || mode.value === 'hp_tiered');
+const requiresNextService = computed(() => serviceType.value?.requires_next_service ?? false);
+
 const hasUnitSelected = computed(() => !!props.line.unit_id);
 
-const isHpBased = computed(() => {
-    if (!props.line.service_type) return false;
-    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
-    return t?.is_hp_based ?? false;
-});
-
-const currentServiceTypeId = computed(() => {
-    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
-    return t?.id ?? null;
-});
-
-const hpOptions = computed(() => {
-    if (!currentServiceTypeId.value) return [];
-    return props.hpTiers?.[currentServiceTypeId.value] ?? [];
-});
+const fees = computed(() => serviceType.value?.fees ?? []);
+const unitTypeOptions = computed(() => [...new Set(fees.value.map(f => f.unit_type))]);
+const hpOptions = computed(() => fees.value
+    .filter(f => f.unit_type === props.line.unit_type)
+    .map(f => ({ hp_value: Number(f.hp_value), price: Number(f.price) })));
 
 const nextServiceMonths = ref(null);
 
-const requiresNextService = computed(() => {
-    if (!props.line.service_type) return false;
-    const t = props.serviceTypes?.find(t => t.name === props.line.service_type);
-    return t?.requires_next_service ?? false;
-});
-
 const err = (field) => props.errors[`lines.${props.index}.${field}`];
+
+function autofill() {
+    if (isFlexible.value || !props.line.service_type) return;
+    if (isHp.value) {
+        const tier = hpOptions.value.find(t => Number(t.hp_value) === Number(props.line.hp_value));
+        props.line.rate = tier ? tier.price : '';
+    } else { // flat
+        const fee = fees.value.find(f => f.unit_type === props.line.unit_type);
+        props.line.rate = fee ? Number(fee.price) : '';
+    }
+}
 
 watch(() => props.line.service_type, () => {
     props.line.unit_type = null;
     props.line.unit_id = null;
-    props.line.gas_option = null;
     props.line.hp_value = null;
     props.line.repair_desc = '';
     props.line.next_service_date = null;
     nextServiceMonths.value = null;
     props.line.notes = '';
-    if (isRepair.value) props.line.rate = '';
+    if (isFlexible.value) props.line.rate = '';
     autofill();
 });
 
@@ -75,12 +68,8 @@ watch(() => props.line.unit_id, (unitId) => {
     }
 });
 
-watch([() => props.line.unit_type, () => props.line.gas_option], autofill);
-
-watch(() => props.line.hp_value, () => {
-    if (!isHpBased.value) return;
-    autofill();
-});
+watch(() => props.line.unit_type, () => { props.line.hp_value = null; autofill(); });
+watch(() => props.line.hp_value, () => { if (isHp.value) autofill(); });
 
 watch(nextServiceMonths, (months) => {
     if (!months || !props.visitDate) { props.line.next_service_date = null; return; }
@@ -95,28 +84,6 @@ watch(() => props.visitDate, () => {
     d.setMonth(d.getMonth() + nextServiceMonths.value);
     props.line.next_service_date = d.toISOString().slice(0, 10);
 });
-
-function autofill() {
-    if (isRepair.value || !props.line.service_type) return;
-    const option = isGas.value ? props.line.gas_option : props.line.unit_type;
-    let baseRate;
-    if (!option) {
-        const flat = props.feeMap[props.line.service_type];
-        baseRate = flat != null ? Number(flat) : 0;
-    } else {
-        const r = props.feeMap[`${props.line.service_type}|${option}`];
-        baseRate = r != null ? Number(r) : 0;
-    }
-
-    if (isHpBased.value && props.line.hp_value) {
-        const tier = hpOptions.value.find(t => Number(t.hp_value) === Number(props.line.hp_value));
-        const hpPrice = tier ? Number(tier.price) : 0;
-        props.line.rate = baseRate + hpPrice;
-    } else if (!isHpBased.value) {
-        props.line.rate = baseRate !== 0 ? baseRate : '';
-    }
-    // If HP-based but no hp_value selected yet — leave rate as is
-}
 
 const subtotal = computed(() => {
     const units = hasUnitSelected.value ? 1 : (Number(props.line.units) || 0);
@@ -133,11 +100,11 @@ const typeAccent = {
 
 const feeBadgeLabel = computed(() => {
     if (!props.line.service_type) return null;
-    if (isRepair.value) return 'Flexible';
+    if (isFlexible.value) return 'Flexible';
     if (props.line.rate !== '' && props.line.rate != null) return money(props.line.rate);
     return null;
 });
-const feeBadgeVariant = computed(() => isRepair.value ? 'amber' : 'blue');
+const feeBadgeVariant = computed(() => isFlexible.value ? 'amber' : 'blue');
 
 const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.hp) + 'HP' : ''})`;
 </script>
@@ -182,44 +149,34 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <InputError :message="err('service_type')" />
                 </div>
 
-                <!-- Unit type (Cleaning / Installation / Troubleshoot) -->
+                <!-- Unit type (flat / hp_tiered service types) -->
                 <div v-if="carriesUnitType">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Unit type</label>
                     <select v-model="line.unit_type" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
                         <option :value="null" disabled>Choose…</option>
-                        <option v-for="u in unitTypes" :key="u" :value="u">{{ u }}</option>
+                        <option v-for="u in unitTypeOptions" :key="u" :value="u">{{ u }}</option>
                     </select>
                     <InputError :message="err('unit_type')" />
                 </div>
 
-                <!-- Gas option -->
-                <div v-if="isGas">
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Gas / PSI option</label>
-                    <select v-model="line.gas_option" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                        <option :value="null" disabled>Choose…</option>
-                        <option v-for="g in gasOptions" :key="g" :value="g">{{ g }}</option>
-                    </select>
-                    <InputError :message="err('gas_option')" />
-                </div>
-
-                <!-- HP dropdown (HP-based service types) -->
-                <div v-if="isHpBased" class="sm:col-span-2">
+                <!-- HP dropdown (hp_tiered service types) -->
+                <div v-if="isHp" class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Horsepower (HP)</label>
                     <select
                         v-model.number="line.hp_value"
                         class="w-full rounded-ra border border-line bg-surface text-sm text-ink shadow-card focus:border-primary focus:ring-1 focus:ring-primary"
                     >
                         <option :value="null" disabled>Choose HP…</option>
-                        <option v-for="tier in hpOptions" :key="tier.id" :value="Number(tier.hp_value)">
+                        <option v-for="tier in hpOptions" :key="tier.hp_value" :value="Number(tier.hp_value)">
                             {{ Number(tier.hp_value).toFixed(1) }} HP — RM {{ Number(tier.price).toFixed(2) }}
                         </option>
                     </select>
                 </div>
 
-                <!-- Repair description -->
-                <div v-if="isRepair" class="sm:col-span-2">
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Repair description</label>
-                    <textarea v-model="line.repair_desc" rows="2" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="What was repaired?" />
+                <!-- Description (flexible service types) -->
+                <div v-if="isFlexible" class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-semibold text-ink">Description</label>
+                    <textarea v-model="line.repair_desc" rows="2" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="What was done?" />
                     <InputError :message="err('repair_desc')" />
                 </div>
 
@@ -230,21 +187,21 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <InputError :message="err('units')" />
                 </div>
 
-                <!-- Rate: auto for fee-driven, manual for Repair -->
+                <!-- Rate: auto for fee-driven, manual for flexible -->
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-ink">
                         Rate (RM)
-                        <span v-if="!isRepair" class="font-normal text-ink-muted"> · auto-filled</span>
+                        <span v-if="!isFlexible" class="font-normal text-ink-muted"> · auto-filled</span>
                     </label>
                     <input
                         v-model.number="line.rate"
                         type="number"
                         step="0.01"
                         min="0"
-                        :readonly="!isRepair"
+                        :readonly="!isFlexible"
                         inputmode="decimal"
                         class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary read-only:bg-surface-muted read-only:text-ink-soft"
-                        :placeholder="isRepair ? 'Enter price' : '—'"
+                        :placeholder="isFlexible ? 'Enter price' : '—'"
                     />
                     <InputError :message="err('rate')" />
                 </div>
@@ -255,7 +212,7 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <input v-model.number="line.discount" type="number" step="0.01" min="0" inputmode="decimal" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="0.00" />
                 </div>
 
-                <!-- Next service months (R2) -->
+                <!-- Next service months -->
                 <div v-if="requiresNextService">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Next service</label>
                     <select v-model.number="nextServiceMonths" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
@@ -265,8 +222,8 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                     <p v-if="line.next_service_date" class="mt-1 text-xs text-ok">Next service: {{ line.next_service_date }}</p>
                 </div>
 
-                <!-- Notes (R3: not for Repair) -->
-                <div v-if="!isRepair" class="sm:col-span-2">
+                <!-- Notes (not for flexible — flexible uses description field instead) -->
+                <div v-if="!isFlexible" class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Notes <span class="font-normal text-ink-muted">(optional)</span></label>
                     <input v-model="line.notes" type="text" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                 </div>

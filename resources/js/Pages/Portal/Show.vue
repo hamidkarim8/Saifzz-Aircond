@@ -120,8 +120,8 @@ const waAppointment = computed(() => wa(props.business.wa, `Hi, I'd like to set 
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <Badge :variant="serviceVariant(l.service_type)">{{ l.service_type }}</Badge>
-                                <span v-if="l.unit_type || l.gas_option" class="text-ink-soft">
-                                    {{ l.unit_type || l.gas_option }}
+                                <span v-if="l.unit_type" class="text-ink-soft">
+                                    {{ l.unit_type }}
                                 </span>
                             </div>
                             <span class="mt-0.5 block text-xs text-ink-muted">× {{ l.units }} unit{{ l.units !== 1 ? 's' : '' }}</span>

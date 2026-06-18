@@ -86,7 +86,6 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
                             <div class="flex flex-wrap items-center gap-2">
                                 <Badge :variant="serviceVariant(l.service_type)">{{ l.service_type }}</Badge>
                                 <span v-if="l.unit_type" class="text-sm text-ink-soft">{{ l.unit_type }}</span>
-                                <span v-if="l.gas_option" class="text-sm text-ink-soft">{{ l.gas_option }}</span>
                                 <span class="text-xs text-ink-muted">× {{ l.units }}</span>
                             </div>
                             <span class="shrink-0 font-mono text-sm font-semibold text-navy-800">{{ money(l.subtotal) }}</span>
