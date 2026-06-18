@@ -8,7 +8,6 @@ import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
 
 const page = usePage();
-const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
     serviceTypes: Array,
@@ -17,6 +16,7 @@ const props = defineProps({
     presetTechnicianId: { type: Number, default: null },
     presetAppointmentId: { type: Number, default: null },
     technicians: { type: Array, default: null },
+    googleReview: { type: Object, default: () => ({ qrUrl: null, url: null }) },
 });
 
 const clientUnits = ref(props.presetClientUnits);
@@ -32,7 +32,6 @@ const form = useForm({
     new_client: { name: '', phone: '', address: '' },
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
-    payment_method: canCollectCash ? 'Cash' : 'DuitNow QR',
     technician_id: props.presetTechnicianId ?? null,
     appointment_id: props.presetAppointmentId ?? null,
     lines: [blankLine()],
@@ -168,24 +167,18 @@ const submit = () => form.post(route('service-records.store'));
                 </button>
             </div>
 
-            <!-- Payment method -->
-            <Card title="Payment method">
-                <div class="grid gap-3" :class="canCollectCash ? 'grid-cols-2' : 'grid-cols-1'">
-                    <label
-                        v-if="canCollectCash"
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="Cash" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">Cash</span>
-                    </label>
-                    <label
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'DuitNow QR' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="DuitNow QR" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">DuitNow QR</span>
-                    </label>
+            <!-- Google Review — shown before payment so the tech can prompt the customer -->
+            <Card v-if="googleReview.qrUrl" title="Google Review">
+                <div class="flex flex-col items-center gap-3 text-center">
+                    <p class="text-sm text-ink-soft">Show this to the customer to leave a review.</p>
+                    <img :src="googleReview.qrUrl" alt="Google Review QR" class="h-44 w-44 object-contain" />
+                    <a
+                        v-if="googleReview.url"
+                        :href="googleReview.url"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-sm font-semibold text-primary underline"
+                    >Open review page</a>
                 </div>
             </Card>
         </form>
