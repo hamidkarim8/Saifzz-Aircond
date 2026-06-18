@@ -8,6 +8,7 @@ import InvoicePreview from './Partials/InvoicePreview.vue';
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
     qrUrl: { type: String, default: null },
+    paymentQrUrl: { type: String, default: null },
     payment: { type: Object, default: () => ({}) },
 });
 
@@ -35,6 +36,13 @@ const payForm = useForm({ api_token: '', portal_key: '', api_secret: '' });
 const savePayment = () => payForm.put(route('payment-settings.update'), {
     preserveScroll: true,
     onSuccess: () => payForm.reset(),
+});
+
+const manualQrForm = useForm({ payment_qr: null });
+const saveManualQr = () => manualQrForm.put(route('business-settings.update'), {
+    preserveScroll: true,
+    forceFormData: true,
+    onSuccess: () => { manualQrForm.payment_qr = null; },
 });
 
 const tabs = [
@@ -126,6 +134,30 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                 <span v-if="payment.isConfigured">Gateway configured ✓ — DuitNow QR payments are live.</span>
                 <span v-else>Gateway not configured — payments will use test mode.</span>
             </div>
+            <Card title="Manual QR (DuitNow)" class="mb-6">
+                <p class="mb-5 text-sm text-ink-soft">Upload your DuitNow / bank QR. Admins can show this at payment collection; once the customer transfers, confirm receipt manually.</p>
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <form class="space-y-4" @submit.prevent="saveManualQr">
+                        <div>
+                            <label class="mb-1.5 block text-sm font-semibold text-ink">QR image (PNG/JPG, max 2MB)</label>
+                            <input type="file" accept="image/*" :class="inputClass"
+                                @change="manualQrForm.payment_qr = $event.target.files[0]" />
+                            <p v-if="manualQrForm.errors.payment_qr" class="mt-1 text-xs text-danger">{{ manualQrForm.errors.payment_qr }}</p>
+                        </div>
+                        <button type="submit" :disabled="manualQrForm.processing"
+                            class="inline-flex items-center rounded-ra bg-primary px-4 py-2 text-sm font-semibold text-white shadow-card hover:bg-primary-hover disabled:opacity-60">
+                            {{ manualQrForm.processing ? 'Saving…' : 'Save Manual QR' }}
+                        </button>
+                    </form>
+                    <div>
+                        <div class="mb-2 text-sm font-semibold text-ink-soft">Current QR</div>
+                        <div class="grid place-items-center rounded-ral border border-line bg-white p-6">
+                            <img v-if="paymentQrUrl" :src="paymentQrUrl" alt="Manual payment QR" class="h-48 w-48 object-contain" />
+                            <span v-else class="text-sm text-ink-soft">No QR uploaded yet.</span>
+                        </div>
+                    </div>
+                </div>
+            </Card>
             <Card title="BayarCash Credentials">
                 <p class="mb-5 text-sm text-ink-soft">Leave a field blank to keep the existing value. Credentials are encrypted at rest.</p>
                 <form class="space-y-4" @submit.prevent="savePayment">
