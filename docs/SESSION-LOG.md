@@ -6,6 +6,17 @@
 
 ---
 
+## Session 35 — 2026-06-18 — Transaction filters (FEAT-008 method + FEAT-009 status)
+
+**Branch:** `dev`, NOT pushed. Commit `09dab34`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster A, both → TESTING.
+
+- `Transactions/Index.vue`: client-side filter chips in the table-card header. **Method** (All / Cash / DuitNow QR / Manual QR) and **Status** (All / paid / pending / failed / cancelled).
+- Both filters combine through a `filtered` computed; `rows` and the summary StatCards (`totalPaid` / `pendingCount` / `pendingAmount`) now derive from `filtered`, so the dashboard recomputes live on filter (FEAT-008 asks the summary dashboard be filterable, not just the table).
+- No backend change — the controller already loads the full list per period (`limit=null`). Method values are canonical (`Cash`/`DuitNow QR` from `payment_method` `Rule::in`; `Manual QR` set on confirm); statuses pending/paid/failed/cancelled.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
 ## Session 34 — 2026-06-18 — FEAT-007 edit service lines + FEAT-004 Manual QR payment (both P1)
 
 **Branch:** `dev`, NOT pushed. Suite **322/322**, build clean. Two 17-Jun P1 feedback items, each: brainstorm → spec → plan → subagent-driven execution (impl + spec review + code-quality/security review per backend). Both → TESTING.
