@@ -36,14 +36,24 @@ const toggleContacted = (item) =>
 
 // FEAT-008: search filter
 const search = ref('');
+// FEAT-011: contacted filter — all / contacted / not contacted
+const contactedFilter = ref('all');
+const contactedOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'uncontacted', label: 'Not contacted' },
+];
 const filterItems = (items) => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(i =>
-        i.name?.toLowerCase().includes(q) ||
-        i.phone?.toLowerCase().includes(q) ||
-        i.serial_no?.toLowerCase().includes(q)
-    );
+    const cf = contactedFilter.value;
+    return items.filter(i => {
+        if (cf === 'contacted' && !i.contacted) return false;
+        if (cf === 'uncontacted' && i.contacted) return false;
+        if (!q) return true;
+        return i.name?.toLowerCase().includes(q) ||
+            i.phone?.toLowerCase().includes(q) ||
+            i.serial_no?.toLowerCase().includes(q);
+    });
 };
 
 // FEAT-009: tabs — default active tab is "due"
@@ -146,8 +156,24 @@ const dismissReminder = async (item) => {
                 </div>
             </div>
 
+            <!-- FEAT-011: contacted filter chips -->
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+                <span class="text-xs font-medium text-ink-soft">Status:</span>
+                <button
+                    v-for="opt in contactedOptions"
+                    :key="opt.value"
+                    class="rounded-full px-3 py-1 text-xs font-semibold transition"
+                    :class="contactedFilter === opt.value
+                        ? 'bg-primary text-white'
+                        : 'border border-line text-ink-soft hover:bg-surface-muted'"
+                    @click="contactedFilter = opt.value"
+                >
+                    {{ opt.label }}
+                </button>
+            </div>
+
             <!-- Empty search result -->
-            <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-ink-muted">No results for "{{ search }}".</p>
+            <p v-if="activeItems.length === 0" class="py-8 text-center text-sm text-ink-muted">No results.</p>
 
             <!-- Cards grid -->
             <div class="grid gap-3 md:grid-cols-2">
