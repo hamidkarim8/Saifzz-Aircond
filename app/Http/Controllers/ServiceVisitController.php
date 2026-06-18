@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceVisitRequest;
+use App\Http\Requests\UpdateServiceVisitRequest;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceType;
@@ -192,10 +193,13 @@ class ServiceVisitController extends Controller
             'serviceTypes' => ServiceType::orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
+            'clientUnits' => \App\Models\ClientUnit::where('client_id', $serviceRecord->client_id)
+                ->where('is_active', true)->orderBy('label')
+                ->get(['id', 'label', 'unit_type', 'hp']),
         ]);
     }
 
-    public function update(\Illuminate\Http\Request $request, ServiceVisit $serviceRecord): RedirectResponse
+    public function update(UpdateServiceVisitRequest $request, ServiceVisit $serviceRecord): RedirectResponse
     {
         abort_unless(
             ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
@@ -203,42 +207,52 @@ class ServiceVisitController extends Controller
         );
         abort_unless($serviceRecord->transaction?->status === 'pending', 422);
 
+        $data = $request->validated();
         $user = $request->user();
 
-        $validated = $request->validate([
-            'visit_date' => ['required', 'date'],
-            'warranty_months' => ['required', 'integer', 'between:0,6'],
-            'payment_method' => ['required', \Illuminate\Validation\Rule::in(['Cash', 'DuitNow QR'])],
-            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
+        DB::transaction(function () use ($data, $user, $serviceRecord) {
+            $technicianId = $user->seesAllData()
+                ? ($data['technician_id'] ?? $serviceRecord->technician_id)
+                : $serviceRecord->technician_id;
 
-        if ($validated['payment_method'] === 'Cash' && ! $user->hasPermission('collect_payment')) {
-            return back()->withErrors(['payment_method' => 'Cash payment is not permitted for your account.']);
-        }
+            if ($user->tenantId() !== null && $technicianId !== null) {
+                abort_unless(
+                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    404,
+                );
+            }
 
-        $technicianId = $user->seesAllData()
-            ? ($validated['technician_id'] ?? $serviceRecord->technician_id)
-            : $serviceRecord->technician_id;
+            $serviceRecord->update([
+                'visit_date' => $data['visit_date'],
+                'warranty_months' => $data['warranty_months'],
+                'technician_id' => $technicianId,
+            ]);
 
-        if ($user->tenantId() !== null && $technicianId !== null) {
-            abort_unless(
-                \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
-                404,
-            );
-        }
+            // Server-authoritative line replacement: delete then recreate via normalizeLine().
+            $serviceRecord->lines()->delete();
+            foreach ($data['lines'] as $line) {
+                $serviceRecord->lines()->create($this->normalizeLine($line));
+            }
 
-        $serviceRecord->update([
-            'visit_date' => $validated['visit_date'],
-            'warranty_months' => $validated['warranty_months'],
-        ]);
+            // Re-sync next_service_date/type onto referenced units (mirrors store()).
+            foreach ($data['lines'] as $line) {
+                if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
+                    \App\Models\ClientUnit::where('id', $line['unit_id'])
+                        ->where('client_id', $serviceRecord->client_id)
+                        ->update([
+                            'next_service_date' => $line['next_service_date'],
+                            'next_service_type' => $line['service_type'],
+                        ]);
+                }
+            }
 
-        $serviceRecord->transaction->update([
-            'method' => $validated['payment_method'],
-        ]);
+            $serviceRecord->recalculateTotal();
 
-        if ($technicianId) {
-            $serviceRecord->update(['technician_id' => $technicianId]);
-        }
+            $serviceRecord->transaction->update([
+                'method' => $data['payment_method'],
+                'amount' => $serviceRecord->total_amount,
+            ]);
+        });
 
         return redirect()->route('service-records.show', $serviceRecord)
             ->with('success', 'Record updated.');
