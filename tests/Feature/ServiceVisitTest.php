@@ -37,11 +37,25 @@ class ServiceVisitTest extends TestCase
 
     private function seedFees(): void
     {
-        ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-            ['service_type' => 'Gas Top-Up', 'option' => 'Half Top-Up', 'rate' => 150, 'pricing_mode' => 'tiered', 'created_at' => now(), 'updated_at' => now()],
-            ['service_type' => 'Repair', 'option' => null, 'rate' => null, 'pricing_mode' => 'flexible', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        // ServiceTypeSeeder seeds Cleaning (hp_tiered), Gas Top-Up (flat), Repair (flexible).
+        // These tests use Wall Mounted Cleaning without hp_value, so set Cleaning to flat here.
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+
+        $gasTopUp = \App\Models\ServiceType::where('name', 'Gas Top-Up')->first();
+
+        // Cleaning: Wall Mounted flat = 60 (test R1 asserts rate 60 from fee book; units=2 − 10 discount = 110)
+        ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
+
+        // Gas Top-Up: Half Top-Up flat = 150
+        ServiceFee::firstOrCreate(
+            ['service_type_id' => $gasTopUp->id, 'unit_type' => 'Half Top-Up', 'hp_value' => null],
+            ['price' => 150]
+        );
+        // Repair is flexible — no fee rows needed (manual rate)
     }
 
     private function payload(array $lines, array $overrides = []): array
@@ -111,13 +125,13 @@ class ServiceVisitTest extends TestCase
     {
         $this->seedFees();
         $data = $this->payload([
-            ['service_type' => 'Gas Top-Up', 'gas_option' => 'Half Top-Up', 'units' => 1, 'next_service_date' => '2026-12-01'],
+            ['service_type' => 'Gas Top-Up', 'unit_type' => 'Half Top-Up', 'units' => 1, 'next_service_date' => '2026-12-01'],
         ]);
 
         $this->actingAs($this->recorder())->post(route('service-records.store'), $data)->assertRedirect();
 
         $line = ServiceVisit::latest('id')->first()->lines->first();
-        $this->assertSame('150.00', $line->rate); // tiered fee
+        $this->assertSame('150.00', $line->rate); // flat fee for Half Top-Up
         $this->assertNull($line->next_service_date); // R2
     }
 

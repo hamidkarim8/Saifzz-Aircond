@@ -124,9 +124,12 @@ class TechnicianScopingTest extends TestCase
 
     public function test_store_forces_scoped_technician_to_self_ignoring_payload(): void
     {
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $alice = $this->tech();
         $bob = $this->tech();
         $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
@@ -146,9 +149,12 @@ class TechnicianScopingTest extends TestCase
 
     public function test_admin_store_honors_chosen_technician(): void
     {
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $admin = User::factory()->admin()->create();
         $bob = $this->tech();
         $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);

@@ -100,9 +100,12 @@ class MultiTenantIsolationTest extends TestCase
     public function test_store_paths_stamp_creator_tenant(): void
     {
         $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $khalid = $this->boss();
 
         $this->actingAs($khalid)->post(route('clients.store'), [
@@ -169,9 +172,12 @@ class MultiTenantIsolationTest extends TestCase
     public function test_boss_cannot_attach_visit_to_other_tenant_client(): void
     {
         $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $khalid = $this->boss();
         $saifzz = $this->boss();
         $saifzzClient = $this->clientFor($saifzz);
@@ -309,9 +315,12 @@ class MultiTenantIsolationTest extends TestCase
     public function test_boss_cannot_assign_other_tenant_technician_to_visit(): void
     {
         $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $khalid = $this->boss();
         $saifzz = $this->boss();
         $saifzzTech = \App\Models\User::factory()->technician()->create(['tenant_id' => $saifzz->id]);
