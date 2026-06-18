@@ -6,6 +6,16 @@
 
 ---
 
+## Session 36 — 2026-06-18 — Reminder contacted filter (FEAT-011)
+
+**Branch:** `dev`, NOT pushed. Commit `cfed333`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster B → TESTING.
+
+- `Reminders/Index.vue`: client-side Status filter chips (All / Contacted / Not contacted) above the card grid. Combines with the existing Due/Overdue tab + name/phone/serial search through `filterItems`.
+- No backend change — `dueList()` already overlays the `contacted` flag (from `reminder_contacts`) on every row, and the stat cards already carry the contacted count.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
 ## Session 35 — 2026-06-18 — Transaction filters (FEAT-008 method + FEAT-009 status)
 
 **Branch:** `dev`, NOT pushed. Commit `09dab34`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster A, both → TESTING.
