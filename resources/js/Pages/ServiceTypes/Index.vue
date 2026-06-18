@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Badge from '@/Components/Badge.vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
@@ -73,7 +73,20 @@ function buildEditor(type) {
 }
 
 const editors = reactive({});
-for (const t of props.serviceTypes) editors[t.id] = buildEditor(t);
+
+// Keep editors in sync with serviceTypes. Inertia replaces the prop on partial
+// reload (e.g. after adding a service type) — build an editor for any type that
+// lacks one, and prune editors for types that were removed. Existing editors are
+// left untouched so in-progress, unsaved edits survive a reload.
+watch(() => props.serviceTypes, (types) => {
+    const ids = new Set(types.map(t => t.id));
+    for (const t of types) {
+        if (!editors[t.id]) editors[t.id] = buildEditor(t);
+    }
+    for (const id of Object.keys(editors)) {
+        if (!ids.has(Number(id))) delete editors[id];
+    }
+}, { immediate: true });
 
 function addUnit(ed) {
     ed.unitBlocks.push(ed.pricing_mode === 'hp_tiered'
