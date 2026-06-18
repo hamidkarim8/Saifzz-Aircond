@@ -6,6 +6,37 @@
 
 ---
 
+## Session 34 — 2026-06-18 — FEAT-007 edit service lines + FEAT-004 Manual QR payment (both P1)
+
+**Branch:** `dev`, NOT pushed. Suite **322/322**, build clean. Two 17-Jun P1 feedback items, each: brainstorm → spec → plan → subagent-driven execution (impl + spec review + code-quality/security review per backend). Both → TESTING.
+
+### FEAT-007 — edit a service record's service lines (suite 307→316)
+Spec `2026-06-18-edit-service-lines-design.md`, plan `2026-06-18-edit-service-lines.md`. Commits `a48eaae`→`5392e9d`.
+- Edit page was lines-read-only; now full `ServiceLineCard` editor (add/remove/change lines) + sticky grand-total bar, identical to Create. Client stays fixed (read-only).
+- `update()` rewritten transactional: delete-then-recreate lines via existing `normalizeLine()` (server-authoritative fee re-snapshot), `recalculateTotal()`, **+ sync `transaction.amount`** (latent stale-amount bug fixed). Re-syncs unit next-service. Pending-only guard unchanged (paid→422, non-visible→403).
+- Validation: extracted shared per-line + cash-permission block into `app/Http/Requests/Concerns/ValidatesServiceLines.php` trait (used by both Store + new `UpdateServiceVisitRequest`; Store behaviour identical). `unit_id` existence scoped to the route record's `client_id`.
+- Invoice = live snapshot (`SnapshotBuilder` reads lines at gen time; no frozen copy while pending) → edits reflect automatically, no extra work.
+- Tests: `ServiceVisitUpdateTest` (9). No migrations.
+
+### FEAT-004 — Manual QR payment method (suite 316→322)
+Spec `2026-06-18-manual-qr-payment-design.md`, plan `2026-06-18-manual-qr-payment.md`. Commits `589599f`→`afdd927`.
+- "Manual QR" = per-tenant static QR image (admin's DuitNow/bank QR) uploaded in Business Settings → Payment tab. Mechanically like Cash: admin shows QR, customer transfers, admin confirms → paid + receipt, no gateway/webhook. **Admin-only** at collection.
+- Schema: migration `2026_06_18_000030` adds nullable `payment_qr_path` to `business_settings` (mirrors `google_review_qr_path`). `transactions.method` is a free string → `'Manual QR'` set server-side only, NO transactions migration, Create/Edit form enums unchanged.
+- Upload: `UpdateBusinessSettingRequest` validates `payment_qr` (image, 2MB); `BusinessSettingController::update` stores `payment-qr/tenant-{id}.png` public disk; `show()` exposes `paymentQrUrl`. Business Settings Payment tab gets a Manual QR card (upload + preview) above the BayarCash card.
+- Collection: `PaymentService::confirmManualQr()` (mirror of `confirmCash`, method='Manual QR', idempotent, completes linked appointment). Route `POST payments/{transaction}/manual-qr` (`payments.manualQr`, `can:collect_payment`). `PaymentController::manualQr()` = `authorizeVisitScope` (tenant/visibility 403) THEN `abort_unless(isAdmin,403)`. `Payments/Show.vue` third method button, shown only when `isAdmin && manualQrUrl`, renders the real uploaded QR.
+- Cash unchanged (stays `collect_payment`-gated; CHG-016 not reversed).
+- Tests: `BusinessSettingTest` +1 upload; `PaymentTest` +5 (admin paid/receipt, idempotent, non-admin-collector 403, no-collect_payment 403, cross-tenant 403).
+
+**Problems hit & fixes**
+- FEAT-007: `update()` never synced `transaction.amount` — would have gone stale once lines became editable. Fixed in rewrite.
+- FEAT-004: plan's cross-tenant test hardcoded `tenant_id => 9002`, but `tenant_id` is a FK to `users.id` → FK violation. Implementer fixed to a second self-root admin (real isolation assertion).
+
+**Reviews:** backend of each feature got a combined spec + code-quality/security subagent review → both COMPLIANT, no blockers (only cosmetic notes: inline FQCN style, test coverage boundary). Frontend = pattern-copy of existing UI, build-verified.
+
+**Prod deploy on merge:** `php artisan migrate` (FEAT-004 `payment_qr_path` only; FEAT-007 none) + `npm run build`. Still pending from sessions 47/48/50/51: their migrations + price-book reseed.
+
+---
+
 ## Session 33 — 2026-06-18 — Appointment flow cluster (BUG-003/004, CHG-002/003/004, FEAT-001/002)
 
 **Branch:** `dev`, NOT pushed. Suite **307/307**, build clean. Whole-branch review "ready to merge" (one minor security finding caught + fixed). Spec `docs/superpowers/specs/2026-06-18-appointment-flow-cluster-design.md`, plan `docs/superpowers/plans/2026-06-18-appointment-flow-cluster.md`. Subagent-driven (9 tasks + spec/quality review each + final review). Commits `9f3680e`→`6e3d708`.

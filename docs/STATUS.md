@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-17 (session 30 — Business Settings hub: per-tenant dynamic invoice identity + SSM, Google Review QR, official logo + favicon; payment API token relocated here. Suite 299, not pushed)
+> **Last updated:** 2026-06-18 (session 34 — FEAT-007 edit service lines + FEAT-004 Manual QR payment, both P1 → TESTING. Suite 322, not pushed. 13 commits unpushed on dev since the 47-51 batch. See SESSION-LOG + FEEDBACK-17062026.md)
 
 ---
 
