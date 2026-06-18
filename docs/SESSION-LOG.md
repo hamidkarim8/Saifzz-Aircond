@@ -22,6 +22,8 @@
 
 **Reviews:** each task got spec + code-quality subagent review; review-driven fixes applied (null-safe hp rule, stale-editor re-sync, stable v-for keys, empty-state hint). Final opus whole-branch review: ready to merge, no blockers.
 
+**Hotfix (same session, eyeball-found):** adding a service type then opening Fee Schedule tab rendered blank — `editors` map was built once at component init and not re-synced when Inertia replaced `props.serviceTypes`, so the new type had no editor and the tab threw on `undefined.pricing_mode`. Fixed with `watch(() => props.serviceTypes, …, {immediate:true})` that builds editors for new types + prunes removed ones (existing editors untouched so unsaved edits survive). `ServiceTypes/Index.vue`, build clean.
+
 **Decisions:** one axis per service (a unit type owns its HP set; NOT a 2D matrix and NOT additive base+surcharge) — confirmed by Khalid via Hamid. CHG-006 (catalog grouping polish) deferred.
 
 **Prod deploy on merge:** `php artisan migrate` (4 migrations) + RESEED price book (`db:seed --class=ServiceTypeSeeder` + `--class=ServiceFeeSeeder`) — service_fees rebuilt destructively, data disposable. + `npm run build`.
