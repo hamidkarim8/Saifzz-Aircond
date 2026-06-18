@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceVisitRequest;
 use App\Models\Client;
-use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
@@ -62,11 +61,9 @@ class ServiceVisitController extends Controller
             : null;
 
         return Inertia::render('ServiceRecords/Create', [
-            'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based'])->toArray(),
-            'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
-            'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
-            'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
             'presetClient' => $presetClient,
             'presetClientUnits' => $presetClient
                 ? \App\Models\ClientUnit::where('client_id', $presetClient->id)
@@ -80,9 +77,6 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
-            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
-                ->get(['id', 'service_type_id', 'hp_value', 'price'])
-                ->groupBy('service_type_id'),
         ]);
     }
 
@@ -190,6 +184,9 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
         ]);
     }
 

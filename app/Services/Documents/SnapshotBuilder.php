@@ -39,7 +39,6 @@ final class SnapshotBuilder
             'lines' => $visit->lines->map(fn ($l) => [
                 'service_type' => $l->service_type,
                 'unit_type' => $l->unit_type,
-                'gas_option' => $l->gas_option,
                 'units' => $l->units,
                 'rate' => $l->rate,
                 'discount' => $l->discount,

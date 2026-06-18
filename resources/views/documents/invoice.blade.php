@@ -58,7 +58,7 @@
     <div class="sec-label">Services</div>
     @foreach ($s['lines'] as $i => $l)
         <div class="line">
-            <div class="line-title">{{ $i + 1 }}. {{ $l['service_type'] }}@if ($l['unit_type'] || $l['gas_option']) &mdash; {{ $l['unit_type'] ?: $l['gas_option'] }}@endif</div>
+            <div class="line-title">{{ $i + 1 }}. {{ $l['service_type'] }}@if ($l['unit_type']) &mdash; {{ $l['unit_type'] }}@endif</div>
             <table class="kv">
                 <tr>
                     <td class="k">Units</td>

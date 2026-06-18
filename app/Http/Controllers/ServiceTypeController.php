@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SyncServiceFeesRequest;
-use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,12 +14,11 @@ class ServiceTypeController extends Controller
 {
     public function index(): Response
     {
-        $fees = ServiceFee::orderBy('unit_type')->get();
-
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'pricing_mode']),
-            'feeGroups'    => $fees->groupBy('service_type_id'),
-            'modes'        => ServiceType::MODES,
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service']),
+            'modes' => ServiceType::MODES,
         ]);
     }
 
