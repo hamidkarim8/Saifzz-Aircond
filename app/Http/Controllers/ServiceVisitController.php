@@ -264,46 +264,37 @@ class ServiceVisitController extends Controller
      */
     private function normalizeLine(array $line): array
     {
-        $type = $line['service_type'];
-        $isRepair = $type === 'Repair';
-        $isGas = $type === 'Gas Top-Up';
-        $carriesUnitType = in_array($type, StoreServiceVisitRequest::UNIT_TYPE_SERVICES, true);
-        $hasUnit = !empty($line['unit_id']);
+        $typeName = $line['service_type'];
+        $serviceType = \App\Models\ServiceType::where('name', $typeName)->first();
+        $mode = $serviceType?->pricing_mode ?? 'flexible';
+        $isFlexible = $mode === 'flexible';
+        $isHp = $mode === 'hp_tiered';
+        $requiresNext = $serviceType?->requires_next_service ?? false;
+        $hasUnit = ! empty($line['unit_id']);
 
-        $unitType = $carriesUnitType ? ($line['unit_type'] ?? null) : null;
-        $gasOption = $isGas ? ($line['gas_option'] ?? null) : null;
+        $unitType = $isFlexible ? null : ($line['unit_type'] ?? null);
+        $hpValue = $isHp && ! empty($line['hp_value']) ? (float) $line['hp_value'] : null;
 
-        // R1 — rate is server-authoritative from the fee book, except Repair (flexible/manual).
-        if ($isRepair) {
+        if ($isFlexible) {
             $rate = (float) $line['rate'];
         } else {
-            $option = $isGas ? $gasOption : $unitType;
-            $rate = (float) ServiceFee::where('service_type', $type)->where('option', $option)->value('rate');
-            if (!empty($line['hp_value'])) {
-                $serviceTypeId = \App\Models\ServiceType::where('name', $type)->value('id');
-                if ($serviceTypeId) {
-                    $hpRate = (float) \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeId)
-                        ->where('hp_value', (float) $line['hp_value'])
-                        ->value('price');
-                    $rate += $hpRate;
-                }
-            }
+            $q = \App\Models\ServiceFee::where('service_type_id', $serviceType->id)
+                ->where('unit_type', $unitType);
+            $isHp ? $q->where('hp_value', $hpValue) : $q->whereNull('hp_value');
+            $rate = (float) $q->value('price');
         }
 
         return [
-            'unit_id'          => $hasUnit ? (int) $line['unit_id'] : null,
-            'service_type'     => $type,
-            'unit_type'        => $unitType,
-            'gas_option'       => $gasOption,
-            'units'            => $hasUnit ? 1 : (int) $line['units'],
-            'rate'             => $rate,
-            'repair_desc'      => $isRepair ? ($line['repair_desc'] ?? null) : null,
-            'discount'         => (float) ($line['discount'] ?? 0),
-            // When unit_id is set, next_service_date lives on the unit — not the line.
-            'next_service_date' => ($carriesUnitType && !$hasUnit) ? ($line['next_service_date'] ?? null) : null,
-            // R3 — no notes for Repair.
-            'notes'            => $isRepair ? null : ($line['notes'] ?? null),
-            'hp_value'         => !empty($line['hp_value']) ? (float) $line['hp_value'] : null,
+            'unit_id'           => $hasUnit ? (int) $line['unit_id'] : null,
+            'service_type'      => $typeName,
+            'unit_type'         => $unitType,
+            'units'             => $hasUnit ? 1 : (int) $line['units'],
+            'rate'              => $rate,
+            'repair_desc'       => $isFlexible ? ($line['repair_desc'] ?? null) : null,
+            'discount'          => (float) ($line['discount'] ?? 0),
+            'next_service_date' => ($requiresNext && ! $hasUnit) ? ($line['next_service_date'] ?? null) : null,
+            'notes'             => $isFlexible ? null : ($line['notes'] ?? null),
+            'hp_value'          => $hpValue,
         ];
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ServiceFee;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,8 +32,7 @@ class StoreServiceVisitRequest extends FormRequest
 
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.service_type' => ['required', 'string', Rule::exists('service_types', 'name')],
-            'lines.*.unit_type' => ['nullable', Rule::in(self::UNIT_TYPES)],
-            'lines.*.gas_option' => ['nullable', Rule::in(self::GAS_OPTIONS)],
+            'lines.*.unit_type' => ['nullable', 'string', 'max:255'],
             'lines.*.repair_desc' => ['nullable', 'string', 'max:1000'],
             'lines.*.units' => ['required', 'integer', 'min:1'],
             'lines.*.rate' => ['nullable', 'numeric', 'min:0'],
@@ -58,49 +56,48 @@ class StoreServiceVisitRequest extends FormRequest
             foreach ((array) $this->input('lines', []) as $i => $line) {
                 $type = $line['service_type'] ?? null;
                 $key = "lines.$i";
+                if (! $type) {
+                    continue;
+                }
+                $serviceType = \App\Models\ServiceType::where('name', $type)->first();
+                if (! $serviceType) {
+                    continue;
+                }
 
-                if (in_array($type, self::UNIT_TYPE_SERVICES, true) && empty($line['unit_type'])) {
-                    $v->errors()->add("$key.unit_type", 'Unit type is required for this service.');
-                }
-                if ($type === 'Gas Top-Up' && empty($line['gas_option'])) {
-                    $v->errors()->add("$key.gas_option", 'Gas option is required.');
-                }
-                if ($type === 'Repair') {
+                if ($serviceType->pricing_mode === 'flexible') {
                     if (empty($line['repair_desc'])) {
-                        $v->errors()->add("$key.repair_desc", 'Describe the repair.');
+                        $v->errors()->add("$key.repair_desc", 'Describe the work done.');
                     }
                     if (! isset($line['rate']) || $line['rate'] === '' || $line['rate'] === null) {
-                        $v->errors()->add("$key.rate", 'Enter a price for this repair.');
+                        $v->errors()->add("$key.rate", 'Enter a price.');
                     }
-                } elseif ($type) {
-                    $serviceTypeRow = \App\Models\ServiceType::where('name', $type)->first();
-                    $isHpBased = $serviceTypeRow?->is_hp_based ?? false;
-                    if (! $isHpBased) {
-                        // R1 — a matching fee must exist so the rate can be snapshotted server-side.
-                        $option = $type === 'Gas Top-Up' ? ($line['gas_option'] ?? null) : ($line['unit_type'] ?? null);
-                        if ($option && ! ServiceFee::where('service_type', $type)->where('option', $option)->exists()) {
-                            $v->errors()->add("$key.service_type", "No fee configured for {$type} · {$option}.");
-                        }
+                    continue;
+                }
+
+                if (empty($line['unit_type'])) {
+                    $v->errors()->add("$key.unit_type", 'Unit type is required for this service.');
+                    continue;
+                }
+
+                $feeQuery = \App\Models\ServiceFee::where('service_type_id', $serviceType->id)
+                    ->where('unit_type', $line['unit_type']);
+
+                if ($serviceType->pricing_mode === 'hp_tiered') {
+                    if (empty($line['hp_value'])) {
+                        $v->errors()->add("$key.hp_value", 'HP is required for this service.');
+                        continue;
                     }
-                    // R2 — if HP-based and hp_value submitted, the tier must exist in the fee book
-                    if (!empty($line['hp_value'])) {
-                        if ($serviceTypeRow && $serviceTypeRow->is_hp_based) {
-                            $tierExists = \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeRow->id)
-                                ->where('hp_value', (float) $line['hp_value'])
-                                ->exists();
-                            if (! $tierExists) {
-                                $v->errors()->add("$key.hp_value", "No HP tier configured for {$line['hp_value']} HP.");
-                            }
-                        }
-                    }
+                    $feeQuery->where('hp_value', (float) $line['hp_value']);
+                } else {
+                    $feeQuery->whereNull('hp_value');
+                }
+
+                if (! $feeQuery->exists()) {
+                    $label = $line['unit_type'] . ($serviceType->pricing_mode === 'hp_tiered' ? " · {$line['hp_value']} HP" : '');
+                    $field = $serviceType->pricing_mode === 'hp_tiered' ? 'hp_value' : 'unit_type';
+                    $v->errors()->add("$key.$field", "No fee configured for {$type} · {$label}.");
                 }
             }
         });
     }
-
-    public const UNIT_TYPES = ['Wall Mounted', 'Cassette'];
-    public const GAS_OPTIONS = ['20 PSI', 'Half Top-Up', 'Full Top-Up'];
-
-    /** Services that carry a unit type AND a next-service date (R2). */
-    public const UNIT_TYPE_SERVICES = ['Cleaning', 'Installation', 'Troubleshoot'];
 }
