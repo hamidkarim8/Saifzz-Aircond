@@ -28,16 +28,30 @@ const setPeriod = (p) => {
     router.get(route('transactions.index'), { period: p }, { preserveState: true, replace: true });
 };
 
+// FEAT-008 / FEAT-009 — client-side filters (full list is already loaded for the period).
+const METHODS = ['Cash', 'DuitNow QR', 'Manual QR'];
+const STATUSES = ['paid', 'pending', 'failed', 'cancelled'];
+
+const methodFilter = ref('all');
+const statusFilter = ref('all');
+
+const filtered = computed(() =>
+    props.transactions.filter((t) =>
+        (methodFilter.value === 'all' || t.method === methodFilter.value) &&
+        (statusFilter.value === 'all' || t.status === statusFilter.value)
+    )
+);
+
 const totalPaid = computed(() =>
-    props.transactions.filter((t) => t.status === 'paid').reduce((sum, t) => sum + t.amount, 0)
+    filtered.value.filter((t) => t.status === 'paid').reduce((sum, t) => sum + t.amount, 0)
 );
 
 const pendingCount = computed(() =>
-    props.transactions.filter((t) => t.status === 'pending').length
+    filtered.value.filter((t) => t.status === 'pending').length
 );
 
 const pendingAmount = computed(() =>
-    props.transactions.filter((t) => t.status === 'pending').reduce((sum, t) => sum + t.amount, 0)
+    filtered.value.filter((t) => t.status === 'pending').reduce((sum, t) => sum + t.amount, 0)
 );
 
 const columns = [
@@ -51,7 +65,7 @@ const columns = [
 ];
 
 const rows = computed(() =>
-    props.transactions.map((t) => ({
+    filtered.value.map((t) => ({
         ...t,
         date_fmt: fmtDate(t.date),
         amount_fmt: money(t.amount),
@@ -106,8 +120,38 @@ const rows = computed(() =>
         </div>
 
         <div class="rounded-ral border border-line bg-surface shadow-card">
-            <div class="border-b border-line px-5 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
                 <h2 class="text-sm font-bold text-navy-800">All Transactions</h2>
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs font-semibold text-ink-muted">Method</span>
+                        <button
+                            v-for="m in ['all', ...METHODS]"
+                            :key="m"
+                            class="rounded-ra px-2.5 py-1 text-xs font-semibold capitalize transition"
+                            :class="methodFilter === m
+                                ? 'bg-primary text-white shadow-card'
+                                : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
+                            @click="methodFilter = m"
+                        >
+                            {{ m === 'all' ? 'All' : m }}
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs font-semibold text-ink-muted">Status</span>
+                        <button
+                            v-for="s in ['all', ...STATUSES]"
+                            :key="s"
+                            class="rounded-ra px-2.5 py-1 text-xs font-semibold capitalize transition"
+                            :class="statusFilter === s
+                                ? 'bg-primary text-white shadow-card'
+                                : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
+                            @click="statusFilter = s"
+                        >
+                            {{ s === 'all' ? 'All' : s }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="p-4">
