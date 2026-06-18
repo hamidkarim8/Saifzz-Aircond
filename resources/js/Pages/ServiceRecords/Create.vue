@@ -15,6 +15,7 @@ const props = defineProps({
     presetClient: { type: Object, default: null },
     presetClientUnits: { type: Array, default: () => [] },
     presetTechnicianId: { type: Number, default: null },
+    presetAppointmentId: { type: Number, default: null },
     technicians: { type: Array, default: null },
 });
 
@@ -33,6 +34,7 @@ const form = useForm({
     warranty_months: 0,
     payment_method: canCollectCash ? 'Cash' : 'DuitNow QR',
     technician_id: props.presetTechnicianId ?? null,
+    appointment_id: props.presetAppointmentId ?? null,
     lines: [blankLine()],
 });
 
