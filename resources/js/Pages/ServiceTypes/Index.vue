@@ -1,12 +1,10 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
 import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
 import { serviceVariant } from '@/lib/badges';
-import { confirmDanger } from '@/lib/swal';
 
 const props = defineProps({
     serviceTypes: Array,
@@ -56,17 +54,20 @@ function toggleNextService(type) {
 // --- Fees ---
 const canEditFees = computed(() => usePage().props.auth?.can?.edit_fees ?? false);
 
+// Stable key sequence — monotonically increasing, never reused.
+let _seq = 0;
+
 function buildEditor(type) {
     const mode = type.pricing_mode;
     let unitBlocks = [];
     if (mode === 'hp_tiered') {
         const byUnit = {};
         for (const f of type.fees) {
-            (byUnit[f.unit_type] ??= []).push({ hp_value: Number(f.hp_value), price: Number(f.price) });
+            (byUnit[f.unit_type] ??= []).push({ hp_value: Number(f.hp_value), price: Number(f.price), _key: ++_seq });
         }
-        unitBlocks = Object.entries(byUnit).map(([unit_type, tiers]) => ({ unit_type, tiers }));
+        unitBlocks = Object.entries(byUnit).map(([unit_type, tiers]) => ({ unit_type, tiers, _key: ++_seq }));
     } else if (mode === 'flat') {
-        unitBlocks = type.fees.map(f => ({ unit_type: f.unit_type, price: Number(f.price) }));
+        unitBlocks = type.fees.map(f => ({ unit_type: f.unit_type, price: Number(f.price), _key: ++_seq }));
     }
     return reactive({ pricing_mode: mode, unitBlocks, saving: false, errors: {} });
 }
@@ -76,11 +77,11 @@ for (const t of props.serviceTypes) editors[t.id] = buildEditor(t);
 
 function addUnit(ed) {
     ed.unitBlocks.push(ed.pricing_mode === 'hp_tiered'
-        ? { unit_type: '', tiers: [{ hp_value: '', price: '' }] }
-        : { unit_type: '', price: '' });
+        ? { unit_type: '', tiers: [{ hp_value: '', price: '', _key: ++_seq }], _key: ++_seq }
+        : { unit_type: '', price: '', _key: ++_seq });
 }
 function removeUnit(ed, i) { ed.unitBlocks.splice(i, 1); }
-function addTier(block) { block.tiers.push({ hp_value: '', price: '' }); }
+function addTier(block) { block.tiers.push({ hp_value: '', price: '', _key: ++_seq }); }
 function removeTier(block, i) { block.tiers.splice(i, 1); }
 
 function onModeChange(ed) {
@@ -102,15 +103,37 @@ function flatten(ed) {
 
 function saveFees(type) {
     const ed = editors[type.id];
-    ed.saving = true;
     ed.errors = {};
+
+    // Pre-flight validation — catch obviously bad state before hitting the server.
+    const rows = flatten(ed);
+    if (ed.pricing_mode !== 'flexible') {
+        if (rows.length === 0) {
+            ed.errors = { fees: 'Add at least one unit type.' };
+            return;
+        }
+        const bad = rows.some(r =>
+            !r.unit_type || r.price === '' || r.price === null || isNaN(Number(r.price)) ||
+            (ed.pricing_mode === 'hp_tiered' && (r.hp_value === '' || r.hp_value === null || isNaN(Number(r.hp_value))))
+        );
+        if (bad) {
+            ed.errors = { fees: 'Fill in every unit type, HP, and price before saving.' };
+            return;
+        }
+    }
+
+    ed.saving = true;
     router.put(route('service-types.fees.sync', type.id), {
         pricing_mode: ed.pricing_mode,
-        fees: flatten(ed),
+        fees: rows,
     }, {
         preserveScroll: true,
         onError: (e) => { ed.errors = e; ed.saving = false; },
-        onSuccess: () => { ed.saving = false; },
+        onSuccess: () => {
+            ed.saving = false;
+            const fresh = props.serviceTypes.find(t => t.id === type.id);
+            if (fresh) Object.assign(editors[type.id], buildEditor(fresh));
+        },
     });
 }
 </script>
@@ -285,24 +308,28 @@ function saveFees(type) {
                     </div>
 
                     <div v-else class="divide-y divide-line">
-                        <div v-for="(block, bi) in editors[type.id].unitBlocks" :key="bi" class="px-4 py-3">
+                        <div v-for="(block, bi) in editors[type.id].unitBlocks" :key="block._key" class="px-4 py-3">
                             <div class="flex items-center gap-3">
                                 <input v-model="block.unit_type" placeholder="Unit type (e.g. Wall Mounted)"
+                                    :disabled="!canEditFees"
                                     class="flex-1 rounded-ra border-line bg-surface text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
                                 <input v-if="editors[type.id].pricing_mode === 'flat'" v-model.number="block.price" type="number" step="0.01" min="0" placeholder="Price"
+                                    :disabled="!canEditFees"
                                     class="w-28 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
                                 <button v-if="canEditFees" type="button" class="text-sm font-medium text-danger hover:underline" @click="removeUnit(editors[type.id], bi)">Remove</button>
                             </div>
 
                             <div v-if="editors[type.id].pricing_mode === 'hp_tiered'" class="mt-3 space-y-2 pl-1">
-                                <div v-for="(tier, ti) in block.tiers" :key="ti" class="flex items-center gap-3">
+                                <div v-for="(tier, ti) in block.tiers" :key="tier._key" class="flex items-center gap-3">
                                     <input v-model.number="tier.hp_value" type="number" step="0.5" min="0.5" max="20" placeholder="HP"
+                                        :disabled="!canEditFees"
                                         class="w-24 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
                                     <input v-model.number="tier.price" type="number" step="0.01" min="0" placeholder="Price"
+                                        :disabled="!canEditFees"
                                         class="w-28 rounded-ra border-line bg-surface font-mono text-sm text-ink shadow-card focus:border-primary focus:ring-primary" />
-                                    <button type="button" class="text-xs text-danger hover:underline" @click="removeTier(block, ti)">×</button>
+                                    <button v-if="canEditFees" type="button" class="text-xs text-danger hover:underline" @click="removeTier(block, ti)">×</button>
                                 </div>
-                                <button type="button" class="text-sm text-primary hover:underline" @click="addTier(block)">+ Add HP tier</button>
+                                <button v-if="canEditFees" type="button" class="text-sm text-primary hover:underline" @click="addTier(block)">+ Add HP tier</button>
                             </div>
                         </div>
 
