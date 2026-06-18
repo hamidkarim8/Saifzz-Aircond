@@ -6,6 +6,21 @@
 
 ---
 
+## Session 37 — 2026-06-18 — Service record: payment selector → Google Review (CHG-007/008)
+
+**Branch:** `dev`, NOT pushed. 7 commits `233c491`→`116d9c8` (base `a6cb276`). Suite **324/324**, build clean. Brainstorm → spec → plan → subagent-driven execution (backend + frontend impl, reviewer pass). Both 17-Jun P2 → TESTING.
+
+- **CHG-008** — removed the redundant payment-method selector from the service-record create + edit forms. The collect-payment screen already selects the method and `PaymentService` overwrites `transaction.method` at collection, so the form only needs a pending placeholder.
+  - `store()` writes pending placeholder `'DuitNow QR'`; `update()` no longer touches `method` (preserves existing), updates `amount` only.
+  - Dropped the `payment_method` rule from `StoreServiceVisitRequest` + `UpdateServiceVisitRequest`.
+  - Removed the now-dead cash-at-creation guard from `ValidatesServiceLines` trait (it read a `payment_method` field the forms no longer send). Safe: all payment routes (`payments.cash`/`manualQr`/`pay`) are gated `can:collect_payment`, so cash recording stays permission-protected. Dropped its obsolete test `test_cash_method_blocked_without_collect_payment`.
+- **CHG-007** — Google Review surfaced **before** payment. `create()` now passes `googleReview {qrUrl,url}` (same `BusinessSetting` lookup as `show()`); `Create.vue` renders a Google Review card (QR image + open-review link) where the payment-method card was, gated on a configured QR. Edit form gets no review card.
+- Reviewer initially flagged guard removal as "critical security hole" — verified false (no new capability; routes already gated). Cleaned the dead guard instead.
+- Spec `2026-06-18-service-record-payment-greview-design.md`, plan `2026-06-18-service-record-payment-greview.md`.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
 ## Session 36 — 2026-06-18 — Reminder contacted filter (FEAT-011)
 
 **Branch:** `dev`, NOT pushed. Commit `cfed333`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster B → TESTING.
