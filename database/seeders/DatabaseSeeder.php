@@ -75,7 +75,7 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $this->call(ServiceFeeSeeder::class);
         $this->call(ServiceTypeSeeder::class);
+        $this->call(ServiceFeeSeeder::class);
     }
 }

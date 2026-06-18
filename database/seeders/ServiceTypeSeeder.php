@@ -10,18 +10,18 @@ class ServiceTypeSeeder extends Seeder
     public function run(): void
     {
         $types = [
-            ['name' => 'Cleaning',     'requires_next_service' => true],
-            ['name' => 'Gas Top-Up',   'requires_next_service' => false],
-            ['name' => 'Repair',       'requires_next_service' => false],
-            ['name' => 'Installation', 'requires_next_service' => true],
-            ['name' => 'Troubleshoot', 'requires_next_service' => true],
-            ['name' => 'Dismantle',    'requires_next_service' => false],
+            ['name' => 'Cleaning',     'pricing_mode' => 'hp_tiered', 'requires_next_service' => true],
+            ['name' => 'Gas Top-Up',   'pricing_mode' => 'flat',      'requires_next_service' => false],
+            ['name' => 'Repair',       'pricing_mode' => 'flexible',  'requires_next_service' => false],
+            ['name' => 'Installation', 'pricing_mode' => 'flat',      'requires_next_service' => true],
+            ['name' => 'Troubleshoot', 'pricing_mode' => 'flat',      'requires_next_service' => true],
+            ['name' => 'Dismantle',    'pricing_mode' => 'flexible',  'requires_next_service' => false],
         ];
 
         foreach ($types as $type) {
             ServiceType::updateOrCreate(
                 ['name' => $type['name']],
-                ['requires_next_service' => $type['requires_next_service']],
+                ['pricing_mode' => $type['pricing_mode'], 'requires_next_service' => $type['requires_next_service']],
             );
         }
     }
