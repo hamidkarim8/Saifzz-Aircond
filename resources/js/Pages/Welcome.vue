@@ -19,7 +19,7 @@ const services = [
 
     <div class="min-h-screen bg-appbg">
         <!-- ===== HERO ===== -->
-        <section class="relative overflow-hidden bg-navy-900 text-white">
+        <section class="relative overflow-hidden bg-navy-900 text-white" style="padding-top: env(safe-area-inset-top)">
             <!-- Airflow glow accents -->
             <div class="pointer-events-none absolute inset-0">
                 <div class="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-primary/30 blur-3xl"></div>
