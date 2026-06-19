@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import InvoicePreview from './Partials/InvoicePreview.vue';
+import ImageUploadField from './Partials/ImageUploadField.vue';
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
@@ -108,9 +109,8 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                         <p v-if="reviewForm.errors.google_review_url" class="mt-1 text-xs text-danger">{{ reviewForm.errors.google_review_url }}</p>
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">QR image (PNG/JPG, max 2MB)</label>
-                        <input type="file" accept="image/*" :class="inputClass"
-                            @change="reviewForm.google_review_qr = $event.target.files[0]" />
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">QR image</label>
+                        <ImageUploadField v-model="reviewForm.google_review_qr" />
                         <p v-if="reviewForm.errors.google_review_qr" class="mt-1 text-xs text-danger">{{ reviewForm.errors.google_review_qr }}</p>
                     </div>
                     <button type="submit" :disabled="reviewForm.processing"
@@ -139,9 +139,8 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                 <div class="grid gap-6 lg:grid-cols-2">
                     <form class="space-y-4" @submit.prevent="saveManualQr">
                         <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-ink">QR image (PNG/JPG, max 2MB)</label>
-                            <input type="file" accept="image/*" :class="inputClass"
-                                @change="manualQrForm.payment_qr = $event.target.files[0]" />
+                            <label class="mb-1.5 block text-sm font-semibold text-ink">QR image</label>
+                            <ImageUploadField v-model="manualQrForm.payment_qr" />
                             <p v-if="manualQrForm.errors.payment_qr" class="mt-1 text-xs text-danger">{{ manualQrForm.errors.payment_qr }}</p>
                         </div>
                         <button type="submit" :disabled="manualQrForm.processing"

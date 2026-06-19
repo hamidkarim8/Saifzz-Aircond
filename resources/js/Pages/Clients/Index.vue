@@ -13,8 +13,10 @@ const props = defineProps({
 
 const activeType = ref(props.filters.service_type ?? null);
 
-const setType = (t) => {
-    activeType.value = activeType.value === t ? null : t;
+// Too many service types crowd a chip row — fall back to a dropdown.
+const asDropdown = computed(() => (props.serviceTypes?.length ?? 0) > 6);
+
+const applyType = () => {
     router.get(
         route('clients.index'),
         {
@@ -23,6 +25,11 @@ const setType = (t) => {
         },
         { preserveState: true, replace: true, preserveScroll: true },
     );
+};
+
+const setType = (t) => {
+    activeType.value = activeType.value === t ? null : t;
+    applyType();
 };
 
 // View-only registry: serial, name, phone. Full detail lives behind View.
@@ -56,9 +63,18 @@ const columns = [
             :per-page="10"
             :per-page-options="[10, 25, 50]"
         >
-            <!-- Service-type filter tabs -->
+            <!-- Service-type filter: chips, or a dropdown when there are many types -->
             <template #filters>
-                <div class="flex flex-wrap gap-2">
+                <select
+                    v-if="asDropdown"
+                    v-model="activeType"
+                    class="rounded-ra border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-card focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    @change="applyType"
+                >
+                    <option :value="null">All services</option>
+                    <option v-for="t in serviceTypes" :key="t" :value="t">{{ t }}</option>
+                </select>
+                <div v-else class="flex flex-wrap gap-2">
                     <button
                         v-for="t in serviceTypes"
                         :key="t"
