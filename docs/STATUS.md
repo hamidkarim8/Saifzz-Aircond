@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-18 (session 34 — FEAT-007 edit service lines + FEAT-004 Manual QR payment, both P1 → TESTING. Suite 322. `origin/dev` now at FEAT-004 commit `afdd927`; local `dev` ahead by 1 (session-34 docs). `main` still behind dev by the 47-52 batch — not yet PR'd. See SESSION-LOG + FEEDBACK-17062026.md)
+> **Last updated:** 2026-06-19 (session 38 — 6 remaining 17-Jun P2/P3 items → TESTING: CHG-006 catalog grouping, CHG-012 client filter chips from live service types, CHG-016 phone fallback default, CHG-019 invoice-preview polish, CHG-020 styled QR upload, FEAT-010 next-service badge. Suite 324, commit `5a26e84` on `dev`. 17-Jun now down to FEAT-005/006 warranty theory only. Sessions 47-56 NOT yet pushed/PR'd to `main` — Khalid batch pending. See SESSION-LOG + FEEDBACK-17062026.md)
 
 ---
 

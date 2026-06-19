@@ -6,6 +6,21 @@
 
 ---
 
+## Session 38 — 2026-06-19 — 6 remaining 17-Jun P2/P3 items (CHG-006/012/016/019/020 + FEAT-010)
+
+**Branch:** `dev`, NOT pushed. Commit `5a26e84` (base `116d9c8`). Suite **324/324**, build clean. Done inline (small, independent items). All 6 → TESTING. 17-Jun now down to only FEAT-005/006 (warranty theory, need scope).
+
+- **CHG-006 (P2, Catalog)** — price-set grouping by HP / unit type was already shipped in the CHG-005 catalog rebuild: `Catalog/Index.vue` groups `hp_tiered` fees under each unit type with HP rows, lists `flat` per unit type, shows `flexible` as per-job. Verified vs the ask — no code change.
+- **CHG-012 (P3, Clients)** — filter chips now sourced from the live `service_types` table: `ClientController::index` passes `ServiceType::orderBy('name')->pluck('name')` (was a stale hardcoded const still listing killed `Gas Top-Up`/`Repair`); removed the `SERVICE_TYPES` const. `Clients/Index.vue` falls back to a `<select>` dropdown when >6 types (`asDropdown` computed; chip + dropdown share `applyType()`).
+- **CHG-016 (P3, Business Settings)** — `config/business.php` phone default → `016-635 4563 / 016-281 5887` (was `012-9876543`). Already editable per tenant via Business Settings → Identity (`BusinessSetting::forTenant` overrides the config fallback). The number was never actually hardcoded in code — only the default needed setting.
+- **CHG-019 (P2, Business Settings)** — `InvoicePreview.vue` rewritten to mirror the real `documents/layout.blade.php`: invoice no/date kv rows, Bill-to block, services box, navy total block, PENDING status pill, footer line. Still live-updates from the Identity tab fields (name/phone/SSM).
+- **CHG-020 (P2, Business Settings)** — new shared `BusinessSettings/Partials/ImageUploadField.vue`: `v-model` File, styled Choose/Change button, selected filename, clear (×), and an object-URL thumbnail of the picked image before save (revokes URLs on change/unmount). Wired into both the Google Review QR and Manual QR inputs (replaced the raw `<input type=file>`).
+- **FEAT-010 (P3, Clients)** — each service line in `Clients/Show.vue` service history shows a "Next service: DD Mon YYYY" badge when `l.next_service_date` is set (date, not a countdown).
+- Frontend + `config/business.php` + `ClientController` only. No migrations. Full suite stayed 324/324 (Client tests didn't assert the old const).
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
 ## Session 37 — 2026-06-18 — Service record: payment selector → Google Review (CHG-007/008)
 
 **Branch:** `dev`, NOT pushed. 7 commits `233c491`→`116d9c8` (base `a6cb276`). Suite **324/324**, build clean. Brainstorm → spec → plan → subagent-driven execution (backend + frontend impl, reviewer pass). Both 17-Jun P2 → TESTING.
