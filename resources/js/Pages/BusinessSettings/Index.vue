@@ -1,9 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
-import InvoicePreview from './Partials/InvoicePreview.vue';
 import ImageUploadField from './Partials/ImageUploadField.vue';
 
 const props = defineProps({
@@ -17,11 +16,29 @@ const activeTab = ref('identity');
 
 const idForm = useForm({
     business_name: props.settings.business_name ?? '',
-    address: props.settings.address ?? '',
     phone: props.settings.phone ?? '',
     ssm_no: props.settings.ssm_no ?? '',
 });
 const saveIdentity = () => idForm.put(route('business-settings.update'), { preserveScroll: true });
+
+// Live preview: render the REAL invoice/receipt Blade in an iframe, refreshed
+// (debounced) as identity fields change. Single source of truth — can't drift.
+const previewType = ref('invoice');
+const previewSrc = ref('');
+const buildPreview = () => {
+    const q = new URLSearchParams({
+        name: idForm.business_name ?? '',
+        phone: idForm.phone ?? '',
+        ssm: idForm.ssm_no ?? '',
+    });
+    previewSrc.value = `${route('business-settings.preview', { type: previewType.value })}?${q.toString()}`;
+};
+let previewTimer;
+watch(
+    [() => idForm.business_name, () => idForm.phone, () => idForm.ssm_no, previewType],
+    () => { clearTimeout(previewTimer); previewTimer = setTimeout(buildPreview, 400); },
+    { immediate: true },
+);
 
 const reviewForm = useForm({
     google_review_url: props.settings.google_review_url ?? '',
@@ -77,10 +94,6 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                         <input v-model="idForm.business_name" :class="inputClass" placeholder="Saifzz Aircond Services" />
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Address</label>
-                        <textarea v-model="idForm.address" rows="2" :class="inputClass" placeholder="Business address"></textarea>
-                    </div>
-                    <div>
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Phone number</label>
                         <input v-model="idForm.phone" :class="inputClass" placeholder="012-9876543" />
                     </div>
@@ -94,10 +107,23 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                     </button>
                 </form>
             </Card>
-            <div>
-                <div class="mb-2 text-sm font-semibold text-ink-soft">Invoice preview</div>
-                <InvoicePreview :name="idForm.business_name" :address="idForm.address" :phone="idForm.phone" :ssm="idForm.ssm_no" />
-            </div>
+            <Card title="Live document preview">
+                <template #actions>
+                    <div class="inline-flex rounded-ra border border-line p-0.5 text-xs font-semibold">
+                        <button type="button"
+                            class="rounded-[6px] px-3 py-1 transition"
+                            :class="previewType === 'invoice' ? 'bg-primary text-white' : 'text-ink-soft hover:text-ink'"
+                            @click="previewType = 'invoice'">Invoice</button>
+                        <button type="button"
+                            class="rounded-[6px] px-3 py-1 transition"
+                            :class="previewType === 'receipt' ? 'bg-primary text-white' : 'text-ink-soft hover:text-ink'"
+                            @click="previewType = 'receipt'">Receipt</button>
+                    </div>
+                </template>
+                <p class="mb-3 text-xs text-ink-soft">Exact template the customer receives — sample data, your live identity.</p>
+                <iframe :src="previewSrc" title="Document preview"
+                    class="h-[640px] w-full rounded-ra border border-line bg-[#f0f4f8]"></iframe>
+            </Card>
         </div>
 
         <div v-else-if="activeTab === 'review'" class="grid gap-6 lg:grid-cols-2">

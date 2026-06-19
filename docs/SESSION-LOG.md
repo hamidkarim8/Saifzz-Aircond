@@ -6,6 +6,27 @@
 
 ---
 
+## Session 40 — 2026-06-19 — PWA home-screen icons + Business Settings live preview
+
+**Branch:** `dev`, NOT pushed. 2 commits. PHP `BusinessSettingTest` 15/15 (incl. 5 new). Vite build clean.
+
+- **PWA add-to-home-screen (commit 1):** mobile browsers (iOS Safari + Android Chrome) now get a proper app icon + name when "Add to Home Screen". Generated `icon-192.png`, `icon-512.png` (transparent) + `apple-touch-icon.png` 180px (**white-flattened — iOS renders alpha as black**) from `public/img/logo.png` via container GD. New `public/site.webmanifest` (name "Saifzz Aircond", short "Saifzz", standalone, theme `#1e3a8a`, maskable icon). `app.blade.php` head += apple-touch-icon, manifest link, theme-color, apple/mobile web-app meta. **Prod note:** web server must serve `.webmanifest` as `application/manifest+json` or Android skips the icon — verify nginx mime on deploy.
+- **Business Settings preview overhaul (commit 2):** Khalid flagged the Identity tab as off. Investigated all 6 points →
+  - **Address field removed** — it was saved to DB + frozen in snapshot but **rendered nowhere** on invoice/receipt (only *client* address shows; business header is name/phone/SSM only). Dropped from `Index.vue` form, `UpdateBusinessSettingRequest` rule, controller `update()`/`show()`. DB column + `forTenant`/snapshot left intact (harmless, reversible).
+  - **Placeholder "Business Name / Phone number" fixed at root** — `show()` prefilled from the raw DB row (`$row?->business_name`, no fallback), so a fresh/unsaved tenant got an empty form → mock showed literal placeholders. Now prefills from `BusinessSetting::forTenant()` — the **same source the documents read**, incl. `config('business.*')` fallback. Page + doc can't diverge.
+  - **Preview ≠ real doc fixed (replaces session-39 CHG-019 mock)** — the `InvoicePreview.vue` Tailwind mock was a hand-built reimplementation that drifted from `documents/*.blade.php` (missing Due Date/Status, different total label/colour, etc.). **Deleted it.** New admin-gated `GET business-settings/preview/{type}` route renders the **real** `invoice.blade`/`receipt.blade` with a fixed sample snapshot + live-typed identity (query params), loaded in an `<iframe>` on the Identity tab. Invoice/Receipt toggle, 400ms-debounced refresh as you type. Single source of truth — covers both docs, can't drift again.
+  - **Label fix** — preview now a proper `Card title="Live document preview"` (was a bare floating `<div>` next to the form Card).
+  - Tests: +5 in `BusinessSettingTest` (live invoice identity, receipt template, bad type → 404, saved-identity fallback, non-admin → 403).
+- **Real-fresh seeder:** `DatabaseSeeder` now seeds **only the 2 boss accounts (self-rooted tenants)** — commented out the Saifzz business-identity + Google Review QR block and the `ServiceType`/`ServiceFee` seeder calls. Bosses configure identity/services/fees from the live UI. Seeder classes left intact (uncomment to restore defaults). Local reset verified: `users=2 tenants=2`, everything else 0. **Fresh reset:** `php artisan migrate:fresh --seed` then `storage:link` + `chown -R sail:sail storage/app/public` (prod: `--force` + uid `82`).
+- **Prod on merge:** `npm run build` (Vite) + verify `.webmanifest` mime. No migrations.
+
+### Fixes (same session)
+- **Service-record validation messages** — errors leaked raw keys (`The lines.0.service_type field is required.`). Added `attributes()` + `messages()` to the shared `ValidatesServiceLines` trait (used by Store + Update requests; neither defined them, so trait methods apply). Per-line messages use the 1-based `:position` placeholder → "Select a service type for line 1." +1 test (`ServiceVisitTest`).
+- **Fee Schedule flexible mode had no Save** — the "Save fees" button was inside the non-flexible `v-else` block, so picking **Flexible** gave no way to persist; the type stayed at its DB default `pricing_mode='flat'` (migration `000010`) with zero fees → service records then showed "ask admin to set fees". Moved Save into an always-visible footer in `ServiceTypes/Index.vue`; "Add unit type" stays in the non-flexible block. Server (`syncFees`/`SyncServiceFeesRequest`) already accepted flexible + empty fees. Frontend-only, `npm run build`.
+- **Reminder/context note:** invoice/receipt "defaults" come from `config('business.*')` (env-backed) via `BusinessSetting::forTenant` fallback when no `business_settings` row exists — name "Saifzz Aircond Services" + phone "016-635 4563 / 016-281 5887"; SSM is DB-only (blank until saved). Logo from `BrandAssets::logoDataUri()` (`logo-256.png`). Intentional safety net so docs never render blank pre-setup.
+
+---
+
 ## Session 39 — 2026-06-19 — Google-review warranty bonus (FEAT-005/006)
 
 **Branch:** `dev`, NOT pushed. Build clean. FEAT-005 + FEAT-006 turned out to be the **same feature** (not a voucher entity) → both → TESTING. **17-Jun feedback now has zero OPEN items.**

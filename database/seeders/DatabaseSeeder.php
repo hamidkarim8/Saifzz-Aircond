@@ -55,27 +55,30 @@ class DatabaseSeeder extends Seeder
             $saifzz->update(['tenant_id' => $saifzz->id]);
         }
 
-        if ($saifzz) {
-            // Copy the bundled Google Review QR onto the public disk for Saifzz.
-            $qrSource = public_path('img/google-review-qr.png');
-            $qrPath = "qr/tenant-{$saifzz->id}.png";
-            if (is_file($qrSource)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->put($qrPath, file_get_contents($qrSource));
-            }
-
-            \App\Models\BusinessSetting::updateOrCreate(
-                ['tenant_id' => $saifzz->id],
-                [
-                    'business_name' => config('business.name'),
-                    'address' => config('business.address'),
-                    'phone' => config('business.phone'),
-                    'ssm_no' => '202603093151 (003839732-K)',
-                    'google_review_qr_path' => is_file($qrSource) ? $qrPath : null,
-                ],
-            );
-        }
-
-        $this->call(ServiceTypeSeeder::class);
-        $this->call(ServiceFeeSeeder::class);
+        // Real-fresh start: accounts + tenants only. Everything else (Saifzz
+        // business identity + QR, service types, fee schedule) left blank so the
+        // bosses set it all up from the live UI. Re-enable to reseed defaults.
+        // if ($saifzz) {
+        //     // Copy the bundled Google Review QR onto the public disk for Saifzz.
+        //     $qrSource = public_path('img/google-review-qr.png');
+        //     $qrPath = "qr/tenant-{$saifzz->id}.png";
+        //     if (is_file($qrSource)) {
+        //         \Illuminate\Support\Facades\Storage::disk('public')->put($qrPath, file_get_contents($qrSource));
+        //     }
+        //
+        //     \App\Models\BusinessSetting::updateOrCreate(
+        //         ['tenant_id' => $saifzz->id],
+        //         [
+        //             'business_name' => config('business.name'),
+        //             'address' => config('business.address'),
+        //             'phone' => config('business.phone'),
+        //             'ssm_no' => '202603093151 (003839732-K)',
+        //             'google_review_qr_path' => is_file($qrSource) ? $qrPath : null,
+        //         ],
+        //     );
+        // }
+        //
+        // $this->call(ServiceTypeSeeder::class);
+        // $this->call(ServiceFeeSeeder::class);
     }
 }

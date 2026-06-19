@@ -346,14 +346,18 @@ function saveFees(type) {
                             </div>
                         </div>
 
-                        <div v-if="canEditFees" class="flex items-center justify-between px-4 py-3">
+                        <div v-if="canEditFees" class="px-4 py-3">
                             <button type="button" class="flex items-center gap-1.5 text-sm text-primary hover:underline" @click="addUnit(editors[type.id])">
                                 <IconPlus class="h-4 w-4" /> Add unit type
                             </button>
-                            <button type="button" :disabled="editors[type.id].saving"
-                                class="rounded-ra bg-primary px-4 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
-                                @click="saveFees(type)">Save fees</button>
                         </div>
+                    </div>
+
+                    <!-- Save footer — always shown so flexible (no fee rows) persists too -->
+                    <div v-if="canEditFees" class="flex items-center justify-end border-t border-line bg-surface-muted px-4 py-3">
+                        <button type="button" :disabled="editors[type.id].saving"
+                            class="rounded-ra bg-primary px-4 py-1.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                            @click="saveFees(type)">{{ editors[type.id].saving ? 'Saving…' : 'Save fees' }}</button>
                     </div>
                 </div>
             </div>

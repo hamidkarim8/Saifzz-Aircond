@@ -134,6 +134,63 @@ class BusinessSettingTest extends TestCase
         $this->assertDatabaseMissing('business_settings', ['tenant_id' => 99999]);
     }
 
+    public function test_preview_renders_real_invoice_template_with_live_identity(): void
+    {
+        $boss = $this->bossAdmin();
+
+        $res = $this->actingAs($boss)
+            ->get(route('business-settings.preview', ['type' => 'invoice']).'?'.http_build_query([
+                'name' => 'Live Typed Co',
+                'phone' => '011-2223334',
+            ]));
+
+        $res->assertOk();
+        $res->assertSee('INVOICE');                 // real template, kind label
+        $res->assertSee('Live Typed Co');           // live identity from query
+        $res->assertSee('011-2223334');
+        $res->assertSee('Ahmad bin Ismail');        // sample snapshot client
+    }
+
+    public function test_preview_renders_receipt_template(): void
+    {
+        $boss = $this->bossAdmin();
+
+        $this->actingAs($boss)
+            ->get(route('business-settings.preview', ['type' => 'receipt']))
+            ->assertOk()
+            ->assertSee('OFFICIAL RECEIPT')
+            ->assertSee('TOTAL PAID');
+    }
+
+    public function test_preview_rejects_unknown_type(): void
+    {
+        $this->actingAs($this->bossAdmin())
+            ->get(route('business-settings.preview', ['type' => 'quote']))
+            ->assertNotFound();
+    }
+
+    public function test_preview_falls_back_to_saved_identity_when_no_query(): void
+    {
+        $boss = $this->bossAdmin();
+        BusinessSetting::create([
+            'tenant_id' => $boss->id,
+            'business_name' => 'Saved Identity Sdn Bhd',
+        ]);
+
+        $this->actingAs($boss)
+            ->get(route('business-settings.preview', ['type' => 'invoice']))
+            ->assertOk()
+            ->assertSee('Saved Identity Sdn Bhd');
+    }
+
+    public function test_non_admin_cannot_view_preview(): void
+    {
+        $tech = User::factory()->create(['role' => User::ROLE_TECHNICIAN]);
+        $this->actingAs($tech)
+            ->get(route('business-settings.preview', ['type' => 'invoice']))
+            ->assertForbidden();
+    }
+
     public function test_non_admin_cannot_update(): void
     {
         $tech = User::factory()->create(['role' => User::ROLE_TECHNICIAN]);
