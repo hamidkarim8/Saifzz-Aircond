@@ -208,6 +208,19 @@ class ServiceVisitTest extends TestCase
             ->assertSessionHasErrors(['lines.0.repair_desc', 'lines.0.rate']);
     }
 
+    public function test_line_validation_messages_are_human_readable(): void
+    {
+        $this->seedFees();
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $this->payload([
+                ['units' => 1], // missing service_type
+            ]))
+            ->assertSessionHasErrors([
+                'lines.0.service_type' => 'Select a service type for line 1.',
+            ]);
+    }
+
     public function test_new_client_is_created_with_serial(): void
     {
         $this->seedFees();
