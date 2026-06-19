@@ -20,6 +20,11 @@
 - **Real-fresh seeder:** `DatabaseSeeder` now seeds **only the 2 boss accounts (self-rooted tenants)** — commented out the Saifzz business-identity + Google Review QR block and the `ServiceType`/`ServiceFee` seeder calls. Bosses configure identity/services/fees from the live UI. Seeder classes left intact (uncomment to restore defaults). Local reset verified: `users=2 tenants=2`, everything else 0. **Fresh reset:** `php artisan migrate:fresh --seed` then `storage:link` + `chown -R sail:sail storage/app/public` (prod: `--force` + uid `82`).
 - **Prod on merge:** `npm run build` (Vite) + verify `.webmanifest` mime. No migrations.
 
+### Fixes (same session)
+- **Service-record validation messages** — errors leaked raw keys (`The lines.0.service_type field is required.`). Added `attributes()` + `messages()` to the shared `ValidatesServiceLines` trait (used by Store + Update requests; neither defined them, so trait methods apply). Per-line messages use the 1-based `:position` placeholder → "Select a service type for line 1." +1 test (`ServiceVisitTest`).
+- **Fee Schedule flexible mode had no Save** — the "Save fees" button was inside the non-flexible `v-else` block, so picking **Flexible** gave no way to persist; the type stayed at its DB default `pricing_mode='flat'` (migration `000010`) with zero fees → service records then showed "ask admin to set fees". Moved Save into an always-visible footer in `ServiceTypes/Index.vue`; "Add unit type" stays in the non-flexible block. Server (`syncFees`/`SyncServiceFeesRequest`) already accepted flexible + empty fees. Frontend-only, `npm run build`.
+- **Reminder/context note:** invoice/receipt "defaults" come from `config('business.*')` (env-backed) via `BusinessSetting::forTenant` fallback when no `business_settings` row exists — name "Saifzz Aircond Services" + phone "016-635 4563 / 016-281 5887"; SSM is DB-only (blank until saved). Logo from `BrandAssets::logoDataUri()` (`logo-256.png`). Intentional safety net so docs never render blank pre-setup.
+
 ---
 
 ## Session 39 — 2026-06-19 — Google-review warranty bonus (FEAT-005/006)
