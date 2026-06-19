@@ -6,6 +6,18 @@
 
 ---
 
+## Session 41 — 2026-06-19 — Prod 500 on receipt/invoice PDF: GD missing in prod image
+
+**Branch:** `dev`, NOT pushed. 1 commit. Hotfix — found via prod log.
+
+- **Symptom:** Khalid hit a 500 around the Google Review QR flow on prod. Tailed `storage/logs/laravel-2026-06-19.log` → real fault is **`DocumentController->receiptPdf` → dompdf**, not the upload: `production.ERROR: The PHP GD extension is required, but is not installed. (Cpdf.php:6226)`. dompdf needs **GD to embed the PNG QR** into the receipt/invoice PDF → any doc carrying the QR 500s.
+- **Root cause:** `Dockerfile.prod` ext list (`install-php-extensions ...`) never included `gd`. Local Sail image has GD (used it in session 40 to generate icons), so it only bit prod.
+- **Fix:** added `gd` to the `install-php-extensions` line in `Dockerfile.prod`. `install-php-extensions` pulls libpng/jpeg/freetype deps itself — no extra apk.
+- **Immediate prod unblock (live, no rebuild):** `docker compose exec app install-php-extensions gd && docker compose restart app worker` — survives `restart`, dies on next image rebuild (hence the Dockerfile change bakes it permanently).
+- **Prod on merge:** image rebuild (CD) — `gd` now compiled in. No migrations, no Vite.
+
+---
+
 ## Session 40 — 2026-06-19 — PWA home-screen icons + Business Settings live preview
 
 **Branch:** `dev`, NOT pushed. 2 commits. PHP `BusinessSettingTest` 15/15 (incl. 5 new). Vite build clean.
