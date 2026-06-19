@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-19 (session 39 — FEAT-005/006 Google-review warranty bonus → TESTING. FEAT-005 + FEAT-006 were the same feature (not a voucher entity): toggle button under Warranty dropdown, +1 month on review (cap 6), on Create + Edit. Frontend-only, build clean. **17-Jun feedback now has ZERO open items.** Sessions 47-39(this batch) NOT yet pushed/PR'd to `main` — Khalid batch pending. See SESSION-LOG + FEEDBACK-17062026.md)
+> **Last updated:** 2026-06-19 (session 39 — FEAT-005/006 Google-review warranty bonus → TESTING (same feature, not a voucher): toggle button now INSIDE the Google Review card under the QR on Create (+1 month, cap 6, "Covered until" label); Edit keeps it under the dropdown. Frontend-only, build clean. Also fixed QR-not-displaying (env, not code): missing `public/storage` symlink + root-owned `qr/` dir blocking web-user writes → ran `storage:link` + `chown sail:sail`; added post-seed `chown 82:82 storage` to DEPLOYMENT.md. **17-Jun feedback now has ZERO open items.** Sessions 47+ NOT yet pushed/PR'd to `main` — Khalid batch pending. See SESSION-LOG + FEEDBACK-17062026.md)
 
 ---
 

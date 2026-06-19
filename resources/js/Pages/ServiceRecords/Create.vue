@@ -149,17 +149,6 @@ const submit = () => form.post(route('service-records.store'));
                             <option v-for="m in [0,1,2,3,4,5,6]" :key="m" :value="m">{{ m === 0 ? 'No warranty' : m + ' month' + (m > 1 ? 's' : '') }}</option>
                         </select>
                         <p v-if="warrantyEnd" class="mt-1 text-xs text-ok">Covered until {{ warrantyEnd }}</p>
-                        <button
-                            type="button"
-                            :disabled="!reviewBonus && atWarrantyCap"
-                            class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-ra border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-                            :class="reviewBonus ? 'border-ok bg-ok-bg text-ok' : 'border-line bg-surface text-ink-soft hover:border-primary hover:text-primary'"
-                            @click="toggleReviewBonus"
-                        >
-                            <IconStar :size="14" :stroke="2" />
-                            {{ reviewBonus ? 'Review bonus applied · +1 month' : 'Customer left a Google review · +1 month' }}
-                        </button>
-                        <p v-if="!reviewBonus && atWarrantyCap" class="mt-1 text-xs text-ink-soft">Max warranty is 6 months.</p>
                     </div>
                 </div>
             </Card>
@@ -213,6 +202,21 @@ const submit = () => form.post(route('service-records.store'));
                         rel="noopener"
                         class="text-sm font-semibold text-primary underline"
                     >Open review page</a>
+
+                    <div class="mt-1 w-full border-t border-line pt-4">
+                        <button
+                            type="button"
+                            :disabled="!reviewBonus && atWarrantyCap"
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-ra border px-3 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="reviewBonus ? 'border-ok bg-ok-bg text-ok' : 'border-line bg-surface text-ink-soft hover:border-primary hover:text-primary'"
+                            @click="toggleReviewBonus"
+                        >
+                            <IconStar :size="15" :stroke="2" />
+                            {{ reviewBonus ? 'Review bonus applied · +1 month warranty' : 'Customer left a review · +1 month warranty' }}
+                        </button>
+                        <p v-if="reviewBonus && warrantyEnd" class="mt-1.5 text-xs font-medium text-ok">Covered until {{ warrantyEnd }}</p>
+                        <p v-else-if="!reviewBonus && atWarrantyCap" class="mt-1.5 text-xs text-ink-soft">Max warranty is 6 months.</p>
+                    </div>
                 </div>
             </Card>
         </form>

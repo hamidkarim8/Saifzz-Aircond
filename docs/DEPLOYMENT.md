@@ -160,6 +160,14 @@ sudo chown -R 82:82 storage
 $DC exec -T app php artisan migrate --force
 $DC exec -T app php artisan db:seed --force
 
+# 4b. Re-fix storage ownership AFTER seeding. The seeder writes the
+#     bundled QR into storage/app/public/qr — if that dir is created by a
+#     root-run command it stays root-owned and later in-app QR uploads
+#     fail SILENTLY (public disk has throw=false → put() returns false,
+#     DB path saves but no file is written → broken image). Hand the whole
+#     tree back to the php-fpm user so uploads can write.
+sudo chown -R 82:82 storage
+
 # 5. Cache config/routes/views (reads the new APP_KEY)
 $DC exec -T app php artisan optimize
 
@@ -329,6 +337,11 @@ rm -rf ./public/build && $DC cp app:/var/www/Saifzz-Aircond/public/build ./publi
 $DC exec -T app php artisan migrate --force
 $DC exec -T app php artisan optimize
 ```
+
+> ⚠️ **If you run `php artisan db:seed` on prod** (e.g. a price-book reseed), the
+> seeder may recreate `storage/app/public/qr` as root-owned, which makes later
+> in-app QR uploads fail silently. Always re-fix ownership afterwards:
+> `docker run --rm -v "$PWD/storage:/s" alpine chown -R 82:82 /s`
 
 Database backup:
 
