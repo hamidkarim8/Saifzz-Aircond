@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import StatCard from '@/Components/StatCard.vue';
@@ -37,6 +37,14 @@ const openNew  = () => { editing.value = null; modalOpen.value = true; };
 const openEdit = (a) => { editing.value = a;   modalOpen.value = true; };
 if (props.presetClient) openNew();
 
+const onModalClose = () => {
+    modalOpen.value = false;
+    // Opened from a client profile (or reminder) → return there on cancel.
+    if (props.presetClient && !editing.value) {
+        router.visit(route('clients.show', props.presetClient.id));
+    }
+};
+
 // Month navigation
 const shiftMonth = (delta) => {
     const [y, m] = props.month.split('-').map(Number);
@@ -45,16 +53,21 @@ const shiftMonth = (delta) => {
     router.get(route('appointments.index', { month: next }), {}, { preserveState: false });
 };
 
+// datetime is a UTC-tagged ISO string but represents local wall-clock intent;
+// parse the raw date part so `new Date()` tz-conversion can't shift the day (off-by-one).
+const wallDate  = (dt) => { const [y, m, d] = (dt ?? '').slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+
 // Selected-day panel
 const dayList   = computed(() =>
     selectedDay.value === null ? [] :
-    props.appointments.filter((a) => new Date(a.datetime).getDate() === selectedDay.value)
+    props.appointments.filter((a) => wallDate(a.datetime).getDate() === selectedDay.value)
 );
 const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? null : day; };
 
 // Formatters
-const fmtDate   = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtDate   = (dt) => wallDate(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
+const cap       = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const monthLabel = computed(() => {
     const [y, m] = props.month.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -62,7 +75,7 @@ const monthLabel = computed(() => {
 
 // Status actions
 const setStatus = async (a, status) => {
-    const label = { confirmed: 'confirm', done: 'mark as done', cancelled: 'cancel' }[status] ?? status;
+    const label = { cancelled: 'cancel', completed: 'complete' }[status] ?? status;
     const ok = await confirmAction({
         title: 'Update appointment?',
         body:  `This will <strong>${label}</strong> the appointment.`,
@@ -82,6 +95,7 @@ const setStatus = async (a, status) => {
 const columns = [
     { key: 'datetime',     label: 'Date / Time',  sortable: true },
     { key: 'client',       label: 'Client' },
+    { key: 'serial',       label: 'Serial' },
     { key: 'phone',        label: 'Contact' },
     { key: 'technician',   label: 'Technician' },
     { key: 'address',      label: 'Address' },
@@ -114,7 +128,7 @@ const columns = [
         <!-- Stat cards -->
         <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="This month" :value="stats.month_total ?? 0" variant="primary"
-                :sub="`${stats.month_confirmed ?? 0} confirmed`">
+                :sub="`${stats.month_completed ?? 0} completed`">
                 <template #icon>
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round" />
@@ -129,8 +143,8 @@ const columns = [
                     </svg>
                 </template>
             </StatCard>
-            <StatCard label="Confirmed" :value="stats.month_confirmed ?? 0" variant="ok"
-                :sub="'ready to go'">
+            <StatCard label="Completed" :value="stats.month_completed ?? 0" variant="ok"
+                :sub="'done this month'">
                 <template #icon>
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
@@ -175,8 +189,8 @@ const columns = [
                         @click="openEdit(a)"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="font-medium text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
-                        <Badge class="ml-auto" :variant="statusVariant(a.status.charAt(0).toUpperCase() + a.status.slice(1))">{{ a.status }}</Badge>
+                        <span class="font-medium text-ink">{{ a.client?.name ?? a.customer_name ?? 'Walk-in' }}</span>
+                        <Badge class="ml-auto" :variant="statusVariant(cap(a.status))">{{ cap(a.status) }}</Badge>
                     </button>
                 </div>
                 <p v-else-if="selectedDay !== null" class="py-3 text-center text-sm text-ink-muted">No appointments on this date.</p>
@@ -195,7 +209,7 @@ const columns = [
                         @click="openEdit(a)"
                     >
                         <span class="font-mono font-semibold text-primary">{{ fmtTime(a.datetime) }}</span>
-                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? 'Walk-in' }}</span>
+                        <span class="min-w-0 flex-1 truncate text-ink">{{ a.client?.name ?? a.customer_name ?? 'Walk-in' }}</span>
                     </button>
                 </div>
                 <p v-else class="mt-3 text-sm text-ink-muted">No appointments today.</p>
@@ -225,8 +239,13 @@ const columns = [
 
                 <!-- Client -->
                 <template #cell-client="{ row }">
-                    <div class="font-medium text-ink">{{ row.client?.name ?? 'Walk-in' }}</div>
-                    <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
+                    <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
+                </template>
+
+                <!-- Serial -->
+                <template #cell-serial="{ row }">
+                    <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
+                    <span v-else class="text-xs text-ink-soft">Non client</span>
                 </template>
 
                 <!-- Contact -->
@@ -250,7 +269,7 @@ const columns = [
 
                 <!-- Status -->
                 <template #cell-status="{ value }">
-                    <Badge :variant="statusVariant(value.charAt(0).toUpperCase() + value.slice(1))">{{ value }}</Badge>
+                    <Badge :variant="statusVariant(cap(value))">{{ cap(value) }}</Badge>
                 </template>
 
                 <!-- Actions -->
@@ -258,17 +277,15 @@ const columns = [
                     <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-medium">
                         <Link
                             v-if="row.client"
-                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })"
+                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })"
                             class="text-ok hover:text-ok/80"
-                        >+ Service record</Link>
+                        >Add Record</Link>
                         <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                         <button
-                            v-for="next in (transitions[row.status] ?? [])"
-                            :key="next"
-                            class="hover:underline"
-                            :class="next === 'cancelled' ? 'text-danger' : 'text-ok'"
-                            @click="setStatus(row, next)"
-                        >{{ { confirmed: 'Confirm', done: 'Mark done', cancelled: 'Cancel' }[next] }}</button>
+                            v-if="(transitions[row.status] ?? []).includes('cancelled')"
+                            class="text-danger hover:underline"
+                            @click="setStatus(row, 'cancelled')"
+                        >Cancel Appointment</button>
                     </div>
                 </template>
 
@@ -277,10 +294,11 @@ const columns = [
                     <div class="rounded-ral border border-line bg-surface p-4 shadow-card">
                         <div class="mb-2 flex items-start justify-between gap-2">
                             <div>
-                                <div class="font-medium text-ink">{{ row.client?.name ?? 'Walk-in' }}</div>
-                                <div v-if="row.client" class="font-mono text-xs text-primary">#{{ row.client.serial_no }}</div>
+                                <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
+                                <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
+                                <span v-else class="font-mono text-xs text-ink-soft">Non client</span>
                             </div>
-                            <Badge :variant="statusVariant(row.status.charAt(0).toUpperCase() + row.status.slice(1))">{{ row.status }}</Badge>
+                            <Badge :variant="statusVariant(cap(row.status))">{{ cap(row.status) }}</Badge>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                             <span class="font-mono font-semibold text-primary">{{ fmtDate(row.datetime) }} {{ fmtTime(row.datetime) }}</span>
@@ -294,15 +312,13 @@ const columns = [
                             · {{ row.address }}
                         </div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">
-                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">+ Record</Link>
+                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })" class="text-ok hover:text-ok/80">Add Record</Link>
                             <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                             <button
-                                v-for="next in (transitions[row.status] ?? [])"
-                                :key="next"
-                                class="hover:underline"
-                                :class="next === 'cancelled' ? 'text-danger' : 'text-ok'"
-                                @click="setStatus(row, next)"
-                            >{{ { confirmed: 'Confirm', done: 'Mark done', cancelled: 'Cancel' }[next] }}</button>
+                                v-if="(transitions[row.status] ?? []).includes('cancelled')"
+                                class="text-danger hover:underline"
+                                @click="setStatus(row, 'cancelled')"
+                            >Cancel Appointment</button>
                         </div>
                     </div>
                 </template>
@@ -316,7 +332,8 @@ const columns = [
             :appointment="editing"
             :preset-client="presetClient"
             :technicians="technicians"
-            @close="modalOpen = false"
+            @saved="modalOpen = false"
+            @close="onModalClose"
         />
     </AdminLayout>
 </template>

@@ -27,7 +27,50 @@ final class PaymentService
             ])->save();
 
             $this->issueReceipt($transaction);
+            $this->completeLinkedAppointment($transaction);
         });
+    }
+
+    public function confirmManualQr(Transaction $transaction): void
+    {
+        if ($transaction->status === 'paid') {
+            return;
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $transaction->forceFill([
+                'status' => 'paid',
+                'method' => 'Manual QR',
+                'paid_at' => now(),
+            ])->save();
+
+            $this->issueReceipt($transaction);
+            $this->completeLinkedAppointment($transaction);
+        });
+    }
+
+    public function completeLinkedAppointment(Transaction $transaction): void
+    {
+        $visit = $transaction->visit()->first();
+        if (! $visit || ! $visit->appointment_id) {
+            return;
+        }
+
+        $appointment = $visit->appointment()->first();
+        if (! $appointment) {
+            return;
+        }
+
+        // Reached via the visit's own FK; assert same tenant before mutating.
+        if ($appointment->tenant_id !== $visit->tenant_id) {
+            return;
+        }
+
+        // The Appointment state machine is authoritative: only pending → completed is legal;
+        // cancelled / already-completed are terminal and become no-ops.
+        if ($appointment->canTransitionTo('completed')) {
+            $appointment->update(['status' => 'completed']);
+        }
     }
 
     public function startGateway(Transaction $transaction): string

@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreServiceFeeRequest;
-use App\Models\ServiceFee;
+use App\Http\Requests\SyncServiceFeesRequest;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,15 +14,11 @@ class ServiceTypeController extends Controller
 {
     public function index(): Response
     {
-        $fees = ServiceFee::orderBy('service_type')->orderBy('option')->get();
-
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based']),
-            'feeGroups'    => $fees->groupBy('service_type'),
-            'modes'        => StoreServiceFeeRequest::MODES,
-            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
-                ->get(['id', 'service_type_id', 'hp_value', 'price'])
-                ->groupBy('service_type_id'),
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service']),
+            'modes' => ServiceType::MODES,
         ]);
     }
 
@@ -47,7 +42,6 @@ class ServiceTypeController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:100', "unique:service_types,name,{$serviceType->id}"],
             'requires_next_service' => ['boolean'],
-            'is_hp_based' => ['boolean'],
         ]);
 
         $oldName = $serviceType->name;
@@ -56,14 +50,34 @@ class ServiceTypeController extends Controller
         $serviceType->update([
             'name' => $newName,
             'requires_next_service' => $request->boolean('requires_next_service', $serviceType->requires_next_service),
-            'is_hp_based' => $request->boolean('is_hp_based', $serviceType->is_hp_based),
         ]);
 
         if ($oldName !== $newName) {
-            DB::table('service_fees')->where('service_type', $oldName)->update(['service_type' => $newName]);
             DB::table('service_lines')->where('service_type', $oldName)->update(['service_type' => $newName]);
         }
 
         return back()->with('success', 'Service type updated.');
+    }
+
+    public function syncFees(SyncServiceFeesRequest $request, ServiceType $serviceType): RedirectResponse
+    {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($serviceType, $data) {
+            $serviceType->update(['pricing_mode' => $data['pricing_mode']]);
+            $serviceType->fees()->delete();
+
+            if ($data['pricing_mode'] !== 'flexible') {
+                foreach ($data['fees'] as $fee) {
+                    $serviceType->fees()->create([
+                        'unit_type' => $fee['unit_type'],
+                        'hp_value'  => $data['pricing_mode'] === 'hp_tiered' ? $fee['hp_value'] : null,
+                        'price'     => $fee['price'],
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Fees updated.');
     }
 }

@@ -8,8 +8,6 @@ import { serviceVariant } from '@/lib/badges';
 
 const props = defineProps({
     serviceTypes: Array,
-    feeGroups: { type: Object, default: () => ({}) },
-    modes: Array,
 });
 
 const search = ref('');
@@ -20,19 +18,15 @@ const filtered = computed(() => {
     return props.serviceTypes.filter((t) => t.name.toLowerCase().includes(q));
 });
 
-function feesFor(typeName) {
-    return props.feeGroups[typeName] ?? [];
-}
-
-function formatRate(fee) {
-    if (fee.pricing_mode === 'flexible') return 'Varies';
-    return fee.rate != null ? `RM ${Number(fee.rate).toFixed(2)}` : '—';
-}
-
-function modeLabel(mode) {
-    if (mode === 'fixed_per_unit') return 'Per unit';
-    if (mode === 'flexible') return 'Flexible';
-    return mode;
+/** Group hp_tiered fees by unit_type → [{unit_type, rows:[{hp_value,price}]}] */
+function groupedFees(type) {
+    if (type.pricing_mode !== 'hp_tiered') return null;
+    const map = {};
+    for (const fee of type.fees) {
+        if (!map[fee.unit_type]) map[fee.unit_type] = [];
+        map[fee.unit_type].push(fee);
+    }
+    return Object.entries(map).map(([unit_type, rows]) => ({ unit_type, rows }));
 }
 </script>
 
@@ -75,21 +69,45 @@ function modeLabel(mode) {
                         </Badge>
                     </div>
 
-                    <!-- Fee list -->
-                    <div v-if="feesFor(type.name).length > 0" class="divide-y divide-gray-100 rounded-ra border border-gray-100">
-                        <div
-                            v-for="fee in feesFor(type.name)"
-                            :key="fee.id"
-                            class="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                        >
-                            <span class="text-gray-700">{{ fee.option || type.name }}</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400">{{ modeLabel(fee.pricing_mode) }}</span>
-                                <span class="font-semibold text-navy-900">{{ formatRate(fee) }}</span>
+                    <!-- flexible -->
+                    <p v-if="type.pricing_mode === 'flexible'" class="text-xs text-gray-400 italic">
+                        Flexible pricing — set per job
+                    </p>
+
+                    <!-- flat: list each fee as unit_type — RM price -->
+                    <template v-else-if="type.pricing_mode === 'flat'">
+                        <div v-if="type.fees.length > 0" class="divide-y divide-gray-100 rounded-ra border border-gray-100">
+                            <div
+                                v-for="fee in type.fees"
+                                :key="fee.id"
+                                class="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                            >
+                                <span class="text-gray-700">{{ fee.unit_type }}</span>
+                                <span class="font-semibold text-navy-900">RM {{ Number(fee.price).toFixed(2) }}</span>
                             </div>
                         </div>
-                    </div>
-                    <p v-else class="text-xs text-gray-400">No pricing configured.</p>
+                        <p v-else class="text-xs text-gray-400">No pricing configured.</p>
+                    </template>
+
+                    <!-- hp_tiered: group by unit_type, show X.X HP — RM price rows -->
+                    <template v-else-if="type.pricing_mode === 'hp_tiered'">
+                        <div v-if="type.fees.length > 0" class="space-y-3">
+                            <div v-for="group in groupedFees(type)" :key="group.unit_type">
+                                <p class="mb-1 text-xs font-medium text-gray-500">{{ group.unit_type }}</p>
+                                <div class="divide-y divide-gray-100 rounded-ra border border-gray-100">
+                                    <div
+                                        v-for="fee in group.rows"
+                                        :key="fee.id"
+                                        class="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                                    >
+                                        <span class="text-gray-700">{{ Number(fee.hp_value).toFixed(1) }} HP</span>
+                                        <span class="font-semibold text-navy-900">RM {{ Number(fee.price).toFixed(2) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="text-xs text-gray-400">No pricing configured.</p>
+                    </template>
                 </Card>
             </div>
         </div>

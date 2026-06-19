@@ -1,0 +1,192 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\BusinessSetting;
+use App\Models\Client;
+use App\Models\ServiceVisit;
+use App\Models\Transaction;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class BusinessSettingTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_for_tenant_returns_row_when_present(): void
+    {
+        $boss = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $boss->update(['tenant_id' => $boss->id]);
+        BusinessSetting::create([
+            'tenant_id' => $boss->id,
+            'business_name' => 'Acme Cooling',
+            'ssm_no' => '202603093151 (003839732-K)',
+        ]);
+
+        $resolved = BusinessSetting::forTenant($boss->id);
+
+        $this->assertSame('Acme Cooling', $resolved['name']);
+        $this->assertSame('202603093151 (003839732-K)', $resolved['ssm_no']);
+    }
+
+    public function test_for_tenant_falls_back_to_config_when_absent(): void
+    {
+        $resolved = BusinessSetting::forTenant(null);
+
+        $this->assertSame(config('business.name'), $resolved['name']);
+        $this->assertNull($resolved['ssm_no']);
+    }
+
+    public function test_snapshot_freezes_per_tenant_business_identity(): void
+    {
+        $boss = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $boss->update(['tenant_id' => $boss->id]);
+        BusinessSetting::create([
+            'tenant_id' => $boss->id,
+            'business_name' => 'Tenant Cooling Co',
+            'ssm_no' => 'SSM-123',
+        ]);
+
+        $client = Client::create([
+            'tenant_id' => $boss->id,
+            'name' => 'Test Client',
+            'phone' => '0123456789',
+            'address' => '123 Test Street',
+        ]);
+        $visit = ServiceVisit::create([
+            'tenant_id' => $boss->id,
+            'client_id' => $client->id,
+            'visit_date' => now()->toDateString(),
+            'created_by' => $boss->id,
+            'technician_id' => $boss->id,
+        ]);
+        $txn = Transaction::create([
+            'visit_id' => $visit->id,
+            'txn_id' => 'TXN-' . now()->format('Ymd') . '-001',
+            'amount' => '0.00',
+            'method' => 'Cash',
+            'status' => 'pending',
+        ]);
+
+        $snap = app(\App\Services\Documents\SnapshotBuilder::class)->forTransaction($txn);
+
+        $this->assertSame('Tenant Cooling Co', $snap['business']['name']);
+        $this->assertSame('SSM-123', $snap['business']['ssm_no']);
+    }
+
+    private function bossAdmin(): User
+    {
+        $boss = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $boss->update(['tenant_id' => $boss->id]);
+        return $boss;
+    }
+
+    public function test_admin_can_view_business_settings(): void
+    {
+        $this->actingAs($this->bossAdmin())
+            ->get(route('business-settings.show'))
+            ->assertOk();
+    }
+
+    public function test_admin_can_save_identity(): void
+    {
+        $boss = $this->bossAdmin();
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'business_name' => 'New Name Sdn Bhd',
+            'ssm_no' => '202603093151 (003839732-K)',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', [
+            'tenant_id' => $boss->id,
+            'business_name' => 'New Name Sdn Bhd',
+            'ssm_no' => '202603093151 (003839732-K)',
+        ]);
+    }
+
+    public function test_qr_upload_stores_file_and_path(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $boss = $this->bossAdmin();
+
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'google_review_qr' => \Illuminate\Http\UploadedFile::fake()->image('qr.png', 200, 200),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', [
+            'tenant_id' => $boss->id,
+            'google_review_qr_path' => "qr/tenant-{$boss->id}.png",
+        ]);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists("qr/tenant-{$boss->id}.png");
+    }
+
+    public function test_tenant_id_not_honored_from_input(): void
+    {
+        $boss = $this->bossAdmin();
+        $this->actingAs($boss)->put(route('business-settings.update'), [
+            'tenant_id' => 99999,
+            'business_name' => 'X',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('business_settings', ['tenant_id' => $boss->id]);
+        $this->assertDatabaseMissing('business_settings', ['tenant_id' => 99999]);
+    }
+
+    public function test_non_admin_cannot_update(): void
+    {
+        $tech = User::factory()->create(['role' => User::ROLE_TECHNICIAN]);
+        $this->actingAs($tech)->put(route('business-settings.update'), [
+            'business_name' => 'Hax',
+        ])->assertForbidden();
+    }
+
+    public function test_show_passes_google_review_qr_url(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $boss = $this->bossAdmin();
+        BusinessSetting::create([
+            'tenant_id' => $boss->id,
+            'google_review_qr_path' => 'qr/sample.png',
+            'google_review_url' => 'https://g.page/r/test',
+        ]);
+        \Illuminate\Support\Facades\Storage::disk('public')->put('qr/sample.png', 'x');
+
+        $client = \App\Models\Client::create([
+            'name' => 'QR Client', 'phone' => '0123', 'address' => 'Addr',
+            'tenant_id' => $boss->id,
+        ]);
+        $visit = \App\Models\ServiceVisit::create([
+            'client_id' => $client->id, 'visit_date' => now()->toDateString(),
+            'tenant_id' => $boss->id, 'technician_id' => $boss->id, 'created_by' => $boss->id,
+        ]);
+
+        $this->actingAs($boss)
+            ->get(route('service-records.show', $visit->id))
+            ->assertInertia(fn ($page) => $page
+                ->where('googleReview.url', 'https://g.page/r/test')
+                ->whereNot('googleReview.qrUrl', null));
+    }
+
+    public function test_admin_uploads_payment_qr_and_show_exposes_url(): void
+    {
+        Storage::fake('public');
+        $admin = \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->put(route('business-settings.update'), [
+                'payment_qr' => UploadedFile::fake()->image('myqr.png', 300, 300),
+            ])
+            ->assertRedirect();
+
+        $row = \App\Models\BusinessSetting::where('tenant_id', $admin->id)->first();
+        $this->assertSame("payment-qr/tenant-{$admin->id}.png", $row->payment_qr_path);
+        Storage::disk('public')->assertExists($row->payment_qr_path);
+
+        $this->actingAs($admin)
+            ->get(route('business-settings.show'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('paymentQrUrl', fn ($url) => $url !== null));
+    }
+}

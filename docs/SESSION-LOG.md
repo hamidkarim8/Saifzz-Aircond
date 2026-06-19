@@ -6,6 +6,197 @@
 
 ---
 
+## Session 39 — 2026-06-19 — Google-review warranty bonus (FEAT-005/006)
+
+**Branch:** `dev`, NOT pushed. Build clean. FEAT-005 + FEAT-006 turned out to be the **same feature** (not a voucher entity) → both → TESTING. **17-Jun feedback now has zero OPEN items.**
+
+- **Scope (confirmed by Khalid via Q&A):** when a customer leaves a Google review, the technician clicks a toggle button instead of fiddling the Warranty dropdown. Toggle on = +1 month; toggle off = −1. Capped at 6. No voucher object, no tracking flag (pure dropdown bump) — "for now". On **both** Create + Edit (Edit covers the "client decides to review after the record was submitted" case).
+- **Impl (frontend-only):** `ServiceRecords/Create.vue` + `Edit.vue` — added `reviewBonus` ref, `atWarrantyCap` computed, `toggleReviewBonus()`, and a `watch(form.warranty_months)` that clears the bonus state on any manual dropdown change (via a `suppressBonusWatch` flag so the toggle's own write doesn't trip it — avoids subtracting from a hand-set value). Button sits under the Warranty `<select>`; green `border-ok/bg-ok-bg/text-ok` "applied" state, `IconStar`. Disabled + "Max warranty is 6 months" hint at cap.
+- No backend, no migration. PHP suite unaffected (warranty_months already persisted/tested). Vite build clean.
+- **UI follow-up (per Khalid):** moved the review-bonus toggle OUT of the warranty grid and INTO the Google Review card on `Create.vue`, directly under the QR image (tech no longer scrolls up). Shows "Covered until {date}" under the button when applied; the warranty dropdown up top still reflects the +1 and its own covered-until. `Edit.vue` keeps its button under the dropdown (no QR card there).
+- **QR-not-displaying bug (env, not code) — fixed:** two stacked issues. (1) `public/storage` symlink was missing → all `/storage/*` 404'd → ran `storage:link`. (2) `storage/app/public/qr` was `root:root` while web PHP runs as `sail` → `Storage::disk('public')->put()` failed SILENTLY (`throw=>false`), DB path saved but no file written. Confirmed via temp logging (`bytes_read=4380, put=false` → after `chown -R sail:sail qr payment-qr` → `put=true`). Cleared one stale DB path (file gone) during diagnosis. **Durable:** added a post-seed `chown -R 82:82 storage` to both deploy blocks in `docs/DEPLOYMENT.md` + a reseed warning (the seeder writes the bundled QR, can recreate `qr/` root-owned).
+- **QR preview not auto-refreshing after save — fixed:** the QR filename is fixed (`qr/tenant-{id}.png`), so a re-upload leaves the DB path string unchanged → Eloquent isn't dirty → `updated_at` never bumps → any version query built from it was identical → browser kept the cached image until a manual reload. Fix: new `BusinessSettingController::qrUrl()` helper versions the URL by the **file's `lastModified` mtime** (changes every upload) and returns null when the file is missing (shows "No QR uploaded yet" instead of a broken img). Backend-only, no rebuild.
+- **Prod on merge:** `npm run build`. No migrations.
+
+---
+
+## Session 38 — 2026-06-19 — 6 remaining 17-Jun P2/P3 items (CHG-006/012/016/019/020 + FEAT-010)
+
+**Branch:** `dev`, NOT pushed. Commit `5a26e84` (base `116d9c8`). Suite **324/324**, build clean. Done inline (small, independent items). All 6 → TESTING. 17-Jun now down to only FEAT-005/006 (warranty theory, need scope).
+
+- **CHG-006 (P2, Catalog)** — price-set grouping by HP / unit type was already shipped in the CHG-005 catalog rebuild: `Catalog/Index.vue` groups `hp_tiered` fees under each unit type with HP rows, lists `flat` per unit type, shows `flexible` as per-job. Verified vs the ask — no code change.
+- **CHG-012 (P3, Clients)** — filter chips now sourced from the live `service_types` table: `ClientController::index` passes `ServiceType::orderBy('name')->pluck('name')` (was a stale hardcoded const still listing killed `Gas Top-Up`/`Repair`); removed the `SERVICE_TYPES` const. `Clients/Index.vue` falls back to a `<select>` dropdown when >6 types (`asDropdown` computed; chip + dropdown share `applyType()`).
+- **CHG-016 (P3, Business Settings)** — `config/business.php` phone default → `016-635 4563 / 016-281 5887` (was `012-9876543`). Already editable per tenant via Business Settings → Identity (`BusinessSetting::forTenant` overrides the config fallback). The number was never actually hardcoded in code — only the default needed setting.
+- **CHG-019 (P2, Business Settings)** — `InvoicePreview.vue` rewritten to mirror the real `documents/layout.blade.php`: invoice no/date kv rows, Bill-to block, services box, navy total block, PENDING status pill, footer line. Still live-updates from the Identity tab fields (name/phone/SSM).
+- **CHG-020 (P2, Business Settings)** — new shared `BusinessSettings/Partials/ImageUploadField.vue`: `v-model` File, styled Choose/Change button, selected filename, clear (×), and an object-URL thumbnail of the picked image before save (revokes URLs on change/unmount). Wired into both the Google Review QR and Manual QR inputs (replaced the raw `<input type=file>`).
+- **FEAT-010 (P3, Clients)** — each service line in `Clients/Show.vue` service history shows a "Next service: DD Mon YYYY" badge when `l.next_service_date` is set (date, not a countdown).
+- Frontend + `config/business.php` + `ClientController` only. No migrations. Full suite stayed 324/324 (Client tests didn't assert the old const).
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
+## Session 37 — 2026-06-18 — Service record: payment selector → Google Review (CHG-007/008)
+
+**Branch:** `dev`, NOT pushed. 7 commits `233c491`→`116d9c8` (base `a6cb276`). Suite **324/324**, build clean. Brainstorm → spec → plan → subagent-driven execution (backend + frontend impl, reviewer pass). Both 17-Jun P2 → TESTING.
+
+- **CHG-008** — removed the redundant payment-method selector from the service-record create + edit forms. The collect-payment screen already selects the method and `PaymentService` overwrites `transaction.method` at collection, so the form only needs a pending placeholder.
+  - `store()` writes pending placeholder `'DuitNow QR'`; `update()` no longer touches `method` (preserves existing), updates `amount` only.
+  - Dropped the `payment_method` rule from `StoreServiceVisitRequest` + `UpdateServiceVisitRequest`.
+  - Removed the now-dead cash-at-creation guard from `ValidatesServiceLines` trait (it read a `payment_method` field the forms no longer send). Safe: all payment routes (`payments.cash`/`manualQr`/`pay`) are gated `can:collect_payment`, so cash recording stays permission-protected. Dropped its obsolete test `test_cash_method_blocked_without_collect_payment`.
+- **CHG-007** — Google Review surfaced **before** payment. `create()` now passes `googleReview {qrUrl,url}` (same `BusinessSetting` lookup as `show()`); `Create.vue` renders a Google Review card (QR image + open-review link) where the payment-method card was, gated on a configured QR. Edit form gets no review card.
+- Reviewer initially flagged guard removal as "critical security hole" — verified false (no new capability; routes already gated). Cleaned the dead guard instead.
+- Spec `2026-06-18-service-record-payment-greview-design.md`, plan `2026-06-18-service-record-payment-greview.md`.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
+## Session 36 — 2026-06-18 — Reminder contacted filter (FEAT-011)
+
+**Branch:** `dev`, NOT pushed. Commit `cfed333`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster B → TESTING.
+
+- `Reminders/Index.vue`: client-side Status filter chips (All / Contacted / Not contacted) above the card grid. Combines with the existing Due/Overdue tab + name/phone/serial search through `filterItems`.
+- No backend change — `dueList()` already overlays the `contacted` flag (from `reminder_contacts`) on every row, and the stat cards already carry the contacted count.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
+## Session 35 — 2026-06-18 — Transaction filters (FEAT-008 method + FEAT-009 status)
+
+**Branch:** `dev`, NOT pushed. Commit `09dab34`. Frontend-only (no PHP tests touched); vite build clean. 17-Jun cluster A, both → TESTING.
+
+- `Transactions/Index.vue`: client-side filter chips in the table-card header. **Method** (All / Cash / DuitNow QR / Manual QR) and **Status** (All / paid / pending / failed / cancelled).
+- Both filters combine through a `filtered` computed; `rows` and the summary StatCards (`totalPaid` / `pendingCount` / `pendingAmount`) now derive from `filtered`, so the dashboard recomputes live on filter (FEAT-008 asks the summary dashboard be filterable, not just the table).
+- No backend change — the controller already loads the full list per period (`limit=null`). Method values are canonical (`Cash`/`DuitNow QR` from `payment_method` `Rule::in`; `Manual QR` set on confirm); statuses pending/paid/failed/cancelled.
+- **Prod on merge:** `npm run build` (Vite). No migrations.
+
+---
+
+## Session 34 — 2026-06-18 — FEAT-007 edit service lines + FEAT-004 Manual QR payment (both P1)
+
+**Branch:** `dev`, NOT pushed. Suite **322/322**, build clean. Two 17-Jun P1 feedback items, each: brainstorm → spec → plan → subagent-driven execution (impl + spec review + code-quality/security review per backend). Both → TESTING.
+
+### FEAT-007 — edit a service record's service lines (suite 307→316)
+Spec `2026-06-18-edit-service-lines-design.md`, plan `2026-06-18-edit-service-lines.md`. Commits `a48eaae`→`5392e9d`.
+- Edit page was lines-read-only; now full `ServiceLineCard` editor (add/remove/change lines) + sticky grand-total bar, identical to Create. Client stays fixed (read-only).
+- `update()` rewritten transactional: delete-then-recreate lines via existing `normalizeLine()` (server-authoritative fee re-snapshot), `recalculateTotal()`, **+ sync `transaction.amount`** (latent stale-amount bug fixed). Re-syncs unit next-service. Pending-only guard unchanged (paid→422, non-visible→403).
+- Validation: extracted shared per-line + cash-permission block into `app/Http/Requests/Concerns/ValidatesServiceLines.php` trait (used by both Store + new `UpdateServiceVisitRequest`; Store behaviour identical). `unit_id` existence scoped to the route record's `client_id`.
+- Invoice = live snapshot (`SnapshotBuilder` reads lines at gen time; no frozen copy while pending) → edits reflect automatically, no extra work.
+- Tests: `ServiceVisitUpdateTest` (9). No migrations.
+
+### FEAT-004 — Manual QR payment method (suite 316→322)
+Spec `2026-06-18-manual-qr-payment-design.md`, plan `2026-06-18-manual-qr-payment.md`. Commits `589599f`→`afdd927`.
+- "Manual QR" = per-tenant static QR image (admin's DuitNow/bank QR) uploaded in Business Settings → Payment tab. Mechanically like Cash: admin shows QR, customer transfers, admin confirms → paid + receipt, no gateway/webhook. **Admin-only** at collection.
+- Schema: migration `2026_06_18_000030` adds nullable `payment_qr_path` to `business_settings` (mirrors `google_review_qr_path`). `transactions.method` is a free string → `'Manual QR'` set server-side only, NO transactions migration, Create/Edit form enums unchanged.
+- Upload: `UpdateBusinessSettingRequest` validates `payment_qr` (image, 2MB); `BusinessSettingController::update` stores `payment-qr/tenant-{id}.png` public disk; `show()` exposes `paymentQrUrl`. Business Settings Payment tab gets a Manual QR card (upload + preview) above the BayarCash card.
+- Collection: `PaymentService::confirmManualQr()` (mirror of `confirmCash`, method='Manual QR', idempotent, completes linked appointment). Route `POST payments/{transaction}/manual-qr` (`payments.manualQr`, `can:collect_payment`). `PaymentController::manualQr()` = `authorizeVisitScope` (tenant/visibility 403) THEN `abort_unless(isAdmin,403)`. `Payments/Show.vue` third method button, shown only when `isAdmin && manualQrUrl`, renders the real uploaded QR.
+- Cash unchanged (stays `collect_payment`-gated; CHG-016 not reversed).
+- Tests: `BusinessSettingTest` +1 upload; `PaymentTest` +5 (admin paid/receipt, idempotent, non-admin-collector 403, no-collect_payment 403, cross-tenant 403).
+
+**Problems hit & fixes**
+- FEAT-007: `update()` never synced `transaction.amount` — would have gone stale once lines became editable. Fixed in rewrite.
+- FEAT-004: plan's cross-tenant test hardcoded `tenant_id => 9002`, but `tenant_id` is a FK to `users.id` → FK violation. Implementer fixed to a second self-root admin (real isolation assertion).
+
+**Reviews:** backend of each feature got a combined spec + code-quality/security subagent review → both COMPLIANT, no blockers (only cosmetic notes: inline FQCN style, test coverage boundary). Frontend = pattern-copy of existing UI, build-verified.
+
+**Prod deploy on merge:** `php artisan migrate` (FEAT-004 `payment_qr_path` only; FEAT-007 none) + `npm run build`. Still pending from sessions 47/48/50/51: their migrations + price-book reseed.
+
+---
+
+## Session 33 — 2026-06-18 — Appointment flow cluster (BUG-003/004, CHG-002/003/004, FEAT-001/002)
+
+**Branch:** `dev`, NOT pushed. Suite **307/307**, build clean. Whole-branch review "ready to merge" (one minor security finding caught + fixed). Spec `docs/superpowers/specs/2026-06-18-appointment-flow-cluster-design.md`, plan `docs/superpowers/plans/2026-06-18-appointment-flow-cluster.md`. Subagent-driven (9 tasks + spec/quality review each + final review). Commits `9f3680e`→`6e3d708`.
+
+Closes 7 feedback items (all → TESTING):
+- **CHG-004 (P1):** appointment status enum collapsed `pending→confirmed→done/cancelled` ⇒ `pending→completed/cancelled`. Data migration `2026_06_18_000020` maps `confirmed→pending`, `done→completed`. Collecting payment now auto-Completes the appointment.
+- **Appointment↔payment link:** migration `2026_06_18_000021` adds nullable `appointment_id` FK on `service_visits` (nullOnDelete). Threaded: appointment "Add Record" link passes `appointment=row.id` → `ServiceVisitController::create` resolves `presetAppointmentId` via `Appointment::visibleTo` → `Create.vue` form carries `appointment_id` → `StoreServiceVisitRequest` validates tenant-scoped → `store()` persists. `PaymentService::completeLinkedAppointment()` (cash **+ webhook** paths) completes the linked appointment using the `Appointment` state machine (`canTransitionTo('completed')`) + tenant guard. Idempotent, skips cancelled/terminal.
+- **BUG-003/004:** root cause = `AppointmentModal` open-watcher not `immediate`, so modal opened during Index setup never autofilled until a second open. Fixed with `{ immediate: true }` (body early-returns on `!open`). Cancel/close from a client booking now returns to the client profile (`saved` vs `close` emit split avoids double-nav on save).
+- **CHG-002:** per-row actions = Add Record / Edit / Cancel Appointment (dropped Confirm/Mark-done). "Confirmed" stat → "Completed" (`month_completed`).
+- **CHG-003:** technician dropdown defaults to current admin, "Unassigned" removed; `AppointmentController` technicians prop now includes the current all-data user (so self-default resolves to a real option).
+- **FEAT-001:** Add Record autofills client + technician + appointment_id.
+- **FEAT-002:** dedicated Serial column (hyperlink to client / "Non client" for walk-ins). Removed serial sub-line under client name.
+- **Status-edit override:** `UpdateAppointmentRequest` accepts `status` (admin override, no transition guard) — gated to `seesAllData()` users (scoped techs cannot override; regression-tested). CREATE always forces `pending`. `updateStatus()` quick-action keeps its transition guard.
+
+**Bugs caught in review:** latent `Link`-not-imported in Index.vue (was broken), `orWhereKey` typo (not a real Eloquent method → 500), scoped-tech status-override hole.
+
+**Tests:** new `AppointmentPaymentCompletionTest` (8: persist + cross-tenant reject + cash/webhook completion + cancelled-stays + no-op + tenant-mismatch guard). `AppointmentTest` + `TechnicianScopingTest` updated to new enum; +scoped-tech-cannot-override-status. Net 297→307.
+
+**Prod deploy on merge:** `php artisan migrate` (2: status collapse + appointment_id). No reseed for this cluster. `npm run build`. (Still pending from sessions 47/48/50: their migrations + price-book reseed.)
+
+---
+
+## Session 32 — 2026-06-18 — CHG-005 service pricing unification (HP overhaul)
+
+**Goal:** 17-Jun feedback CHG-005 cluster — restructure service fees so each unit type owns its own HP→price set, set dynamically in one form. Includes BUG-002 (flexible editable price + description) + FEAT-003 (HP tier add/edit). Subagent-driven, 7 tasks, spec+plan in `docs/superpowers/`.
+
+**Model (full unification):** each `service_type` has ONE `pricing_mode` ∈ {flat, hp_tiered, flexible}. Single rebuilt `service_fees(service_type_id FK, unit_type, hp_value nullable, price)` (unique service_type_id+unit_type+hp_value) ABSORBS the old `service_hp_tiers` table. Price = direct `(unit_type, hp_value)` lookup — NOT base+surcharge (the old additive model). Killed all hardcoded pricing: `is_hp_based`, `UNIT_TYPES`/`GAS_OPTIONS`/`UNIT_TYPE_SERVICES` constants, `'Repair'`=flexible / `'Gas Top-Up'`=gas name-checks, `service_lines.gas_option` column. `service_types`/`service_fees` stay GLOBAL (no tenant_id).
+
+**Done** (suite 299→**297** — `ServiceHpTierTest` removed (8), `ServiceFeeTest` rewritten, `ServicePricingTest` added (6); build clean; NOT pushed):
+- **Schema** (4 migrations `2026_06_18_000010-000013`): `pricing_mode` on service_types (backfill, drop is_hp_based); rebuild service_fees; drop service_hp_tiers; drop service_lines.gas_option. Seeders updated to new shape (Cleaning=hp_tiered, Gas/Install/Troubleshoot=flat, Repair/Dismantle=flexible).
+- **Fee-sync endpoint**: `PUT service-types/{id}/fees` → `ServiceTypeController::syncFees` (transactional delete-then-insert of whole price set), `SyncServiceFeesRequest` (per-mode validation + duplicate guard). Deleted `ServiceFeeController`/`ServiceHpTierController`/`StoreServiceFeeRequest`/`UpdateServiceFeeRequest`.
+- **Record pricing**: `normalizeLine()` + `StoreServiceVisitRequest` resolve rate by `pricing_mode` (server-authoritative for flat/hp; manual for flexible). BUG-002: flexible = editable rate + required description.
+- **Controllers**: index/create/edit/catalog pass `serviceTypes` with eager-loaded `fees`; dropped old props. `gas_option` out of `SnapshotBuilder`/`PortalService`/invoice+receipt blades.
+- **Frontend**: `ServiceTypes/Index.vue` dynamic per-service fee editor (mode select → repeatable unit-type blocks → HP/price tiers; one "Save fees" PUT). `ServiceLineCard.vue` driven by pricing_mode (unit-type dropdown from fees, HP dropdown filtered by unit_type, flexible editable+desc, empty-state hint). `FeeModal.vue` deleted. `Catalog/Index.vue` new shape.
+- **Tests**: fixed stale fee/line fixtures (ServiceVisitTest/MultiTenant/TechnicianScoping/ClientUnit) to new schema.
+
+**Reviews:** each task got spec + code-quality subagent review; review-driven fixes applied (null-safe hp rule, stale-editor re-sync, stable v-for keys, empty-state hint). Final opus whole-branch review: ready to merge, no blockers.
+
+**Hotfix (same session, eyeball-found):** adding a service type then opening Fee Schedule tab rendered blank — `editors` map was built once at component init and not re-synced when Inertia replaced `props.serviceTypes`, so the new type had no editor and the tab threw on `undefined.pricing_mode`. Fixed with `watch(() => props.serviceTypes, …, {immediate:true})` that builds editors for new types + prunes removed ones (existing editors untouched so unsaved edits survive). `ServiceTypes/Index.vue`, build clean.
+
+**Decisions:** one axis per service (a unit type owns its HP set; NOT a 2D matrix and NOT additive base+surcharge) — confirmed by Khalid via Hamid. CHG-006 (catalog grouping polish) deferred.
+
+**Prod deploy on merge:** `php artisan migrate` (4 migrations) + RESEED price book (`db:seed --class=ServiceTypeSeeder` + `--class=ServiceFeeSeeder`) — service_fees rebuilt destructively, data disposable. + `npm run build`.
+
+**Next:** push sessions 47+48+49+this for Khalid. Then remaining 17-Jun: appointment flow (CHG-002/003/004), FEAT-001/002, payment Manual-QR (FEAT-004), FEAT-007 (edit-record-edits-services), transaction/reminder filters.
+
+---
+
+## Session 31 — 2026-06-18 — BUG-001 appointment date off-by-one (timezone)
+
+**Goal:** Fix 17-Jun feedback BUG-001 — picking 17/6 recorded/displayed as 18/6.
+
+**Root cause:** `Appointment.datetime` cast→Carbon→serialized as UTC-tagged ISO (`...Z`). Frontend `new Date(a.datetime)` converts to browser tz (Malaysia UTC+8), bumping afternoon/evening appointments to the next calendar day. The edit modal already dodged it with `slice()`; the calendar + day-panel + table date did not.
+
+**Done:**
+- `Appointments/Index.vue` — added `wallDate()` helper (parses raw `YYYY-MM-DD` parts, no tz conversion); applied to `dayList` filter + `fmtDate`. `fmtTime` already `slice`d — untouched.
+- `Appointments/Partials/MonthCalendar.vue` — `byDay` grouping parses raw date parts instead of `new Date()`.
+- Frontend-only, no backend/migration/test change. Needs `npm run build` (CI builds on PR merge).
+- `FEEDBACK-17062026.md`: BUG-001 OPEN → TESTING (only Khalid closes to DONE).
+
+**Next:** push sessions 47+48+this for Khalid; then CHG-005 HP overhaul cluster.
+
+---
+
+## Session 30 — 2026-06-17 — Business Settings hub (dynamic identity, Google Review QR, logo)
+
+**Goal:** Make business-facing details dynamic + admin-editable per-tenant: official logo swap + favicon, dynamic invoice/receipt identity (name/address/phone/SSM) with live preview, Google Review QR on payment-received, all under one consolidated nav hub. Also answered: per-tenant payment API token setting was already shipped (session 41 in memory numbering) — relocated into the new hub.
+
+**Done** (subagent-driven, 10 tasks, suite 290→**299**, build clean, NOT pushed)
+- `business_settings` table (per-tenant, unique `tenant_id` FK, mirrors `tenant_gateways`). `BusinessSetting::forTenant(?int)` resolver → row or `config('business.*')` fallback (null-tenant safe).
+- `SnapshotBuilder` freezes per-tenant identity + `ssm_no` into each document.
+- Logo on invoice/receipt PDFs via `App\Support\BrandAssets::logoDataUri()` (base64 data-URI, per-request cached, null-safe if asset missing). Wired into `DocumentController` (invoice+receipt) + `PortalController` (receipt).
+- `BusinessSettingController` (GET show / PUT update), `can:manage_users` route group, `tenant_id` server-sourced. QR upload → public disk `qr/tenant-{id}.png`. `UpdateBusinessSettingRequest` (nullable identity + `url` + `image` max 2MB).
+- `BusinessSettings/Index.vue` — 3 tabs: Identity (fields + live `InvoicePreview.vue`) / Google Review (URL + QR upload + thumbnail) / Payment (BayarCash creds, posts to existing `payment-settings.update`).
+- Nav: "Business Settings" (`IconBuildingStore`, adminOnly) replaces "Payment Settings"; `PaymentSettings/Index.vue` deleted; `/payment-settings` GET → redirect to hub (route name kept). `PaymentGatewayController` untouched.
+- Google Review button on `ServiceRecords/Show.vue` paid block → `Modal` (`:show`/`@close`) with QR + review link. Controller passes `googleReview:{qrUrl,url}` via `forTenant($visit->tenant_id)`.
+- Official logo: source `public/img/logo.png` (2.5MB) → GD-resized `logo-256.png` (107KB) + `favicon.png`/`.ico`. Swapped `IconAirConditioning` → `<img>` in AdminLayout, GuestLayout, Welcome, Portal/Login; favicon links in `app.blade.php`.
+- Seeder: Saifzz tenant business identity + SSM `202603093151 (003839732-K)` + bundled Google Review QR (idempotent `updateOrCreate`).
+- Tests: `BusinessSettingTest` (9 cases — resolver, snapshot, view/save, QR upload, tenant_id-not-honored, non-admin 403, Show props). `PaymentGatewaySettingsTest` made redirect-aware.
+
+**Problems hit & fixes**
+- No model factories exist → tests use direct `Model::create()` (Client needs name/phone/address; ServiceVisit client_id/visit_date; Transaction txn_id/visit_id/amount/method).
+- `/payment-settings` redirect broke 2 existing payment tests → updated to `assertRedirect`/hit new hub.
+
+**Decisions**
+- Logo static-swap now (dynamic upload deferred); logo DOES render on PDFs; per-tenant identity + QR (consistent with payment gateway); live Vue preview (not server-rendered).
+- Spec `docs/superpowers/specs/2026-06-17-business-settings-design.md`, plan `docs/superpowers/plans/2026-06-17-business-settings.md`.
+
+**Deploy needs (on merge):** `php artisan migrate` (business_settings), `db:seed` (Saifzz identity+QR), `storage:link` present, `npm run build`.
+
+**Next**
+- Push for Khalid testing (incl. new Business Settings + logo). Discuss Units scope. SMTP, DB backups.
+
+---
+
 ## Session 29 — 2026-06-16 — Park Units feature (frontend hidden)
 
 **Goal:** Units feature feels half-built — unit lives on client page but link to service records is unclear. Hide until requirement matures, without breaking anything.

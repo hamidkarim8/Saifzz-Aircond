@@ -90,10 +90,13 @@ const waLink = computed(() => wa(props.client.phone));
                         </template>
                         <ul class="divide-y divide-line">
                             <li v-for="l in v.lines" :key="l.id" class="flex items-center justify-between py-2.5 text-sm">
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <Badge :variant="serviceVariant(l.service_type)">{{ l.service_type }}</Badge>
-                                    <span v-if="l.unit_type || l.gas_option" class="text-ink-soft">{{ l.unit_type || l.gas_option }}</span>
+                                    <span v-if="l.unit_type" class="text-ink-soft">{{ l.unit_type }}</span>
                                     <span class="text-ink-muted">× {{ l.units }}</span>
+                                    <span v-if="l.next_service_date" class="inline-flex items-center rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-soft">
+                                        Next service: {{ fmtDate(l.next_service_date) }}
+                                    </span>
                                 </div>
                                 <span class="font-mono font-semibold text-ink">{{ money(l.subtotal) }}</span>
                             </li>

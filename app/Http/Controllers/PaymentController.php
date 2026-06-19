@@ -30,6 +30,11 @@ class PaymentController extends Controller
 
         $transaction->load('visit.client');
 
+        $biz = \App\Models\BusinessSetting::forTenant($transaction->visit->tenant_id);
+        $manualQrUrl = $biz['payment_qr_path']
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['payment_qr_path'])
+            : null;
+
         return Inertia::render('Payments/Show', [
             'transaction' => [
                 'id' => $transaction->id,
@@ -43,6 +48,8 @@ class PaymentController extends Controller
                     'serial_no' => $transaction->visit->client->serial_no,
                 ],
             ],
+            'manualQrUrl' => $manualQrUrl,
+            'isAdmin' => request()->user()->isAdmin(),
         ]);
     }
 
@@ -54,6 +61,17 @@ class PaymentController extends Controller
 
         return redirect()->route('payments.return', $transaction)
             ->with('success', 'Cash payment recorded.');
+    }
+
+    public function manualQr(Transaction $transaction, PaymentService $payments): RedirectResponse
+    {
+        $this->authorizeVisitScope($transaction);
+        abort_unless(request()->user()->isAdmin(), 403);
+
+        $payments->confirmManualQr($transaction);
+
+        return redirect()->route('payments.return', $transaction)
+            ->with('success', 'Manual QR payment recorded.');
     }
 
     public function pay(Transaction $transaction, PaymentService $payments): HttpResponse

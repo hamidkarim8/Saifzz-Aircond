@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { IconAirConditioning, IconClipboardList, IconLock, IconArrowRight, IconDroplet, IconFlame, IconTool, IconBuildingStore } from '@tabler/icons-vue';
+import { IconClipboardList, IconLock, IconArrowRight, IconDroplet, IconFlame, IconTool, IconBuildingStore } from '@tabler/icons-vue';
 
 defineProps({
     canLogin: Boolean,
@@ -36,9 +36,7 @@ const services = [
                 <!-- Brand bar -->
                 <header class="flex items-center justify-between py-6">
                     <div class="flex items-center gap-3">
-                        <div class="grid h-10 w-10 place-items-center rounded-ra bg-primary text-white shadow-lift">
-                            <IconAirConditioning :size="22" :stroke="2" />
-                        </div>
+                        <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-12 w-12 rounded-ra object-cover shadow-lift" />
                         <div class="leading-tight">
                             <div class="font-bold tracking-tight text-white">Saifzz Aircond</div>
                             <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-primary-300/70">Service System</div>

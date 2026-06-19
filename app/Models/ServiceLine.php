@@ -15,7 +15,6 @@ class ServiceLine extends Model
         'unit_id',
         'service_type',
         'unit_type',
-        'gas_option',
         'units',
         'rate',
         'repair_desc',

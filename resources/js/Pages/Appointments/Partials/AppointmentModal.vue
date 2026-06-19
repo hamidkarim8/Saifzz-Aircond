@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
+
+const page = usePage();
 
 const props = defineProps({
     open: Boolean,
@@ -8,7 +10,7 @@ const props = defineProps({
     presetClient: { type: Object, default: null },
     technicians:  { type: Array, default: null },
 });
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'saved']);
 
 const isEdit = computed(() => !!props.appointment);
 
@@ -16,12 +18,14 @@ const todayIso = new Date().toISOString().slice(0, 10);
 
 const form = useForm({
     client_id: null,
+    customer_name: '',
     date: '',
     time: '',
     phone: '',
     address: '',
     notes: '',
     technician_id: null,
+    status: 'pending',
 });
 
 // Chosen existing client (display + prefill); appointments may also be booked client-less.
@@ -65,22 +69,25 @@ watch(() => props.open, (open) => {
     if (props.appointment) {
         const a = props.appointment;
         form.client_id = a.client_id ?? null;
+        form.customer_name = a.customer_name ?? '';
         form.date = (a.datetime ?? '').slice(0, 10);   // 'YYYY-MM-DD' — slice avoids tz drift
         form.time = (a.datetime ?? '').slice(11, 16);  // 'HH:MM'
         form.phone = a.phone ?? '';
         form.address = a.address ?? '';
         form.notes = a.notes ?? '';
         form.technician_id = a.technician_id ?? null;
+        form.status = a.status ?? 'pending';
         chosen.value = a.client ?? null;
     } else {
         form.reset();
         chosen.value = null;
+        if (props.technicians) form.technician_id = page.props.auth?.user?.id ?? null;
         if (props.presetClient) applyClient(props.presetClient);
     }
-});
+}, { immediate: true });
 
 const submit = () => {
-    const opts = { onSuccess: () => emit('close'), preserveScroll: true };
+    const opts = { onSuccess: () => emit('saved'), preserveScroll: true };
     if (isEdit.value) {
         form.put(route('appointments.update', props.appointment.id), opts);
     } else {
@@ -125,6 +132,13 @@ const submit = () => {
                         </div>
                     </div>
 
+                    <!-- Customer name (manual lead — only when no existing client picked) -->
+                    <div v-if="!chosen">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Customer name <span class="font-normal text-ink-muted">(for a manual lead)</span></label>
+                        <input v-model="form.customer_name" type="text" placeholder="e.g. Encik Ali" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                        <p v-if="form.errors.customer_name" class="mt-1 text-sm text-danger">{{ form.errors.customer_name }}</p>
+                    </div>
+
                     <!-- Date + time -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -164,10 +178,20 @@ const submit = () => {
                     <div v-if="technicians">
                         <label class="mb-1.5 block text-sm font-semibold text-ink">Technician</label>
                         <select v-model="form.technician_id" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
-                            <option :value="null">— Unassigned —</option>
                             <option v-for="t in technicians" :key="t.id" :value="t.id">{{ t.name }}</option>
                         </select>
                         <p v-if="form.errors.technician_id" class="mt-1 text-sm text-danger">{{ form.errors.technician_id }}</p>
+                    </div>
+
+                    <!-- Status (edit only, all-data users — `technicians` is null for scoped techs) -->
+                    <div v-if="isEdit && technicians">
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">Status</label>
+                        <select v-model="form.status" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary">
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <p v-if="form.errors.status" class="mt-1 text-sm text-danger">{{ form.errors.status }}</p>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-2">

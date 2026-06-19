@@ -1,11 +1,17 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import { confirmAction } from '@/lib/swal.js';
 
-const props = defineProps({ transaction: Object });
+const props = defineProps({
+    transaction: Object,
+    manualQrUrl: { type: String, default: null },
+    isAdmin: { type: Boolean, default: false },
+});
+
+const canManualQr = computed(() => props.isAdmin && !!props.manualQrUrl);
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
 const processing = ref(false);
@@ -31,8 +37,22 @@ const payByCash = async () => {
     });
 };
 
+const payByManualQr = async () => {
+    const ok = await confirmAction({
+        title: 'Confirm payment received?',
+        body: 'This marks the transaction paid via Manual QR and issues a receipt.',
+        confirmText: 'Confirm payment',
+    });
+    if (!ok) return;
+    processing.value = true;
+    router.post(route('payments.manualQr', props.transaction.id), {}, {
+        onFinish: () => (processing.value = false),
+    });
+};
+
 const handleConfirm = () => {
     if (method.value === 'duitnow') payByGateway();
+    else if (method.value === 'manualqr') payByManualQr();
     else if (method.value === 'cash') payByCash();
 };
 </script>
@@ -104,6 +124,43 @@ const handleConfirm = () => {
                     </div>
                 </button>
 
+                <!-- Manual QR (admin only, requires uploaded QR) -->
+                <button
+                    v-if="canManualQr"
+                    type="button"
+                    :disabled="processing"
+                    class="w-full rounded-ral border-2 bg-surface p-4 text-left transition focus:outline-none disabled:opacity-50"
+                    :class="method === 'manualqr'
+                        ? 'border-primary bg-primary-50'
+                        : 'border-line hover:border-primary/40 hover:bg-primary-50/30'"
+                    @click="method = 'manualqr'"
+                >
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="grid h-11 w-11 shrink-0 place-items-center rounded-ral text-lg font-bold"
+                            :class="method === 'manualqr' ? 'bg-primary text-white' : 'bg-primary-50 text-primary'"
+                        >
+                            QR
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-semibold text-ink">Manual QR</div>
+                            <div class="mt-0.5 text-sm text-ink-soft">Customer scans your saved QR, then confirm</div>
+                        </div>
+                        <div
+                            v-if="method === 'manualqr'"
+                            class="h-5 w-5 shrink-0 rounded-full bg-primary text-white text-xs grid place-items-center"
+                        >✓</div>
+                    </div>
+
+                    <div
+                        v-if="method === 'manualqr'"
+                        class="mt-4 flex flex-col items-center gap-2 rounded-ral border border-primary/20 bg-white px-4 py-6"
+                    >
+                        <img :src="manualQrUrl" alt="Payment QR" class="h-44 w-44 object-contain" />
+                        <p class="text-xs text-ink-soft">Customer scans, then tap confirm once paid</p>
+                    </div>
+                </button>
+
                 <!-- Cash -->
                 <button
                     type="button"
@@ -155,6 +212,7 @@ const handleConfirm = () => {
             >
                 <span v-if="processing">Processing…</span>
                 <span v-else-if="method === 'duitnow'">Confirm Payment — DuitNow QR</span>
+                <span v-else-if="method === 'manualqr'">Confirm Payment — Manual QR</span>
                 <span v-else-if="method === 'cash'">Confirm Payment — Cash</span>
                 <span v-else>Select a payment method</span>
             </button>

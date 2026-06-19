@@ -224,8 +224,14 @@ class ClientUnitTest extends TestCase
 
     private function seedFee(string $type, string $option, float $rate): void
     {
-        \App\Models\ServiceType::firstOrCreate(['name' => $type]);
-        \App\Models\ServiceFee::create(['service_type' => $type, 'option' => $option, 'pricing_mode' => 'fixed_per_unit', 'rate' => $rate]);
+        $serviceType = \App\Models\ServiceType::firstOrCreate(
+            ['name' => $type],
+            ['pricing_mode' => 'flat', 'requires_next_service' => false]
+        );
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $serviceType->id, 'unit_type' => $option, 'hp_value' => null],
+            ['price' => $rate]
+        );
     }
 
     public function test_service_line_stores_unit_id_when_provided(): void

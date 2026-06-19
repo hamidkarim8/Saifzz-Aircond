@@ -81,6 +81,29 @@ class AppointmentTest extends TestCase
         $this->assertSame(1, Appointment::whereNull('client_id')->count());
     }
 
+    public function test_store_keeps_manual_customer_name_for_a_clientless_lead(): void
+    {
+        $this->actingAs($this->setter())
+            ->post(route('appointments.store'), $this->payload(['customer_name' => 'Encik Ali']))
+            ->assertRedirect();
+
+        $this->assertSame('Encik Ali', Appointment::whereNull('client_id')->value('customer_name'));
+    }
+
+    public function test_store_drops_customer_name_when_a_client_is_linked(): void
+    {
+        $client = Client::create(['name' => 'Kavitha', 'phone' => '011-22334455', 'address' => 'Unit 3A']);
+
+        $this->actingAs($this->setter())
+            ->post(route('appointments.store'), $this->payload([
+                'client_id' => $client->id,
+                'customer_name' => 'Should Be Ignored',
+            ]))
+            ->assertRedirect();
+
+        $this->assertNull(Appointment::whereNotNull('client_id')->value('customer_name'));
+    }
+
     public function test_store_validates_required_fields(): void
     {
         $this->actingAs($this->setter())
@@ -115,7 +138,41 @@ class AppointmentTest extends TestCase
         $this->assertSame('New address', $a->address);
     }
 
-    public function test_status_transition_pending_to_confirmed_is_allowed(): void
+    public function test_admin_can_set_status_directly_via_update(): void
+    {
+        $appt = Appointment::create([
+            'datetime' => '2026-06-16 10:00',
+            'phone' => '012-3456789',
+            'address' => 'KL',
+            'status' => 'pending',
+        ]);
+
+        // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
+        $this->actingAs(User::factory()->admin()->create())
+            ->put(route('appointments.update', $appt), $this->payload([
+                'status' => 'completed',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame('completed', $appt->fresh()->status);
+    }
+
+    public function test_status_transitions_follow_new_model(): void
+    {
+        $appt = Appointment::make(['status' => 'pending']);
+
+        $this->assertTrue($appt->canTransitionTo('completed'));
+        $this->assertTrue($appt->canTransitionTo('cancelled'));
+
+        $appt->status = 'completed';
+        $this->assertFalse($appt->canTransitionTo('cancelled'));
+        $this->assertFalse($appt->canTransitionTo('pending'));
+
+        $appt->status = 'cancelled';
+        $this->assertFalse($appt->canTransitionTo('completed'));
+    }
+
+    public function test_status_transition_pending_to_completed_is_allowed(): void
     {
         $a = Appointment::create([
             'datetime' => '2026-06-16 10:00',
@@ -126,10 +183,10 @@ class AppointmentTest extends TestCase
 
         // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
         $this->actingAs(User::factory()->admin()->create())
-            ->patch(route('appointments.status', $a), ['status' => 'confirmed'])
+            ->patch(route('appointments.status', $a), ['status' => 'completed'])
             ->assertRedirect();
 
-        $this->assertSame('confirmed', $a->refresh()->status);
+        $this->assertSame('completed', $a->refresh()->status);
     }
 
     public function test_invalid_status_transition_is_rejected(): void
@@ -138,7 +195,7 @@ class AppointmentTest extends TestCase
             'datetime' => '2026-06-16 10:00',
             'phone' => '012-3456789',
             'address' => 'KL',
-            'status' => 'done', // terminal
+            'status' => 'completed', // terminal
         ]);
 
         // Admin sees all data — appointment has no technician_id so a scoped tech cannot reach it.
@@ -146,12 +203,12 @@ class AppointmentTest extends TestCase
             ->patch(route('appointments.status', $a), ['status' => 'pending'])
             ->assertStatus(422);
 
-        $this->assertSame('done', $a->refresh()->status);
+        $this->assertSame('completed', $a->refresh()->status);
     }
 
     public function test_index_scopes_to_the_selected_month_and_returns_stats(): void
     {
-        Appointment::create(['datetime' => '2026-06-10 09:00', 'phone' => '012-1112222', 'address' => 'A', 'status' => 'confirmed']);
+        Appointment::create(['datetime' => '2026-06-10 09:00', 'phone' => '012-1112222', 'address' => 'A', 'status' => 'completed']);
         Appointment::create(['datetime' => '2026-06-20 14:00', 'phone' => '012-3334444', 'address' => 'B', 'status' => 'pending']);
         Appointment::create(['datetime' => '2026-07-01 09:00', 'phone' => '012-5556666', 'address' => 'C', 'status' => 'pending']);
 
@@ -163,7 +220,6 @@ class AppointmentTest extends TestCase
                 ->where('month', '2026-06')
                 ->has('appointments', 2)
                 ->where('stats.month_total', 2)
-                ->where('stats.month_confirmed', 1)
                 ->where('stats.month_pending', 1)
             );
     }
@@ -172,10 +228,10 @@ class AppointmentTest extends TestCase
     {
         $client = Client::create(['name' => 'Ahmad Zaki', 'phone' => '012-9998888', 'address' => 'Taman Maju']);
 
-        Appointment::create(['datetime' => '2026-06-05 09:00', 'phone' => '011-11111111', 'address' => 'Alpha St', 'status' => 'confirmed', 'client_id' => $client->id]);
+        Appointment::create(['datetime' => '2026-06-05 09:00', 'phone' => '011-11111111', 'address' => 'Alpha St', 'status' => 'completed', 'client_id' => $client->id]);
         Appointment::create(['datetime' => '2026-06-10 10:00', 'phone' => '011-22222222', 'address' => 'Beta Rd',  'status' => 'pending']);
         Appointment::create(['datetime' => '2026-06-15 11:00', 'phone' => '011-33333333', 'address' => 'Gamma Ave','status' => 'pending']);
-        Appointment::create(['datetime' => '2026-06-20 12:00', 'phone' => '011-44444444', 'address' => 'Delta Blvd','status' => 'confirmed']);
+        Appointment::create(['datetime' => '2026-06-20 12:00', 'phone' => '011-44444444', 'address' => 'Delta Blvd','status' => 'completed']);
         Appointment::create(['datetime' => '2026-06-25 13:00', 'phone' => '011-55555555', 'address' => 'Epsilon Ln','status' => 'pending']);
 
         // Admin sees all data — needed because the seeded appointments have no technician_id.

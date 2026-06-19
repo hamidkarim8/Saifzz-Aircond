@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceVisitRequest;
+use App\Http\Requests\UpdateServiceVisitRequest;
+use App\Models\Appointment;
 use App\Models\Client;
-use App\Models\ServiceFee;
 use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
@@ -61,12 +62,16 @@ class ServiceVisitController extends Controller
             ? Client::visibleTo(request()->user())->where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
             : null;
 
+        $biz = \App\Models\BusinessSetting::forTenant(request()->user()->tenantId());
+        $qrUrl = $biz['google_review_qr_path']
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
+            : null;
+
         return Inertia::render('ServiceRecords/Create', [
-            'fees' => ServiceFee::orderBy('service_type')->get(['service_type', 'option', 'rate', 'pricing_mode']),
-            'serviceTypes' => ServiceType::orderBy('name')->get(['id', 'name', 'requires_next_service', 'is_hp_based'])->toArray(),
-            'unitTypes' => StoreServiceVisitRequest::UNIT_TYPES,
-            'gasOptions' => StoreServiceVisitRequest::GAS_OPTIONS,
-            'unitTypeServices' => StoreServiceVisitRequest::UNIT_TYPE_SERVICES,
+            'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
             'presetClient' => $presetClient,
             'presetClientUnits' => $presetClient
                 ? \App\Models\ClientUnit::where('client_id', $presetClient->id)
@@ -74,15 +79,15 @@ class ServiceVisitController extends Controller
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
             'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
+            'presetAppointmentId' => request('appointment')
+                ? Appointment::visibleTo(request()->user())->whereKey(request('appointment'))->value('id')
+                : null,
             'technicians' => request()->user()->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
                     ->where('active', true)
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
-            'hpTiers' => \App\Models\ServiceHpTier::orderBy('hp_value')
-                ->get(['id', 'service_type_id', 'hp_value', 'price'])
-                ->groupBy('service_type_id'),
         ]);
     }
 
@@ -115,6 +120,7 @@ class ServiceVisitController extends Controller
                 'created_by' => $user->id,
                 'technician_id' => $technicianId,
                 'tenant_id' => $user->tenantId(),
+                'appointment_id' => $data['appointment_id'] ?? null,
             ]);
 
             foreach ($data['lines'] as $line) {
@@ -140,7 +146,7 @@ class ServiceVisitController extends Controller
             $visit->transaction()->create([
                 'txn_id' => $this->nextTxnId(),
                 'amount' => $visit->total_amount,
-                'method' => $data['payment_method'],
+                'method' => 'DuitNow QR', // pending placeholder; PaymentService sets real method at collection
                 'status' => 'pending',
             ]);
 
@@ -161,8 +167,14 @@ class ServiceVisitController extends Controller
 
         $serviceRecord->load(['client', 'lines', 'transaction', 'creator:id,name']);
 
+        $biz = \App\Models\BusinessSetting::forTenant($serviceRecord->tenant_id);
+        $qrUrl = $biz['google_review_qr_path']
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
+            : null;
+
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
+            'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
         ]);
     }
 
@@ -184,10 +196,16 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
+            'serviceTypes' => ServiceType::orderBy('name')
+                ->with('fees:id,service_type_id,unit_type,hp_value,price')
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
+            'clientUnits' => \App\Models\ClientUnit::where('client_id', $serviceRecord->client_id)
+                ->where('is_active', true)->orderBy('label')
+                ->get(['id', 'label', 'unit_type', 'hp']),
         ]);
     }
 
-    public function update(\Illuminate\Http\Request $request, ServiceVisit $serviceRecord): RedirectResponse
+    public function update(UpdateServiceVisitRequest $request, ServiceVisit $serviceRecord): RedirectResponse
     {
         abort_unless(
             ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
@@ -195,42 +213,51 @@ class ServiceVisitController extends Controller
         );
         abort_unless($serviceRecord->transaction?->status === 'pending', 422);
 
+        $data = $request->validated();
         $user = $request->user();
 
-        $validated = $request->validate([
-            'visit_date' => ['required', 'date'],
-            'warranty_months' => ['required', 'integer', 'between:0,6'],
-            'payment_method' => ['required', \Illuminate\Validation\Rule::in(['Cash', 'DuitNow QR'])],
-            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
+        DB::transaction(function () use ($data, $user, $serviceRecord) {
+            $technicianId = $user->seesAllData()
+                ? ($data['technician_id'] ?? $serviceRecord->technician_id)
+                : $serviceRecord->technician_id;
 
-        if ($validated['payment_method'] === 'Cash' && ! $user->hasPermission('collect_payment')) {
-            return back()->withErrors(['payment_method' => 'Cash payment is not permitted for your account.']);
-        }
+            if ($user->tenantId() !== null && $technicianId !== null) {
+                abort_unless(
+                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    404,
+                );
+            }
 
-        $technicianId = $user->seesAllData()
-            ? ($validated['technician_id'] ?? $serviceRecord->technician_id)
-            : $serviceRecord->technician_id;
+            $serviceRecord->update([
+                'visit_date' => $data['visit_date'],
+                'warranty_months' => $data['warranty_months'],
+                'technician_id' => $technicianId,
+            ]);
 
-        if ($user->tenantId() !== null && $technicianId !== null) {
-            abort_unless(
-                \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
-                404,
-            );
-        }
+            // Server-authoritative line replacement: delete then recreate via normalizeLine().
+            $serviceRecord->lines()->delete();
+            foreach ($data['lines'] as $line) {
+                $serviceRecord->lines()->create($this->normalizeLine($line));
+            }
 
-        $serviceRecord->update([
-            'visit_date' => $validated['visit_date'],
-            'warranty_months' => $validated['warranty_months'],
-        ]);
+            // Re-sync next_service_date/type onto referenced units (mirrors store()).
+            foreach ($data['lines'] as $line) {
+                if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
+                    \App\Models\ClientUnit::where('id', $line['unit_id'])
+                        ->where('client_id', $serviceRecord->client_id)
+                        ->update([
+                            'next_service_date' => $line['next_service_date'],
+                            'next_service_type' => $line['service_type'],
+                        ]);
+                }
+            }
 
-        $serviceRecord->transaction->update([
-            'method' => $validated['payment_method'],
-        ]);
+            $serviceRecord->recalculateTotal();
 
-        if ($technicianId) {
-            $serviceRecord->update(['technician_id' => $technicianId]);
-        }
+            $serviceRecord->transaction->update([
+                'amount' => $serviceRecord->total_amount, // method preserved; set at payment collection
+            ]);
+        });
 
         return redirect()->route('service-records.show', $serviceRecord)
             ->with('success', 'Record updated.');
@@ -258,46 +285,37 @@ class ServiceVisitController extends Controller
      */
     private function normalizeLine(array $line): array
     {
-        $type = $line['service_type'];
-        $isRepair = $type === 'Repair';
-        $isGas = $type === 'Gas Top-Up';
-        $carriesUnitType = in_array($type, StoreServiceVisitRequest::UNIT_TYPE_SERVICES, true);
-        $hasUnit = !empty($line['unit_id']);
+        $typeName = $line['service_type'];
+        $serviceType = \App\Models\ServiceType::where('name', $typeName)->first();
+        $mode = $serviceType?->pricing_mode ?? 'flexible';
+        $isFlexible = $mode === 'flexible';
+        $isHp = $mode === 'hp_tiered';
+        $requiresNext = $serviceType?->requires_next_service ?? false;
+        $hasUnit = ! empty($line['unit_id']);
 
-        $unitType = $carriesUnitType ? ($line['unit_type'] ?? null) : null;
-        $gasOption = $isGas ? ($line['gas_option'] ?? null) : null;
+        $unitType = $isFlexible ? null : ($line['unit_type'] ?? null);
+        $hpValue = $isHp && ! empty($line['hp_value']) ? (float) $line['hp_value'] : null;
 
-        // R1 — rate is server-authoritative from the fee book, except Repair (flexible/manual).
-        if ($isRepair) {
+        if ($isFlexible) {
             $rate = (float) $line['rate'];
         } else {
-            $option = $isGas ? $gasOption : $unitType;
-            $rate = (float) ServiceFee::where('service_type', $type)->where('option', $option)->value('rate');
-            if (!empty($line['hp_value'])) {
-                $serviceTypeId = \App\Models\ServiceType::where('name', $type)->value('id');
-                if ($serviceTypeId) {
-                    $hpRate = (float) \App\Models\ServiceHpTier::where('service_type_id', $serviceTypeId)
-                        ->where('hp_value', (float) $line['hp_value'])
-                        ->value('price');
-                    $rate += $hpRate;
-                }
-            }
+            $q = \App\Models\ServiceFee::where('service_type_id', $serviceType->id)
+                ->where('unit_type', $unitType);
+            $isHp ? $q->where('hp_value', $hpValue) : $q->whereNull('hp_value');
+            $rate = (float) $q->value('price');
         }
 
         return [
-            'unit_id'          => $hasUnit ? (int) $line['unit_id'] : null,
-            'service_type'     => $type,
-            'unit_type'        => $unitType,
-            'gas_option'       => $gasOption,
-            'units'            => $hasUnit ? 1 : (int) $line['units'],
-            'rate'             => $rate,
-            'repair_desc'      => $isRepair ? ($line['repair_desc'] ?? null) : null,
-            'discount'         => (float) ($line['discount'] ?? 0),
-            // When unit_id is set, next_service_date lives on the unit — not the line.
-            'next_service_date' => ($carriesUnitType && !$hasUnit) ? ($line['next_service_date'] ?? null) : null,
-            // R3 — no notes for Repair.
-            'notes'            => $isRepair ? null : ($line['notes'] ?? null),
-            'hp_value'         => !empty($line['hp_value']) ? (float) $line['hp_value'] : null,
+            'unit_id'           => $hasUnit ? (int) $line['unit_id'] : null,
+            'service_type'      => $typeName,
+            'unit_type'         => $unitType,
+            'units'             => $hasUnit ? 1 : (int) $line['units'],
+            'rate'              => $rate,
+            'repair_desc'       => $isFlexible ? ($line['repair_desc'] ?? null) : null,
+            'discount'          => (float) ($line['discount'] ?? 0),
+            'next_service_date' => ($requiresNext && ! $hasUnit) ? ($line['next_service_date'] ?? null) : null,
+            'notes'             => $isFlexible ? null : ($line['notes'] ?? null),
+            'hp_value'          => $hpValue,
         ];
     }
 

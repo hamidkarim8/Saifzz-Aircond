@@ -124,9 +124,12 @@ class TechnicianScopingTest extends TestCase
 
     public function test_store_forces_scoped_technician_to_self_ignoring_payload(): void
     {
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $alice = $this->tech();
         $bob = $this->tech();
         $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
@@ -146,9 +149,12 @@ class TechnicianScopingTest extends TestCase
 
     public function test_admin_store_honors_chosen_technician(): void
     {
-        \App\Models\ServiceFee::insert([
-            ['service_type' => 'Cleaning', 'option' => 'Wall Mounted', 'rate' => 60, 'pricing_mode' => 'fixed_per_unit', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning->update(['pricing_mode' => 'flat']);
+        \App\Models\ServiceFee::firstOrCreate(
+            ['service_type_id' => $cleaning->id, 'unit_type' => 'Wall Mounted', 'hp_value' => null],
+            ['price' => 60]
+        );
         $admin = User::factory()->admin()->create();
         $bob = $this->tech();
         $client = Client::create(['name' => 'X', 'phone' => '011-0000000', 'address' => 'KL']);
@@ -339,7 +345,7 @@ class TechnicianScopingTest extends TestCase
         $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
         $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
 
-        $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'confirmed'])
+        $this->actingAs($alice)->patch(route('appointments.status', $appt), ['status' => 'completed'])
             ->assertForbidden();
     }
 
@@ -359,5 +365,23 @@ class TechnicianScopingTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame($bob->id, $appt->fresh()->technician_id);
+    }
+
+    public function test_scoped_technician_cannot_override_status_via_update(): void
+    {
+        $bob = $this->aptTech(); // scoped tech (no view_all_data), can edit own appointments
+        $client = Client::create(['name' => 'X', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = $client->appointments()->create(['datetime' => '2026-07-01 09:00:00', 'status' => 'pending', 'phone' => '012-3456789', 'address' => 'KL', 'technician_id' => $bob->id]);
+
+        $this->actingAs($bob)->put(route('appointments.update', $appt), [
+            'client_id' => $client->id, 'date' => '2026-07-01', 'time' => '11:30',
+            'phone' => '012-3456789', 'address' => 'KL',
+            'status' => 'completed',
+        ])->assertRedirect();
+
+        // The edit succeeds (time changed) but the status override is ignored for scoped techs.
+        $appt->refresh();
+        $this->assertSame('pending', $appt->status);
+        $this->assertSame('11:30', \Illuminate\Support\Carbon::parse($appt->datetime)->format('H:i'));
     }
 }

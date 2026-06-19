@@ -20,9 +20,10 @@ const title = computed(() => `${MONTHS[monthIdx.value]} ${year.value}`);
 const byDay = computed(() => {
     const map = {};
     for (const a of props.appointments) {
-        const d = new Date(a.datetime);
-        if (d.getFullYear() === year.value && d.getMonth() === monthIdx.value) {
-            (map[d.getDate()] ??= []).push(a);
+        // datetime is UTC-tagged but represents local wall-clock; parse raw parts to avoid tz day-shift.
+        const [y, m, d] = (a.datetime ?? '').slice(0, 10).split('-').map(Number);
+        if (y === year.value && m - 1 === monthIdx.value) {
+            (map[d] ??= []).push(a);
         }
     }
     return map;

@@ -6,37 +6,24 @@ import Card from '@/Components/Card.vue';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ClientPicker from './Partials/ClientPicker.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
+import { IconStar } from '@tabler/icons-vue';
 
 const page = usePage();
-const canCollectCash = page.props.auth?.can?.collect_payment ?? false;
 
 const props = defineProps({
-    fees: Array,
     serviceTypes: Array,
-    unitTypes: Array,
-    gasOptions: Array,
-    unitTypeServices: Array,
     presetClient: { type: Object, default: null },
     presetClientUnits: { type: Array, default: () => [] },
     presetTechnicianId: { type: Number, default: null },
+    presetAppointmentId: { type: Number, default: null },
     technicians: { type: Array, default: null },
-    hpTiers: { type: Object, default: () => ({}) },
-});
-
-// Fee lookup map for client-side rate preview ("type|option" -> rate).
-const feeMap = computed(() => {
-    const m = {};
-    for (const f of props.fees) {
-        if (f.option != null) m[`${f.service_type}|${f.option}`] = Number(f.rate);
-        else if (f.rate != null) m[f.service_type] = Number(f.rate);
-    }
-    return m;
+    googleReview: { type: Object, default: () => ({ qrUrl: null, url: null }) },
 });
 
 const clientUnits = ref(props.presetClientUnits);
 
 const blankLine = () => ({
-    unit_id: null, service_type: '', unit_type: null, gas_option: null, hp_value: null, repair_desc: '',
+    unit_id: null, service_type: '', unit_type: null, hp_value: null, repair_desc: '',
     units: 1, rate: '', discount: 0, next_service_date: null, notes: '',
 });
 
@@ -46,8 +33,8 @@ const form = useForm({
     new_client: { name: '', phone: '', address: '' },
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
-    payment_method: canCollectCash ? 'Cash' : 'DuitNow QR',
     technician_id: props.presetTechnicianId ?? null,
+    appointment_id: props.presetAppointmentId ?? null,
     lines: [blankLine()],
 });
 
@@ -72,7 +59,6 @@ const addLinesForAllUnits = () => {
             unit_id: unit.id,
             service_type: '',
             unit_type: unit.unit_type,
-            gas_option: null,
             hp_value: null,
             repair_desc: '',
             units: 1,
@@ -96,6 +82,28 @@ const warrantyEnd = computed(() => {
     const d = new Date(form.visit_date);
     d.setMonth(d.getMonth() + Number(form.warranty_months));
     return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+});
+
+// Google-review warranty bonus: toggle adds +1 month (capped at 6), toggling off removes it.
+// A manual dropdown change clears the bonus state so we never subtract from a hand-set value.
+const reviewBonus = ref(false);
+const atWarrantyCap = computed(() => Number(form.warranty_months) >= 6);
+let suppressBonusWatch = false;
+const toggleReviewBonus = () => {
+    if (!reviewBonus.value) {
+        if (atWarrantyCap.value) return;
+        suppressBonusWatch = true;
+        form.warranty_months = Number(form.warranty_months) + 1;
+        reviewBonus.value = true;
+    } else {
+        suppressBonusWatch = true;
+        form.warranty_months = Math.max(0, Number(form.warranty_months) - 1);
+        reviewBonus.value = false;
+    }
+};
+watch(() => form.warranty_months, () => {
+    if (suppressBonusWatch) { suppressBonusWatch = false; return; }
+    reviewBonus.value = false;
 });
 
 const totalServices = computed(() => form.lines.filter(l => l.service_type).length);
@@ -156,13 +164,8 @@ const submit = () => form.post(route('service-records.store'));
                     :key="i"
                     :line="line"
                     :index="i"
-                    :fee-map="feeMap"
                     :service-types="serviceTypes"
-                    :unit-types="unitTypes"
-                    :gas-options="gasOptions"
-                    :unit-type-services="unitTypeServices"
                     :client-units="clientUnits"
-                    :hp-tiers="hpTiers"
                     :errors="form.errors"
                     :removable="form.lines.length > 1"
                     :visit-date="form.visit_date"
@@ -187,24 +190,33 @@ const submit = () => form.post(route('service-records.store'));
                 </button>
             </div>
 
-            <!-- Payment method -->
-            <Card title="Payment method">
-                <div class="grid gap-3" :class="canCollectCash ? 'grid-cols-2' : 'grid-cols-1'">
-                    <label
-                        v-if="canCollectCash"
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'Cash' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="Cash" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">Cash</span>
-                    </label>
-                    <label
-                        class="flex cursor-pointer items-center gap-3 rounded-ra border px-4 py-3 transition"
-                        :class="form.payment_method === 'DuitNow QR' ? 'border-primary bg-primary-50 shadow-card' : 'border-line hover:border-primary/40'"
-                    >
-                        <input v-model="form.payment_method" type="radio" value="DuitNow QR" class="text-primary focus:ring-primary" />
-                        <span class="font-semibold text-ink">DuitNow QR</span>
-                    </label>
+            <!-- Google Review — shown before payment so the tech can prompt the customer -->
+            <Card v-if="googleReview.qrUrl" title="Google Review">
+                <div class="flex flex-col items-center gap-3 text-center">
+                    <p class="text-sm text-ink-soft">Show this to the customer to leave a review.</p>
+                    <img :src="googleReview.qrUrl" alt="Google Review QR" class="h-44 w-44 object-contain" />
+                    <a
+                        v-if="googleReview.url"
+                        :href="googleReview.url"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-sm font-semibold text-primary underline"
+                    >Open review page</a>
+
+                    <div class="mt-1 w-full border-t border-line pt-4">
+                        <button
+                            type="button"
+                            :disabled="!reviewBonus && atWarrantyCap"
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-ra border px-3 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="reviewBonus ? 'border-ok bg-ok-bg text-ok' : 'border-line bg-surface text-ink-soft hover:border-primary hover:text-primary'"
+                            @click="toggleReviewBonus"
+                        >
+                            <IconStar :size="15" :stroke="2" />
+                            {{ reviewBonus ? 'Review bonus applied · +1 month warranty' : 'Customer left a review · +1 month warranty' }}
+                        </button>
+                        <p v-if="reviewBonus && warrantyEnd" class="mt-1.5 text-xs font-medium text-ok">Covered until {{ warrantyEnd }}</p>
+                        <p v-else-if="!reviewBonus && atWarrantyCap" class="mt-1.5 text-xs text-ink-soft">Max warranty is 6 months.</p>
+                    </div>
                 </div>
             </Card>
         </form>

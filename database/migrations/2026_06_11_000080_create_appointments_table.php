@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('address')->nullable(); // snapshot at booking, editable
             $table->string('phone')->nullable();
             $table->decimal('amount', 10, 2)->nullable(); // estimate
-            $table->string('status')->default('pending'); // pending | confirmed | done | cancelled
+            $table->string('status')->default('pending'); // pending | completed | cancelled
             $table->boolean('contacted_flag')->default(false);
             $table->text('notes')->nullable();
             $table->timestamps();

@@ -57,7 +57,6 @@ final class PortalService
                 'lines' => $v->lines->map(fn ($l) => [
                     'service_type' => $l->service_type,
                     'unit_type' => $l->unit_type,
-                    'gas_option' => $l->gas_option,
                     'units' => $l->units,
                     'subtotal' => $l->subtotal,
                 ])->values(),

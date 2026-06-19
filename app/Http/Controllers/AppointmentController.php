@@ -41,7 +41,7 @@ class AppointmentController extends Controller
 
         $stats = [
             'month_total' => $appointments->count(),
-            'month_confirmed' => $appointments->where('status', 'confirmed')->count(),
+            'month_completed' => $appointments->where('status', 'completed')->count(),
             'month_pending' => $appointments->where('status', 'pending')->count(),
             'today_total' => $today->count(),
         ];
@@ -81,9 +81,12 @@ class AppointmentController extends Controller
             'presetClient' => $request->filled('client')
                 ? Client::visibleTo($request->user())->where('id', $request->input('client'))->first(['id', 'serial_no', 'name', 'phone', 'address'])
                 : null,
+            // Include the current all-data user (e.g. an admin) so they can act as the
+            // technician — the modal defaults the dropdown to their own name (CHG-003).
             'technicians' => $request->user()->seesAllData()
-                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
-                    ->where('active', true)
+                ? \App\Models\User::where('active', true)
+                    ->where(fn ($q) => $q->where('role', \App\Models\User::ROLE_TECHNICIAN)
+                        ->orWhere('id', $request->user()->id))
                     ->when($request->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', $request->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
@@ -156,7 +159,8 @@ class AppointmentController extends Controller
             );
         }
 
-        // Status is owned by the lifecycle endpoint, not the edit form.
+        // The edit form may carry a status override (admin-only, no transition
+        // guard); appointmentData() folds it in only when present.
         $appointment->update($data);
 
         return redirect()
@@ -165,7 +169,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Lifecycle transition (pending → confirmed → done / cancelled), guarded server-side.
+     * Lifecycle transition (pending → completed / cancelled), guarded server-side.
      */
     public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
     {

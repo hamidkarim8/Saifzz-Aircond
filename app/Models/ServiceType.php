@@ -7,15 +7,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceType extends Model
 {
-    protected $fillable = ['name', 'requires_next_service', 'is_hp_based'];
+    public const MODES = ['flat', 'hp_tiered', 'flexible'];
+
+    protected $fillable = ['name', 'pricing_mode', 'requires_next_service'];
 
     protected $casts = [
         'requires_next_service' => 'boolean',
-        'is_hp_based'           => 'boolean',
     ];
 
-    public function hpTiers(): HasMany
+    public function fees(): HasMany
     {
-        return $this->hasMany(ServiceHpTier::class);
+        return $this->hasMany(ServiceFee::class);
     }
 }

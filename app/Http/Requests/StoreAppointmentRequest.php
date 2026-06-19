@@ -19,6 +19,7 @@ class StoreAppointmentRequest extends FormRequest
         return [
             // Loosely linked — an appointment may be booked for a lead with no client record yet.
             'client_id' => ['nullable', 'exists:clients,id'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
             'phone' => ['required', 'string', 'regex:/^01\d-?\d{7,8}$/'],
@@ -45,6 +46,7 @@ class StoreAppointmentRequest extends FormRequest
     {
         return [
             'client_id' => $this->input('client_id'),
+            'customer_name' => $this->input('client_id') ? null : $this->input('customer_name'),
             'datetime' => $this->datetime(),
             'phone' => $this->input('phone'),
             'address' => $this->input('address'),

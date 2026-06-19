@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { IconAirConditioning, IconShieldCheck, IconHistory, IconReceipt2 } from '@tabler/icons-vue';
+import { IconShieldCheck, IconHistory, IconReceipt2 } from '@tabler/icons-vue';
 
 defineProps({
     // When true, renders a two-pane branded split screen (used by the login page).
@@ -24,9 +24,7 @@ defineProps({
 
             <div class="relative flex flex-1 flex-col justify-between p-12 xl:p-16">
                 <Link href="/" class="flex items-center gap-3">
-                    <div class="grid h-12 w-12 place-items-center rounded-ra bg-primary text-white shadow-lift">
-                        <IconAirConditioning :size="26" :stroke="2" />
-                    </div>
+                    <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-14 w-14 rounded-ra object-cover shadow-lift" />
                     <div class="leading-tight">
                         <div class="text-xl font-bold tracking-tight text-white">Saifzz Aircond</div>
                         <div class="font-mono text-[11px] uppercase tracking-[0.2em] text-primary-300/70">Service System</div>
@@ -70,9 +68,7 @@ defineProps({
 
             <!-- Mobile logo -->
             <Link href="/" class="relative mb-8 flex flex-col items-center gap-3 lg:hidden">
-                <div class="grid h-14 w-14 place-items-center rounded-ral bg-primary text-white shadow-lift">
-                    <IconAirConditioning :size="30" :stroke="2" />
-                </div>
+                <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-16 w-16 rounded-ral object-cover shadow-lift" />
                 <div class="text-center leading-tight">
                     <div class="text-xl font-bold tracking-tight text-navy-900">Saifzz Aircond</div>
                     <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">Service System</div>
@@ -89,9 +85,7 @@ defineProps({
     <!-- ===== Default centered card (forgot/reset/verify) ===== -->
     <div v-else class="flex min-h-screen flex-col items-center justify-center bg-appbg px-4 py-10">
         <Link href="/" class="mb-6 flex items-center gap-3">
-            <div class="grid h-11 w-11 place-items-center rounded-ra bg-primary text-white">
-                <IconAirConditioning :size="24" :stroke="2" />
-            </div>
+            <img src="/img/logo-256.png" alt="Saifzz Aircond" class="h-14 w-14 rounded-ra object-cover" />
             <div class="leading-tight">
                 <div class="text-lg font-bold tracking-tight text-navy-900">Saifzz Aircond</div>
                 <div class="font-mono text-[10px] uppercase tracking-widest text-ink-muted">Service System</div>

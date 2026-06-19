@@ -3,7 +3,7 @@
 > Quick human reference for what's done / pending / on-hold / deferred / broken.
 > Mirror of the assistant's working memory. Update at the end of every work session.
 >
-> **Last updated:** 2026-06-16 (session 29 — Units feature parked: frontend hidden pending requirement discussion, see docs/UNITS-TODO.md)
+> **Last updated:** 2026-06-19 (session 39 — FEAT-005/006 Google-review warranty bonus → TESTING (same feature, not a voucher): toggle button now INSIDE the Google Review card under the QR on Create (+1 month, cap 6, "Covered until" label); Edit keeps it under the dropdown. Frontend-only, build clean. Also fixed QR-not-displaying (env, not code): missing `public/storage` symlink + root-owned `qr/` dir blocking web-user writes → ran `storage:link` + `chown sail:sail`; added post-seed `chown 82:82 storage` to DEPLOYMENT.md. **17-Jun feedback now has ZERO open items.** Sessions 47+ NOT yet pushed/PR'd to `main` — Khalid batch pending. See SESSION-LOG + FEEDBACK-17062026.md)
 
 ---
 
@@ -23,6 +23,7 @@ Legend: ✅ done · 🔄 in progress · ⏳ pending/next · ⏸ on hold · 📋 
 ---
 
 ## ✅ Completed
+- **Business Settings hub (session 30)** — per-tenant `business_settings` table + `BusinessSetting::forTenant` (config fallback). Admin page (Settings → Business Settings, adminOnly), 3 tabs: Identity (name/address/phone/SSM + live invoice preview) / Google Review (link + QR upload) / Payment (BayarCash creds relocated from old Payment Settings). Invoice/receipt now render per-tenant identity + SSM + logo (base64). Google Review QR button + modal on paid service records. Official logo swapped app-wide (`logo-256.png`) + favicon. Saifzz seeded (SSM + QR). Suite 299.
 - Product docs written (`docs/01`–`06`) + clickable mockup (`index.html`, Service System v4).
 - Product & architecture decisions locked (2026-06-10).
 - Tech stack chosen: Laravel + Inertia/Vue + Postgres (Docker-first).

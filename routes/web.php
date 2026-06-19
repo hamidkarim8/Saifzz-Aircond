@@ -13,10 +13,8 @@ use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ServiceFeeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\ServiceHpTierController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\PaymentGatewayController;
@@ -86,14 +84,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
 
-    // Service Fees (module 3) — GET /fees redirects to merged Service Settings page.
-    Route::redirect('fees', '/service-types')->name('fees.index');
+    // Service Fees (module 3) — fee-set sync endpoint, gated by edit_fees.
     Route::middleware('can:edit_fees')->group(function () {
-        Route::post('fees', [ServiceFeeController::class, 'store'])->name('fees.store');
-        Route::put('fees/{fee}', [ServiceFeeController::class, 'update'])->name('fees.update');
-        Route::delete('fees/{fee}', [ServiceFeeController::class, 'destroy'])->name('fees.destroy');
-        Route::post('service-hp-tiers', [ServiceHpTierController::class, 'store'])->name('service-hp-tiers.store');
-        Route::delete('service-hp-tiers/{tier}', [ServiceHpTierController::class, 'destroy'])->name('service-hp-tiers.destroy');
+        Route::put('service-types/{serviceType}/fees', [ServiceTypeController::class, 'syncFees'])->name('service-types.fees.sync');
     });
 
     // Service Types (manage_service_types — admin + technician)
@@ -115,6 +108,7 @@ Route::middleware('auth')->group(function () {
     // Payments (module 5) — collection gated by collect_payment (P3)
     Route::get('payments/{transaction}', [PaymentController::class, 'show'])->middleware('can:collect_payment')->name('payments.show');
     Route::post('payments/{transaction}/cash', [PaymentController::class, 'cash'])->middleware('can:collect_payment')->name('payments.cash');
+    Route::post('payments/{transaction}/manual-qr', [PaymentController::class, 'manualQr'])->middleware('can:collect_payment')->name('payments.manualQr');
     Route::post('payments/{transaction}/pay', [PaymentController::class, 'pay'])->middleware('can:collect_payment')->name('payments.pay');
     Route::get('payments/{transaction}/return', [PaymentController::class, 'return'])->middleware('can:collect_payment')->name('payments.return');
 
@@ -137,9 +131,11 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/transactions/export', [ReportController::class, 'exportTransactions'])
         ->middleware('can:export_data')->name('reports.transactions.export');
 
-    // Payment Settings — admin-only gateway credential management.
+    // Business Settings (identity, QR) + Payment Settings — admin-only.
     Route::middleware('can:manage_users')->group(function () {
-        Route::get('payment-settings', [PaymentGatewayController::class, 'index'])->name('payment-settings.index');
+        Route::get('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'show'])->name('business-settings.show');
+        Route::put('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'update'])->name('business-settings.update');
+        Route::redirect('/payment-settings', '/business-settings')->name('payment-settings.index');
         Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');
     });
 });

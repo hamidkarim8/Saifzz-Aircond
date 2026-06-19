@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreClientRequest;
 use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
+use App\Models\ServiceType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,7 +128,7 @@ class ClientController extends Controller
         return Inertia::render('Clients/Index', [
             'clients'      => $clients,
             'filters'      => ['search' => $search, 'service_type' => $serviceType],
-            'serviceTypes' => self::SERVICE_TYPES,
+            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
         ]);
     }
 
@@ -223,12 +224,4 @@ class ClientController extends Controller
             ->route('clients.index')
             ->with('success', "Client {$client->serial_no} archived.");
     }
-
-    private const SERVICE_TYPES = [
-        'Cleaning',
-        'Gas Top-Up',
-        'Repair',
-        'Installation',
-        'Troubleshoot',
-    ];
 }
