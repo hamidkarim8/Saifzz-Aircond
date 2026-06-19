@@ -17,6 +17,7 @@
   - **Preview ≠ real doc fixed (replaces session-39 CHG-019 mock)** — the `InvoicePreview.vue` Tailwind mock was a hand-built reimplementation that drifted from `documents/*.blade.php` (missing Due Date/Status, different total label/colour, etc.). **Deleted it.** New admin-gated `GET business-settings/preview/{type}` route renders the **real** `invoice.blade`/`receipt.blade` with a fixed sample snapshot + live-typed identity (query params), loaded in an `<iframe>` on the Identity tab. Invoice/Receipt toggle, 400ms-debounced refresh as you type. Single source of truth — covers both docs, can't drift again.
   - **Label fix** — preview now a proper `Card title="Live document preview"` (was a bare floating `<div>` next to the form Card).
   - Tests: +5 in `BusinessSettingTest` (live invoice identity, receipt template, bad type → 404, saved-identity fallback, non-admin → 403).
+- **Real-fresh seeder:** `DatabaseSeeder` now seeds **only the 2 boss accounts (self-rooted tenants)** — commented out the Saifzz business-identity + Google Review QR block and the `ServiceType`/`ServiceFee` seeder calls. Bosses configure identity/services/fees from the live UI. Seeder classes left intact (uncomment to restore defaults). Local reset verified: `users=2 tenants=2`, everything else 0. **Fresh reset:** `php artisan migrate:fresh --seed` then `storage:link` + `chown -R sail:sail storage/app/public` (prod: `--force` + uid `82`).
 - **Prod on merge:** `npm run build` (Vite) + verify `.webmanifest` mime. No migrations.
 
 ---
