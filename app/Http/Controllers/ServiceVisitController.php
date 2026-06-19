@@ -73,7 +73,7 @@ class ServiceVisitController extends Controller
 
         // Walk-in appointment (no client) → prefill the new-client form.
         $presetNewClient = (!$presetClient && $appointment && !$appointment->client_id)
-            ? ['name' => $appointment->customer_name, 'phone' => $appointment->phone, 'address' => $appointment->address]
+            ? ['name' => $appointment->customer_name ?? '', 'phone' => $appointment->phone ?? '', 'address' => $appointment->address ?? '']
             : null;
 
         $biz = \App\Models\BusinessSetting::forTenant($user->tenantId());
