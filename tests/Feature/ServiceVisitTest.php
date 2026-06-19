@@ -340,4 +340,49 @@ class ServiceVisitTest extends TestCase
             ->get(route('service-records.index', ['sort' => 'injected_col', 'dir' => 'asc']))
             ->assertOk();
     }
+
+    public function test_create_prefills_new_client_from_walkin_appointment(): void
+    {
+        $user = $this->allDataRecorder();
+        $appt = \App\Models\Appointment::create([
+            'datetime' => '2026-06-20 09:00',
+            'customer_name' => 'Walk In Wan',
+            'phone' => '012-7654321',
+            'address' => 'Shah Alam',
+            'status' => 'pending',
+            'technician_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('service-records.create', ['appointment' => $appt->id]))
+            ->assertInertia(fn ($page) => $page
+                ->component('ServiceRecords/Create')
+                ->where('presetClient', null)
+                ->where('presetNewClient.name', 'Walk In Wan')
+                ->where('presetNewClient.phone', '012-7654321')
+                ->where('presetNewClient.address', 'Shah Alam')
+                ->where('presetAppointmentId', $appt->id)
+            );
+    }
+
+    public function test_create_prefills_existing_client_from_appointment(): void
+    {
+        $user = $this->allDataRecorder();
+        $client = Client::create(['name' => 'Acme', 'phone' => '012-3456789', 'address' => 'KL']);
+        $appt = \App\Models\Appointment::create([
+            'datetime' => '2026-06-20 09:00',
+            'client_id' => $client->id,
+            'phone' => '012-3456789',
+            'address' => 'KL',
+            'status' => 'pending',
+            'technician_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('service-records.create', ['appointment' => $appt->id]))
+            ->assertInertia(fn ($page) => $page
+                ->where('presetClient.id', $client->id)
+                ->where('presetNewClient', null)
+            );
+    }
 }

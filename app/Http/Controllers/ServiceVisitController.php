@@ -58,11 +58,25 @@ class ServiceVisitController extends Controller
 
     public function create(): Response
     {
-        $presetClient = request('client')
-            ? Client::visibleTo(request()->user())->where('id', request('client'))->first(['id', 'serial_no', 'name', 'phone'])
+        $user = request()->user();
+
+        $appointment = request('appointment')
+            ? Appointment::visibleTo($user)->whereKey(request('appointment'))
+                ->first(['id', 'client_id', 'customer_name', 'phone', 'address'])
             : null;
 
-        $biz = \App\Models\BusinessSetting::forTenant(request()->user()->tenantId());
+        // Existing client: explicit ?client= param (client-profile path) OR the appointment's client.
+        $clientId = request('client') ?: $appointment?->client_id;
+        $presetClient = $clientId
+            ? Client::visibleTo($user)->where('id', $clientId)->first(['id', 'serial_no', 'name', 'phone'])
+            : null;
+
+        // Walk-in appointment (no client) → prefill the new-client form.
+        $presetNewClient = (!$presetClient && $appointment && !$appointment->client_id)
+            ? ['name' => $appointment->customer_name, 'phone' => $appointment->phone, 'address' => $appointment->address]
+            : null;
+
+        $biz = \App\Models\BusinessSetting::forTenant($user->tenantId());
         $qrUrl = $biz['google_review_qr_path']
             ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
             : null;
@@ -73,19 +87,18 @@ class ServiceVisitController extends Controller
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
             'presetClient' => $presetClient,
+            'presetNewClient' => $presetNewClient,
             'presetClientUnits' => $presetClient
                 ? \App\Models\ClientUnit::where('client_id', $presetClient->id)
                     ->where('is_active', true)->orderBy('label')
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
             'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
-            'presetAppointmentId' => request('appointment')
-                ? Appointment::visibleTo(request()->user())->whereKey(request('appointment'))->value('id')
-                : null,
-            'technicians' => request()->user()->seesAllData()
+            'presetAppointmentId' => $appointment?->id,
+            'technicians' => $user->seesAllData()
                 ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
                     ->where('active', true)
-                    ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
+                    ->when($user->tenantId() !== null, fn ($q) => $q->where('tenant_id', $user->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
         ]);
