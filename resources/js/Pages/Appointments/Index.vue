@@ -276,8 +276,7 @@ const columns = [
                 <template #cell-actions="{ row }">
                     <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-medium">
                         <Link
-                            v-if="row.client"
-                            :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })"
+                            :href="route('service-records.create', { appointment: row.id, technician_id: row.technician_id })"
                             class="text-ok hover:text-ok/80"
                         >Add Record</Link>
                         <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
@@ -312,7 +311,7 @@ const columns = [
                             · {{ row.address }}
                         </div>
                         <div class="mt-3 flex items-center gap-2 text-xs font-medium">
-                            <Link v-if="row.client" :href="route('service-records.create', { client: row.client.id, technician_id: row.technician_id, appointment: row.id })" class="text-ok hover:text-ok/80">Add Record</Link>
+                            <Link :href="route('service-records.create', { appointment: row.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">Add Record</Link>
                             <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
                             <button
                                 v-if="(transitions[row.status] ?? []).includes('cancelled')"
