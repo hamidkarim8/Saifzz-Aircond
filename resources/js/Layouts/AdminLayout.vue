@@ -66,7 +66,10 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
 </script>
 
 <template>
-    <div class="min-h-screen bg-appbg">
+    <div class="min-h-screen bg-appbg" style="padding-top: env(safe-area-inset-top)">
+        <!-- Notch / status-bar strip (PWA standalone) — navy to match brand; 0-height on devices without a notch -->
+        <div class="fixed inset-x-0 top-0 z-50 bg-navy-900" style="height: env(safe-area-inset-top)" />
+
         <!-- Mobile drawer backdrop -->
         <div
             v-show="drawerOpen"
@@ -78,6 +81,7 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
         <aside
             class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-navy-900 text-white transition-transform duration-300 lg:translate-x-0"
             :class="drawerOpen ? 'translate-x-0' : '-translate-x-full'"
+            style="padding-top: env(safe-area-inset-top)"
         >
             <!-- Logo -->
             <div class="flex h-16 items-center gap-3 px-5">
@@ -118,7 +122,7 @@ const closeUserMenuSoon = () => setTimeout(() => (userMenu.value = false), 150);
         <!-- Main column -->
         <div class="lg:pl-64">
             <!-- Top bar -->
-            <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-line bg-surface/80 px-4 backdrop-blur-md sm:px-6">
+            <header class="sticky z-20 flex h-16 items-center gap-4 border-b border-line bg-surface/80 px-4 backdrop-blur-md sm:px-6" style="top: env(safe-area-inset-top)">
                 <button
                     class="grid h-10 w-10 place-items-center rounded-ra text-ink-soft hover:bg-surface-muted lg:hidden"
                     aria-label="Open menu"
