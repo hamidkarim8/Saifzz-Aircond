@@ -34,6 +34,18 @@ const query = ref('');
 const results = ref([]);
 const searching = ref(false);
 
+const clientMode = ref('existing'); // 'existing' | 'walk_in' — display only; server infers from client_id
+
+const setMode = (mode) => {
+    clientMode.value = mode;
+    if (mode === 'existing') {
+        form.customer_name = '';
+    } else {
+        clearClient();
+    }
+    form.clearErrors('client_id', 'customer_name');
+};
+
 const applyClient = (c) => {
     chosen.value = c;
     form.client_id = c?.id ?? null;
@@ -78,15 +90,22 @@ watch(() => props.open, (open) => {
         form.technician_id = a.technician_id ?? null;
         form.status = a.status ?? 'pending';
         chosen.value = a.client ?? null;
+        clientMode.value = a.client_id ? 'existing' : 'walk_in';
     } else {
         form.reset();
         chosen.value = null;
         if (props.technicians) form.technician_id = page.props.auth?.user?.id ?? null;
         if (props.presetClient) applyClient(props.presetClient);
+        clientMode.value = 'existing';
     }
 }, { immediate: true });
 
 const submit = () => {
+    if (clientMode.value === 'walk_in') {
+        form.client_id = null;
+    } else {
+        form.customer_name = '';
+    }
     const opts = { onSuccess: () => emit('saved'), preserveScroll: true };
     if (isEdit.value) {
         form.put(route('appointments.update', props.appointment.id), opts);
@@ -109,34 +128,68 @@ const submit = () => {
                         Please fix the errors below before saving.
                     </div>
 
-                    <!-- Client (optional) -->
+                    <!-- Client: existing vs walk-in -->
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Client <span class="font-normal text-ink-muted">(optional)</span></label>
-                        <div v-if="chosen" class="flex items-center justify-between rounded-ra border border-primary/30 bg-primary-50 px-4 py-2.5">
-                            <div class="min-w-0">
-                                <div class="truncate font-semibold text-ink">{{ chosen.name }} <span class="ml-1 font-mono text-sm text-primary">#{{ chosen.serial_no }}</span></div>
-                            </div>
-                            <button type="button" class="text-sm font-medium text-ink-soft hover:text-danger" @click="clearClient">Change</button>
+                        <div class="mb-4 grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                class="flex flex-col items-start gap-1 rounded-ral border-2 px-4 py-3 text-left transition"
+                                :class="clientMode === 'existing' ? 'border-primary bg-primary-50 shadow-card' : 'border-line bg-surface hover:border-primary/40'"
+                                @click="setMode('existing')"
+                            >
+                                <span class="flex items-center gap-2">
+                                    <span class="flex h-4 w-4 items-center justify-center rounded-full border-2 transition" :class="clientMode === 'existing' ? 'border-primary' : 'border-line'">
+                                        <span v-if="clientMode === 'existing'" class="h-2 w-2 rounded-full bg-primary" />
+                                    </span>
+                                    <span class="text-sm font-semibold" :class="clientMode === 'existing' ? 'text-primary' : 'text-ink'">Existing client</span>
+                                </span>
+                                <span class="pl-6 text-xs text-ink-soft">Search by name, serial or phone</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="flex flex-col items-start gap-1 rounded-ral border-2 px-4 py-3 text-left transition"
+                                :class="clientMode === 'walk_in' ? 'border-primary bg-primary-50 shadow-card' : 'border-line bg-surface hover:border-primary/40'"
+                                @click="setMode('walk_in')"
+                            >
+                                <span class="flex items-center gap-2">
+                                    <span class="flex h-4 w-4 items-center justify-center rounded-full border-2 transition" :class="clientMode === 'walk_in' ? 'border-primary' : 'border-line'">
+                                        <span v-if="clientMode === 'walk_in'" class="h-2 w-2 rounded-full bg-primary" />
+                                    </span>
+                                    <span class="text-sm font-semibold" :class="clientMode === 'walk_in' ? 'text-primary' : 'text-ink'">Walk-in</span>
+                                </span>
+                                <span class="pl-6 text-xs text-ink-soft">Enter customer details manually</span>
+                            </button>
                         </div>
-                        <div v-else class="relative">
-                            <input v-model="query" type="search" placeholder="Search name, serial or phone…" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
-                            <ul v-if="results.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-ra border border-line bg-surface shadow-lift">
-                                <li v-for="c in results" :key="c.id">
-                                    <button type="button" class="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-surface-muted" @click="choose(c)">
-                                        <span class="font-medium text-ink">{{ c.name }}</span>
-                                        <span class="font-mono text-xs text-primary">#{{ c.serial_no }}</span>
-                                    </button>
-                                </li>
-                            </ul>
-                            <p v-if="searching" class="mt-1 text-xs text-ink-muted">Searching…</p>
-                        </div>
-                    </div>
 
-                    <!-- Customer name (manual lead — only when no existing client picked) -->
-                    <div v-if="!chosen">
-                        <label class="mb-1.5 block text-sm font-semibold text-ink">Customer name <span class="font-normal text-ink-muted">(for a manual lead)</span></label>
-                        <input v-model="form.customer_name" type="text" placeholder="e.g. Encik Ali" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
-                        <p v-if="form.errors.customer_name" class="mt-1 text-sm text-danger">{{ form.errors.customer_name }}</p>
+                        <!-- Existing client search/selection -->
+                        <div v-if="clientMode === 'existing'">
+                            <div v-if="chosen" class="flex items-center justify-between rounded-ra border border-primary/30 bg-primary-50 px-4 py-2.5">
+                                <div class="min-w-0">
+                                    <div class="truncate font-semibold text-ink">{{ chosen.name }} <span class="ml-1 font-mono text-sm text-primary">#{{ chosen.serial_no }}</span></div>
+                                </div>
+                                <button type="button" class="text-sm font-medium text-ink-soft hover:text-danger" @click="clearClient">Change</button>
+                            </div>
+                            <div v-else class="relative">
+                                <input v-model="query" type="search" placeholder="Search name, serial or phone…" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                                <ul v-if="results.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-ra border border-line bg-surface shadow-lift">
+                                    <li v-for="c in results" :key="c.id">
+                                        <button type="button" class="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-surface-muted" @click="choose(c)">
+                                            <span class="font-medium text-ink">{{ c.name }}</span>
+                                            <span class="font-mono text-xs text-primary">#{{ c.serial_no }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p v-if="searching" class="mt-1 text-xs text-ink-muted">Searching…</p>
+                            </div>
+                            <p v-if="form.errors.client_id" class="mt-1 text-sm text-danger">{{ form.errors.client_id }}</p>
+                        </div>
+
+                        <!-- Walk-in: manual customer name -->
+                        <div v-else>
+                            <label class="mb-1.5 block text-sm font-semibold text-ink">Customer name</label>
+                            <input v-model="form.customer_name" type="text" placeholder="e.g. Encik Ali" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
+                            <p v-if="form.errors.customer_name" class="mt-1 text-sm text-danger">{{ form.errors.customer_name }}</p>
+                        </div>
                     </div>
 
                     <!-- Date + time -->

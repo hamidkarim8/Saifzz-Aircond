@@ -13,6 +13,7 @@ const page = usePage();
 const props = defineProps({
     serviceTypes: Array,
     presetClient: { type: Object, default: null },
+    presetNewClient: { type: Object, default: null },
     presetClientUnits: { type: Array, default: () => [] },
     presetTechnicianId: { type: Number, default: null },
     presetAppointmentId: { type: Number, default: null },
@@ -28,9 +29,13 @@ const blankLine = () => ({
 });
 
 const form = useForm({
-    client_mode: 'existing',
+    client_mode: props.presetNewClient ? 'new' : 'existing',
     client_id: null,
-    new_client: { name: '', phone: '', address: '' },
+    new_client: {
+        name: props.presetNewClient?.name ?? '',
+        phone: props.presetNewClient?.phone ?? '',
+        address: props.presetNewClient?.address ?? '',
+    },
     visit_date: new Date().toISOString().slice(0, 10),
     warranty_months: 0,
     technician_id: props.presetTechnicianId ?? null,
