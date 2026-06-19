@@ -6,6 +6,16 @@
 
 ---
 
+## Session 43 — 2026-06-19 — PWA toast clipped by notch (BUG-004)
+
+**Branch:** `dev`, NOT pushed. 1 file. Frontend-only (CSS).
+
+- **BUG-004 (toast under notch, PWA standalone):** SweetAlert2 toasts (`position: top-end`) pin their container to `top:0`. In a browser tab that's fine, but in the home-screen PWA the container sits behind the phone's top notch. Added global CSS in `resources/css/app.css` — `.swal2-container.swal2-top{,-start,-end}` get `padding-top: calc(0.625em + env(safe-area-inset-top))` (keeps SweetAlert2's default 0.625em pad, adds the notch inset; 0 on notchless devices). Matches the `env(safe-area-inset-top)` convention already in `AdminLayout.vue`.
+
+**Prod on merge:** `npm run build`. No migrations.
+
+---
+
 ## Session 42 — 2026-06-19 — 19-Jun feedback batch 2: tz off-by-one, portal WhatsApp, catalog redesign
 
 **Branch:** `dev`, NOT pushed. Suite 334/334, Vite build clean. Done inline. Feedback `docs/FEEDBACK-19062026.md` (3 bugs · 2 changes · 2 features → all TESTING).

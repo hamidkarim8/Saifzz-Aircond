@@ -13,3 +13,10 @@
         @apply bg-appbg text-ink antialiased;
     }
 }
+
+/* SweetAlert2 toasts pin to top:0 — offset below the notch in PWA standalone */
+.swal2-container.swal2-top,
+.swal2-container.swal2-top-start,
+.swal2-container.swal2-top-end {
+    padding-top: calc(0.625em + env(safe-area-inset-top));
+}
