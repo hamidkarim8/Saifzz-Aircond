@@ -93,6 +93,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:manage_service_types')->group(function () {
         Route::get('service-types', [ServiceTypeController::class, 'index'])->name('service-types.index');
         Route::post('service-types', [ServiceTypeController::class, 'store'])->name('service-types.store');
+        // Reorder must be declared before the {serviceType} route so "reorder" is
+        // not captured as a model-binding id.
+        Route::put('service-types/reorder', [ServiceTypeController::class, 'reorder'])->name('service-types.reorder');
         Route::put('service-types/{serviceType}', [ServiceTypeController::class, 'update'])->name('service-types.update');
     });
 

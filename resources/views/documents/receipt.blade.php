@@ -7,6 +7,9 @@
         $s = $snapshot;
         $money = fn ($v) => 'RM ' . number_format((float) $v, 2);
         $date  = fn ($d) => $d ? \Illuminate\Support\Carbon::parse($d)->format('d M Y') : '—';
+        // "Manual QR" is the internal label for a DuitNow QR taken in person — show
+        // the customer-facing name on the document.
+        $methodLabel = ($s['method'] ?? '') === 'Manual QR' ? 'Duitnow QR Code' : ($s['method'] ?? '');
     @endphp
 
     {{-- Receipt + payment details --}}
@@ -21,7 +24,7 @@
         </tr>
         <tr>
             <td class="k">Payment</td>
-            <td class="v">{{ $s['method'] }}</td>
+            <td class="v">{{ $methodLabel }}</td>
         </tr>
         <tr>
             <td class="k">Txn ID</td>

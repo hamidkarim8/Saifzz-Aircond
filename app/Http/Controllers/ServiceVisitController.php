@@ -83,7 +83,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Create', [
             'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
-            'serviceTypes' => ServiceType::orderBy('name')
+            'serviceTypes' => ServiceType::orderBy('sort_order')->orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
             'presetClient' => $presetClient,
@@ -216,7 +216,7 @@ class ServiceVisitController extends Controller
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
                 : null,
-            'serviceTypes' => ServiceType::orderBy('name')
+            'serviceTypes' => ServiceType::orderBy('sort_order')->orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
             'clientUnits' => \App\Models\ClientUnit::where('client_id', $serviceRecord->client_id)

@@ -128,7 +128,7 @@ class ClientController extends Controller
         return Inertia::render('Clients/Index', [
             'clients'      => $clients,
             'filters'      => ['search' => $search, 'service_type' => $serviceType],
-            'serviceTypes' => ServiceType::orderBy('name')->pluck('name')->all(),
+            'serviceTypes' => ServiceType::orderBy('sort_order')->orderBy('name')->pluck('name')->all(),
         ]);
     }
 

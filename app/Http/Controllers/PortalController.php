@@ -63,7 +63,7 @@ class PortalController extends Controller
 
         return Inertia::render('Portal/Show', [
             ...$this->portal->accountFor($client),
-            'business' => $this->business(),
+            'business' => $this->business($client->tenant_id),
         ]);
     }
 
@@ -106,11 +106,19 @@ class PortalController extends Controller
     }
 
     /** Business identity + WhatsApp number (normalized by the module-11 service). */
-    protected function business(): array
+    protected function business(?int $tenantId = null): array
     {
+        $b = \App\Models\BusinessSetting::forTenant($tenantId);
+
+        // Prefer the dedicated WhatsApp number (Business Settings → WhatsApp tab).
+        // Fall back to the first listed display phone — `phone` may carry several
+        // numbers ("016-x / 016-y") whose digits would otherwise mash into one
+        // invalid wa.me number (404).
+        $waSource = $b['whatsapp_phone'] ?: explode('/', (string) $b['phone'])[0];
+
         return [
-            'name' => config('business.name'),
-            'wa' => $this->whatsapp->normalize(config('business.phone')),
+            'name' => $b['name'],
+            'wa' => $this->whatsapp->normalize(trim($waSource)),
         ];
     }
 }

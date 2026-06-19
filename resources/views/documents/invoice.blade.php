@@ -6,6 +6,8 @@
     @php
         $s = $snapshot;
         $money = fn ($v) => 'RM ' . number_format((float) $v, 2);
+        // "Manual QR" is the internal label for an in-person DuitNow QR payment.
+        $methodLabel = ($s['method'] ?? '') === 'Manual QR' ? 'Duitnow QR Code' : ($s['method'] ?? '');
     @endphp
 
     {{-- Invoice + date details --}}
@@ -99,5 +101,5 @@
         </table>
     </div>
 
-    <div class="foot">Payment via {{ $s['method'] }} &nbsp;&middot;&nbsp; {{ $s['business']['phone'] }}</div>
+    <div class="foot">Payment via {{ $methodLabel }} &nbsp;&middot;&nbsp; {{ $s['business']['phone'] }}</div>
 @endsection

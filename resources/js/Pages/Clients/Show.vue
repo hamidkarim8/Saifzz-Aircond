@@ -17,7 +17,14 @@ const props = defineProps({
 const can = computed(() => usePage().props.auth.can ?? {});
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// Raw-parse the date portion so UTC-tagged appointment datetimes don't shift a
+// day under UTC+8 (evening appts were showing as +1). Works for date-only too.
+const fmtDate = (d) => {
+    if (!d) return '—';
+    const [y, m, day] = d.slice(0, 10).split('-').map(Number);
+    return `${day} ${MONTHS[m - 1]} ${y}`;
+};
 
 // Warranty display status (R5) from warranty_end.
 const warrantyState = (end) => {
