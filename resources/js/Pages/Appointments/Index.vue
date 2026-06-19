@@ -67,6 +67,8 @@ const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? nul
 // Formatters
 const fmtDate   = (dt) => wallDate(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime   = (dt) => (dt ?? '').slice(11, 16);
+const dayNum    = (dt) => wallDate(dt).getDate();
+const monShort  = (dt) => wallDate(dt).toLocaleDateString('en-GB', { month: 'short' });
 const cap       = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const monthLabel = computed(() => {
     const [y, m] = props.month.split('-').map(Number);
@@ -290,34 +292,48 @@ const columns = [
 
                 <!-- Mobile card -->
                 <template #card="{ row }">
-                    <div class="rounded-ral border border-line bg-surface p-4 shadow-card">
-                        <div class="mb-2 flex items-start justify-between gap-2">
-                            <div>
-                                <div class="font-medium text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
-                                <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
-                                <span v-else class="font-mono text-xs text-ink-soft">Non client</span>
+                    <div class="overflow-hidden rounded-ral border border-line bg-surface shadow-card">
+                        <!-- Header: date tile + name + status -->
+                        <div class="flex items-center gap-3 p-4">
+                            <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-ra bg-primary-50 leading-none">
+                                <span class="text-lg font-bold text-primary">{{ dayNum(row.datetime) }}</span>
+                                <span class="text-[9px] font-semibold uppercase tracking-wide text-primary/70">{{ monShort(row.datetime) }}</span>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate font-semibold text-ink">{{ row.client?.name ?? row.customer_name ?? 'Walk-in' }}</div>
+                                <div class="mt-0.5 flex items-center gap-2">
+                                    <span class="font-mono text-xs text-ink-muted">{{ fmtTime(row.datetime) }}</span>
+                                    <Link v-if="row.client" :href="route('clients.show', row.client.id)" class="font-mono text-xs text-primary hover:underline">#{{ row.client.serial_no }}</Link>
+                                    <span v-else class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">Non client</span>
+                                </div>
                             </div>
                             <Badge :variant="statusVariant(cap(row.status))">{{ cap(row.status) }}</Badge>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-                            <span class="font-mono font-semibold text-primary">{{ fmtDate(row.datetime) }} {{ fmtTime(row.datetime) }}</span>
+
+                        <!-- Meta: phone + address -->
+                        <div class="space-y-2 border-t border-line px-4 py-3 text-xs">
+                            <div class="flex items-center gap-2">
+                                <a v-if="waLink(row.phone)" :href="waLink(row.phone)" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 font-mono text-ok hover:underline">
+                                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.849L.057 23.526a.5.5 0 0 0 .611.658l5.849-1.531A11.946 11.946 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.671-.497-5.206-1.367l-.373-.215-3.872 1.014 1.013-3.799-.234-.389A9.946 9.946 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                                    {{ row.phone }}
+                                </a>
+                                <span v-else class="font-mono text-ink-muted">No phone</span>
+                            </div>
+                            <div v-if="row.address" class="flex items-start gap-2 text-ink-soft">
+                                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.686-7-11a7 7 0 1 1 14 0c0 5.314-7 11-7 11z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                <span>{{ row.address }}</span>
+                            </div>
                         </div>
-                        <div class="mt-2 text-xs text-ink-soft">
-                            <a v-if="waLink(row.phone)" :href="waLink(row.phone)" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-ok hover:underline">
-                                <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.849L.057 23.526a.5.5 0 0 0 .611.658l5.849-1.531A11.946 11.946 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.671-.497-5.206-1.367l-.373-.215-3.872 1.014 1.013-3.799-.234-.389A9.946 9.946 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-                                {{ row.phone }}
-                            </a>
-                            <span v-else>—</span>
-                            · {{ row.address }}
-                        </div>
-                        <div class="mt-3 flex items-center gap-2 text-xs font-medium">
-                            <Link :href="route('service-records.create', { appointment: row.id, technician_id: row.technician_id })" class="text-ok hover:text-ok/80">Add Record</Link>
-                            <button class="text-primary hover:text-primary-hover" @click="openEdit(row)">Edit</button>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2 border-t border-line bg-surface-muted/40 p-3">
+                            <Link :href="route('service-records.create', { appointment: row.id, technician_id: row.technician_id })" class="flex-1 rounded-ra border border-ok/30 bg-surface py-2 text-center text-xs font-semibold text-ok transition hover:bg-ok-bg">Add Record</Link>
+                            <button class="flex-1 rounded-ra border border-line bg-surface py-2 text-center text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary-50" @click="openEdit(row)">Edit</button>
                             <button
                                 v-if="(transitions[row.status] ?? []).includes('cancelled')"
-                                class="text-danger hover:underline"
+                                class="flex-1 rounded-ra border border-danger/30 bg-surface py-2 text-center text-xs font-semibold text-danger transition hover:bg-danger-bg"
                                 @click="setStatus(row, 'cancelled')"
-                            >Cancel Appointment</button>
+                            >Cancel</button>
                         </div>
                     </div>
                 </template>
