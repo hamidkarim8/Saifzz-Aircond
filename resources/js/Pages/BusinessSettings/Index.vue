@@ -1,9 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import ImageUploadField from './Partials/ImageUploadField.vue';
+import { waNumber } from '@/lib/whatsapp';
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
@@ -40,6 +41,17 @@ watch(
     { immediate: true },
 );
 
+// WhatsApp number powering the customer portal's "Set Appointment" button.
+const waForm = useForm({
+    whatsapp_phone: props.settings.whatsapp_phone ?? '',
+});
+const saveWhatsapp = () => waForm.put(route('business-settings.update'), { preserveScroll: true });
+// Live preview of the resulting wa.me link (mirrors the server normalize).
+const waPreview = computed(() => {
+    const n = waNumber(waForm.whatsapp_phone);
+    return n ? `https://wa.me/${n}` : '';
+});
+
 const reviewForm = useForm({
     google_review_url: props.settings.google_review_url ?? '',
     google_review_qr: null,
@@ -65,6 +77,7 @@ const saveManualQr = () => manualQrForm.put(route('business-settings.update'), {
 
 const tabs = [
     { id: 'identity', label: 'Identity' },
+    { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'review', label: 'Google Review' },
     { id: 'payment', label: 'Payment' },
 ];
@@ -123,6 +136,32 @@ const inputClass = 'w-full rounded-ra border border-line bg-surface px-3 py-2 te
                 <p class="mb-3 text-xs text-ink-soft">Exact template the customer receives — sample data, your live identity.</p>
                 <iframe :src="previewSrc" title="Document preview"
                     class="h-[640px] w-full rounded-ra border border-line bg-[#f0f4f8]"></iframe>
+            </Card>
+        </div>
+
+        <div v-else-if="activeTab === 'whatsapp'" class="max-w-xl">
+            <Card title="WhatsApp number">
+                <form class="space-y-4" @submit.prevent="saveWhatsapp">
+                    <p class="text-sm text-ink-soft">Used for the portal's <strong>Set Appointment</strong> button.</p>
+                    <div>
+                        <label class="mb-1.5 block text-sm font-semibold text-ink">WhatsApp number</label>
+                        <input
+                            v-model="waForm.whatsapp_phone"
+                            :class="inputClass"
+                            inputmode="tel"
+                            placeholder="012-3456789"
+                        />
+                        <p class="mt-1.5 text-xs text-ink-soft">One Malaysian mobile, e.g. <span class="font-mono">012-3456789</span>.</p>
+                        <p v-if="waForm.errors.whatsapp_phone" class="mt-1 text-xs text-danger">{{ waForm.errors.whatsapp_phone }}</p>
+                    </div>
+                    <div v-if="waPreview" class="text-xs text-ink-soft">
+                        Link: <span class="font-mono text-primary">{{ waPreview }}</span>
+                    </div>
+                    <button type="submit" :disabled="waForm.processing"
+                        class="inline-flex items-center rounded-ra bg-primary px-4 py-2 text-sm font-semibold text-white shadow-card hover:bg-primary-hover disabled:opacity-60">
+                        {{ waForm.processing ? 'Saving…' : 'Save WhatsApp number' }}
+                    </button>
+                </form>
             </Card>
         </div>
 

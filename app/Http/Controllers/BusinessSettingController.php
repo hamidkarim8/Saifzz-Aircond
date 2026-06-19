@@ -27,6 +27,7 @@ class BusinessSettingController extends Controller
             'settings' => [
                 'business_name' => $identity['name'],
                 'phone' => $identity['phone'],
+                'whatsapp_phone' => $identity['whatsapp_phone'],
                 'ssm_no' => $identity['ssm_no'],
                 'google_review_url' => $identity['google_review_url'],
             ],
@@ -128,7 +129,7 @@ class BusinessSettingController extends Controller
     {
         $tenantId = $request->user()->id;
 
-        $data = $request->only(['business_name', 'phone', 'ssm_no', 'google_review_url']);
+        $data = $request->only(['business_name', 'phone', 'whatsapp_phone', 'ssm_no', 'google_review_url']);
 
         if ($request->hasFile('google_review_qr')) {
             $path = "qr/tenant-{$tenantId}.png";

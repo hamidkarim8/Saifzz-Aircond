@@ -65,10 +65,10 @@
             @endif
             <div class="co">{{ $snapshot['business']['name'] ?? config('business.name') }}</div>
             <div class="co-sub">
-                {{ $snapshot['business']['phone'] ?? '' }}
                 @if(!empty($snapshot['business']['ssm_no']))
-                    <br>SSM: {{ $snapshot['business']['ssm_no'] }}
+                    SSM: {{ $snapshot['business']['ssm_no'] }}<br>
                 @endif
+                Phone Number: {{ $snapshot['business']['phone'] ?? '' }}
             </div>
             <div class="kind">@yield('kind')</div>
         </div>

@@ -15,7 +15,13 @@ const props = defineProps({
 });
 
 const money = (v) => 'RM ' + Number(v ?? 0).toFixed(2);
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// Raw-parse so UTC-tagged datetimes don't shift a day under UTC+8.
+const fmtDate = (d) => {
+    if (!d) return '—';
+    const [y, m, day] = d.slice(0, 10).split('-').map(Number);
+    return `${day} ${MONTHS[m - 1]} ${y}`;
+};
 
 // Derive WarrantyPill state + label from warranty_end date.
 const warrantyPill = (end) => {

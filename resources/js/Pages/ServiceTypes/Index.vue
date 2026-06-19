@@ -2,14 +2,24 @@
 import { computed, reactive, ref, watch } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Badge from '@/Components/Badge.vue';
+import DragList from '@/Components/DragList.vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
-import { IconPencil, IconCheck, IconX, IconPlus } from '@tabler/icons-vue';
+import { IconPencil, IconCheck, IconX, IconPlus, IconGripVertical } from '@tabler/icons-vue';
 import { serviceVariant } from '@/lib/badges';
 
 const props = defineProps({
     serviceTypes: Array,
     modes: Array,
 });
+
+// Local, reorderable copy of the service types (drag updates this optimistically;
+// the watch resyncs after the server round-trip / any other prop change).
+const orderedTypes = ref([...props.serviceTypes]);
+watch(() => props.serviceTypes, (t) => { orderedTypes.value = [...t]; });
+
+function persistOrder(order) {
+    router.put(route('service-types.reorder'), { order }, { preserveScroll: true, preserveState: true });
+}
 
 // --- Tabs ---
 const activeTab = ref('types');
@@ -192,13 +202,20 @@ function saveFees(type) {
 
         <!-- Service Types Tab -->
         <div v-if="activeTab === 'types'">
+            <p class="mb-3 text-xs text-ink-soft">Drag <IconGripVertical class="inline h-3.5 w-3.5 align-text-bottom" /> to reorder how services appear across the app.</p>
             <div class="overflow-hidden rounded-ral border border-line bg-surface shadow-card">
-                <div class="divide-y divide-line">
-                    <div
-                        v-for="type in serviceTypes"
-                        :key="type.id"
-                        class="flex items-center gap-3 px-4 py-3.5"
-                    >
+                <DragList v-model="orderedTypes" item-key="id" class="divide-y divide-line" @reorder="persistOrder">
+                    <template #item="{ item: type, handleDown }">
+                    <div class="flex items-center gap-3 px-4 py-3.5">
+                        <button
+                            v-if="editingId !== type.id"
+                            type="button"
+                            class="-ml-1 cursor-grab touch-none text-ink-muted transition hover:text-ink active:cursor-grabbing"
+                            title="Drag to reorder"
+                            @pointerdown="handleDown"
+                        >
+                            <IconGripVertical class="h-4 w-4" />
+                        </button>
                         <template v-if="editingId !== type.id">
                             <span class="flex-1 text-sm font-medium text-ink">{{ type.name }}</span>
                             <button
@@ -249,9 +266,11 @@ function saveFees(type) {
                             </button>
                         </template>
                     </div>
+                    </template>
+                </DragList>
 
-                    <!-- Add row -->
-                    <div class="px-4 py-3.5">
+                <!-- Add row -->
+                <div class="border-t border-line px-4 py-3.5">
                         <template v-if="!showAdd">
                             <button
                                 type="button"
@@ -290,7 +309,6 @@ function saveFees(type) {
                             </div>
                             <p v-if="addForm.errors.name" class="mt-1 text-xs text-danger">{{ addForm.errors.name }}</p>
                         </template>
-                    </div>
                 </div>
             </div>
         </div>

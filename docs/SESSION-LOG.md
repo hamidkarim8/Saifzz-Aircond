@@ -6,6 +6,26 @@
 
 ---
 
+## Session 42 — 2026-06-19 — 19-Jun feedback batch 2: tz off-by-one, portal WhatsApp, catalog redesign
+
+**Branch:** `dev`, NOT pushed. Suite 334/334, Vite build clean. Done inline. Feedback `docs/FEEDBACK-19062026.md` (3 bugs · 2 changes · 2 features → all TESTING).
+
+- **BUG (tz off-by-one, dashboard + client profile):** evening appointments showed on the next day. `Dashboard.vue` `dayList` used `new Date(a.datetime).getDate()` → UTC+8 pushed late times to the next day, while `MonthCalendar` dot raw-parses (mismatch: dot on 19, click-list on 20). Fixed by raw-parsing `YYYY-MM-DD` against `props.month`. `Clients/Show.vue` + `Portal/Show.vue` `fmtDate` switched from `new Date().toLocaleDateString` to raw-parse (MONTHS array). Frontend-only.
+- **BUG (portal "Set Appointment" → wa.me 404):** `config('business.phone')` carries two numbers (`016-… / 016-…`); `WhatsApp::normalize` strips all non-digits → mashes both into one 20-digit invalid number. Fixed + productised: new per-tenant **WhatsApp tab** in Business Settings.
+- **FEAT (per-tenant WhatsApp number):** `whatsapp_phone` column on `business_settings` (migration `2026_06_19_000002`); model fillable + `forTenant`; request rule; controller `show`/`update`; new "WhatsApp" tab (`BusinessSettings/Index.vue`) with label/placeholder + live `wa.me/60…` preview (via `lib/whatsapp` `waNumber`). `PortalController::business()` now tenant-aware (`BusinessSetting::forTenant($client->tenant_id)`); wa priority = `whatsapp_phone` → first listed display phone → config. Never 404s.
+- **CHG (invoice/receipt):** payment method **"Manual QR" → "Duitnow QR Code"** (display map only in `receipt.blade` + `invoice.blade`; internal label kept so admin still distinguishes manual vs gateway). `documents/layout.blade.php` header: **SSM moved above phone**, phone gets **"Phone Number:"** label. Blade-only.
+- **FEAT (reorder service sequence):** `sort_order` column on `service_types` (migration `2026_06_19_000001`, backfilled from alphabetical). All 7 `orderBy('name')` → `orderBy('sort_order')->orderBy('name')` (Catalog/ServiceType/Client controllers + ServiceVisit ×2) so the order applies **everywhere** (incl. service dropdowns). `ServiceTypeController::reorder` + `PUT service-types/reorder` (declared **before** `{serviceType}` to avoid model-binding capture; gated `manage_service_types`). New **dependency-free** `Components/DragList.vue` — Pointer Events, mouse+touch, nearest-centre target. Drag handles on Service Types tab + Catalog.
+- **CHG (catalog redesign):** rejected card-grid twice (too templated / compact-centred). Final = **rate sheet** — full-width hairline-divided rows: name + mode tag + next-service flag on the left, pricing as inline **tier chips** (HP→price / unit→price) on the right; flexible reads "Quoted per job" inline. `CatalogRow.vue` replaces `CatalogCard.vue`. Drag handle fades in on row hover.
+
+**Problems hit & fixes**
+- `DragList` first used the **default** slot while consumers passed `#item` → blank lists. Fixed: named slot `item`.
+- **npm install blocked** by a corrupted `node_modules/.bin/tree-kill` symlink over the WSL mount (EISDIR) → could not add a drag lib; went dependency-free.
+- **Toolchain note:** node/npm usable only **inside** the app container (`saifzz-aircond-laravel.test-1`, workdir `/var/www/html`) — host Windows npm + bare WSL have no usable node; `node_modules` are linux. Build via `docker exec … sh -lc 'cd /var/www/html && npx vite build'`.
+
+**Prod on merge:** 2 migrations (`sort_order`, `whatsapp_phone`) + `npm run build`. No reseed.
+
+---
+
 ## Session 41 — 2026-06-19 — Prod 500 on receipt/invoice PDF: GD missing in prod image
 
 **Branch:** `dev`, NOT pushed. 1 commit. Hotfix — found via prod log.

@@ -15,9 +15,9 @@ class ServiceTypeController extends Controller
     public function index(): Response
     {
         return Inertia::render('ServiceTypes/Index', [
-            'serviceTypes' => ServiceType::orderBy('name')
+            'serviceTypes' => ServiceType::orderBy('sort_order')->orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
-                ->get(['id', 'name', 'pricing_mode', 'requires_next_service']),
+                ->get(['id', 'name', 'pricing_mode', 'requires_next_service', 'sort_order']),
             'modes' => ServiceType::MODES,
         ]);
     }
@@ -35,6 +35,22 @@ class ServiceTypeController extends Controller
         ]);
 
         return back()->with('success', 'Service type added.');
+    }
+
+    public function reorder(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'order'   => ['required', 'array'],
+            'order.*' => ['integer', 'exists:service_types,id'],
+        ]);
+
+        DB::transaction(function () use ($data) {
+            foreach ($data['order'] as $position => $id) {
+                ServiceType::where('id', $id)->update(['sort_order' => $position]);
+            }
+        });
+
+        return back()->with('success', 'Order updated.');
     }
 
     public function update(Request $request, ServiceType $serviceType): RedirectResponse

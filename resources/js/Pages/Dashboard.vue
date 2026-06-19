@@ -54,7 +54,14 @@ const selectedDay = ref(null);
 const selectDay = (day) => { selectedDay.value = selectedDay.value === day ? null : day; };
 const dayList = computed(() => {
     if (!selectedDay.value) return [];
-    return props.appointments.filter((a) => new Date(a.datetime).getDate() === selectedDay.value);
+    // datetime is UTC-tagged but represents local wall-clock; parse raw parts to
+    // avoid a tz day-shift (matches MonthCalendar.byDay). Without this, evening
+    // appointments land on the next day under UTC+8.
+    const [vy, vm] = props.month.split('-').map(Number);
+    return props.appointments.filter((a) => {
+        const [y, m, d] = (a.datetime ?? '').slice(0, 10).split('-').map(Number);
+        return y === vy && m === vm && d === selectedDay.value;
+    });
 });
 const fmtTime = (dt) => (dt ?? '').slice(11, 16);
 

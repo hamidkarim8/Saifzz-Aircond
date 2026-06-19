@@ -1,32 +1,37 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import Card from '@/Components/Card.vue';
-import Badge from '@/Components/Badge.vue';
-import { IconSearch } from '@tabler/icons-vue';
-import { serviceVariant } from '@/lib/badges';
+import DragList from '@/Components/DragList.vue';
+import CatalogRow from './CatalogRow.vue';
+import { IconSearch, IconGripVertical } from '@tabler/icons-vue';
 
 const props = defineProps({
     serviceTypes: Array,
 });
 
+const can = computed(() => usePage().props.auth?.can ?? {});
+const canReorder = computed(() => !!can.value.manage_service_types);
+
 const search = ref('');
+const isSearching = computed(() => search.value.trim() !== '');
+
+// Local reorderable copy; resync when the server returns fresh props.
+const orderedTypes = ref([...props.serviceTypes]);
+watch(() => props.serviceTypes, (t) => { orderedTypes.value = [...t]; });
 
 const filtered = computed(() => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return props.serviceTypes;
-    return props.serviceTypes.filter((t) => t.name.toLowerCase().includes(q));
+    if (!q) return orderedTypes.value;
+    return orderedTypes.value.filter((t) => t.name.toLowerCase().includes(q));
 });
 
-/** Group hp_tiered fees by unit_type → [{unit_type, rows:[{hp_value,price}]}] */
-function groupedFees(type) {
-    if (type.pricing_mode !== 'hp_tiered') return null;
-    const map = {};
-    for (const fee of type.fees) {
-        if (!map[fee.unit_type]) map[fee.unit_type] = [];
-        map[fee.unit_type].push(fee);
-    }
-    return Object.entries(map).map(([unit_type, rows]) => ({ unit_type, rows }));
+// Reorder is only offered on the full, unfiltered list (dragging a filtered
+// subset would map ambiguously onto the stored sequence).
+const reorderMode = computed(() => canReorder.value && !isSearching.value);
+
+function persistOrder(order) {
+    router.put(route('service-types.reorder'), { order }, { preserveScroll: true, preserveState: true });
 }
 </script>
 
@@ -34,8 +39,17 @@ function groupedFees(type) {
     <AdminLayout title="Catalog">
         <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
             <!-- Header -->
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h1 class="text-xl font-semibold text-navy-900">Service Catalog</h1>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-navy-900">Service Catalog</h1>
+                    <p class="mt-1 text-sm text-ink-soft">
+                        <!-- {{ serviceTypes.length }} {{ serviceTypes.length === 1 ? 'service' : 'services' }} ·
+                        rates customers are quoted. -->
+                        <span v-if="reorderMode" class="inline-flex items-center gap-1">
+                            Drag <IconGripVertical class="inline h-3.5 w-3.5" /> to reorder.
+                        </span>
+                    </p>
+                </div>
                 <!-- Search -->
                 <div class="relative w-full sm:w-64">
                     <IconSearch class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -48,67 +62,30 @@ function groupedFees(type) {
                 </div>
             </div>
 
-            <!-- Empty state (no service types at all) -->
-            <div v-if="serviceTypes.length === 0" class="py-16 text-center text-sm text-gray-400">
+            <!-- Empty / no-match -->
+            <div v-if="serviceTypes.length === 0" class="rounded-ral border border-dashed border-line py-16 text-center text-sm text-ink-muted">
                 No services configured yet.
             </div>
-
-            <!-- No match from search -->
-            <div v-else-if="filtered.length === 0" class="py-16 text-center text-sm text-gray-400">
+            <div v-else-if="filtered.length === 0" class="rounded-ral border border-dashed border-line py-16 text-center text-sm text-ink-muted">
                 No services match "{{ search }}".
             </div>
 
-            <!-- Grid -->
-            <div v-else class="grid gap-4 sm:grid-cols-2">
-                <Card v-for="type in filtered" :key="type.id" class="flex flex-col gap-3 p-4">
-                    <!-- Type header -->
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-base font-semibold text-navy-900">{{ type.name }}</span>
-                        <Badge v-if="type.requires_next_service" :variant="serviceVariant(type.name)" class="text-xs">
-                            Next service tracked
-                        </Badge>
-                    </div>
-
-                    <!-- flexible -->
-                    <p v-if="type.pricing_mode === 'flexible'" class="text-xs text-gray-400 italic">
-                        Flexible pricing — set per job
-                    </p>
-
-                    <!-- flat: list each fee as unit_type — RM price -->
-                    <template v-else-if="type.pricing_mode === 'flat'">
-                        <div v-if="type.fees.length > 0" class="divide-y divide-gray-100 rounded-ra border border-gray-100">
-                            <div
-                                v-for="fee in type.fees"
-                                :key="fee.id"
-                                class="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                            >
-                                <span class="text-gray-700">{{ fee.unit_type }}</span>
-                                <span class="font-semibold text-navy-900">RM {{ Number(fee.price).toFixed(2) }}</span>
-                            </div>
-                        </div>
-                        <p v-else class="text-xs text-gray-400">No pricing configured.</p>
+            <!-- Rate sheet -->
+            <div v-else class="overflow-hidden rounded-ral border border-line bg-surface shadow-card">
+                <DragList
+                    v-if="reorderMode"
+                    v-model="orderedTypes"
+                    item-key="id"
+                    class="divide-y divide-line"
+                    @reorder="persistOrder"
+                >
+                    <template #item="{ item, handleDown }">
+                        <CatalogRow :type="item" :handle-down="handleDown" />
                     </template>
-
-                    <!-- hp_tiered: group by unit_type, show X.X HP — RM price rows -->
-                    <template v-else-if="type.pricing_mode === 'hp_tiered'">
-                        <div v-if="type.fees.length > 0" class="space-y-3">
-                            <div v-for="group in groupedFees(type)" :key="group.unit_type">
-                                <p class="mb-1 text-xs font-medium text-gray-500">{{ group.unit_type }}</p>
-                                <div class="divide-y divide-gray-100 rounded-ra border border-gray-100">
-                                    <div
-                                        v-for="fee in group.rows"
-                                        :key="fee.id"
-                                        class="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                                    >
-                                        <span class="text-gray-700">{{ Number(fee.hp_value).toFixed(1) }} HP</span>
-                                        <span class="font-semibold text-navy-900">RM {{ Number(fee.price).toFixed(2) }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <p v-else class="text-xs text-gray-400">No pricing configured.</p>
-                    </template>
-                </Card>
+                </DragList>
+                <div v-else class="divide-y divide-line">
+                    <CatalogRow v-for="type in filtered" :key="type.id" :type="type" />
+                </div>
             </div>
         </div>
     </AdminLayout>
