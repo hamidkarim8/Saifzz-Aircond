@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import FormErrorSummary from '@/Components/FormErrorSummary.vue';
 import ServiceLineCard from './Partials/ServiceLineCard.vue';
+import { IconStar } from '@tabler/icons-vue';
 
 const page = usePage();
 
@@ -60,6 +61,28 @@ const warrantyEnd = computed(() => {
     return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
 });
 
+// Google-review warranty bonus: toggle adds +1 month (capped at 6), toggling off removes it.
+// A manual dropdown change clears the bonus state so we never subtract from a hand-set value.
+const reviewBonus = ref(false);
+const atWarrantyCap = computed(() => Number(form.warranty_months) >= 6);
+let suppressBonusWatch = false;
+const toggleReviewBonus = () => {
+    if (!reviewBonus.value) {
+        if (atWarrantyCap.value) return;
+        suppressBonusWatch = true;
+        form.warranty_months = Number(form.warranty_months) + 1;
+        reviewBonus.value = true;
+    } else {
+        suppressBonusWatch = true;
+        form.warranty_months = Math.max(0, Number(form.warranty_months) - 1);
+        reviewBonus.value = false;
+    }
+};
+watch(() => form.warranty_months, () => {
+    if (suppressBonusWatch) { suppressBonusWatch = false; return; }
+    reviewBonus.value = false;
+});
+
 const submit = () => form.patch(route('service-records.update', props.visit.id));
 </script>
 
@@ -107,6 +130,17 @@ const submit = () => form.patch(route('service-records.update', props.visit.id))
                             <option v-for="m in [0,1,2,3,4,5,6]" :key="m" :value="m">{{ m === 0 ? 'No warranty' : m + ' month' + (m > 1 ? 's' : '') }}</option>
                         </select>
                         <p v-if="warrantyEnd" class="mt-1 text-xs text-ok">Covered until {{ warrantyEnd }}</p>
+                        <button
+                            type="button"
+                            :disabled="!reviewBonus && atWarrantyCap"
+                            class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-ra border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="reviewBonus ? 'border-ok bg-ok-bg text-ok' : 'border-line bg-surface text-ink-soft hover:border-primary hover:text-primary'"
+                            @click="toggleReviewBonus"
+                        >
+                            <IconStar :size="14" :stroke="2" />
+                            {{ reviewBonus ? 'Review bonus applied · +1 month' : 'Customer left a Google review · +1 month' }}
+                        </button>
+                        <p v-if="!reviewBonus && atWarrantyCap" class="mt-1 text-xs text-ink-soft">Max warranty is 6 months.</p>
                     </div>
                 </div>
             </Card>

@@ -6,6 +6,17 @@
 
 ---
 
+## Session 39 — 2026-06-19 — Google-review warranty bonus (FEAT-005/006)
+
+**Branch:** `dev`, NOT pushed. Build clean. FEAT-005 + FEAT-006 turned out to be the **same feature** (not a voucher entity) → both → TESTING. **17-Jun feedback now has zero OPEN items.**
+
+- **Scope (confirmed by Khalid via Q&A):** when a customer leaves a Google review, the technician clicks a toggle button instead of fiddling the Warranty dropdown. Toggle on = +1 month; toggle off = −1. Capped at 6. No voucher object, no tracking flag (pure dropdown bump) — "for now". On **both** Create + Edit (Edit covers the "client decides to review after the record was submitted" case).
+- **Impl (frontend-only):** `ServiceRecords/Create.vue` + `Edit.vue` — added `reviewBonus` ref, `atWarrantyCap` computed, `toggleReviewBonus()`, and a `watch(form.warranty_months)` that clears the bonus state on any manual dropdown change (via a `suppressBonusWatch` flag so the toggle's own write doesn't trip it — avoids subtracting from a hand-set value). Button sits under the Warranty `<select>`; green `border-ok/bg-ok-bg/text-ok` "applied" state, `IconStar`. Disabled + "Max warranty is 6 months" hint at cap.
+- No backend, no migration. PHP suite unaffected (warranty_months already persisted/tested). Vite build clean.
+- **Prod on merge:** `npm run build`. No migrations.
+
+---
+
 ## Session 38 — 2026-06-19 — 6 remaining 17-Jun P2/P3 items (CHG-006/012/016/019/020 + FEAT-010)
 
 **Branch:** `dev`, NOT pushed. Commit `5a26e84` (base `116d9c8`). Suite **324/324**, build clean. Done inline (small, independent items). All 6 → TESTING. 17-Jun now down to only FEAT-005/006 (warranty theory, need scope).
