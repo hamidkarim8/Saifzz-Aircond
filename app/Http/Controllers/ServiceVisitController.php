@@ -138,8 +138,8 @@ class ServiceVisitController extends Controller
 
             // Walk-in appointment promoted to a real client → back-link it (spec decision: back-link on submit).
             if ($data['client_mode'] === 'new' && !empty($data['appointment_id'])) {
-                Appointment::whereKey($data['appointment_id'])
-                    ->when($user->tenantId() !== null, fn ($q) => $q->where('tenant_id', $user->tenantId()))
+                Appointment::visibleTo($user)
+                    ->whereKey($data['appointment_id'])
                     ->update(['client_id' => $client->id]);
             }
 

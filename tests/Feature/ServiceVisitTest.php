@@ -396,6 +396,7 @@ class ServiceVisitTest extends TestCase
             'phone' => '012-7654321',
             'address' => 'Shah Alam',
             'status' => 'pending',
+            'technician_id' => $user->id,
         ]);
 
         $this->actingAs($user)->post(route('service-records.store'), [
