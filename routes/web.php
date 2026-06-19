@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
     // Business Settings (identity, QR) + Payment Settings — admin-only.
     Route::middleware('can:manage_users')->group(function () {
         Route::get('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'show'])->name('business-settings.show');
+        Route::get('/business-settings/preview/{type}', [\App\Http\Controllers\BusinessSettingController::class, 'preview'])->name('business-settings.preview');
         Route::put('/business-settings', [\App\Http\Controllers\BusinessSettingController::class, 'update'])->name('business-settings.update');
         Route::redirect('/payment-settings', '/business-settings')->name('payment-settings.index');
         Route::put('payment-settings', [PaymentGatewayController::class, 'update'])->name('payment-settings.update');

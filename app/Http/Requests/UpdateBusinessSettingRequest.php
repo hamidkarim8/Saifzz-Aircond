@@ -15,7 +15,6 @@ class UpdateBusinessSettingRequest extends FormRequest
     {
         return [
             'business_name' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
             'phone' => ['nullable', 'string', 'max:50'],
             'ssm_no' => ['nullable', 'string', 'max:100'],
             'google_review_url' => ['nullable', 'url', 'max:500'],
