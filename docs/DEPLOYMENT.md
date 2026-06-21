@@ -37,6 +37,12 @@ Type  Name    Value
 A     saifzz  <VM_EXTERNAL_IP>
 ```
 
+> **Migrating to a new VM (same domain):** Stop the **old** VM's containers/nginx
+> (or shut the old VM down) *before* you point DNS at the new IP and run certbot.
+> Two servers answering for `saifzz.mktechnologies.my` at once causes a Let's Encrypt
+> validation race. Update the A record to the new VM's IP, wait for it to propagate
+> (`nslookup` returns the new IP), then continue.
+
 Verify before continuing (must return the VM IP):
 
 ```bash
@@ -54,7 +60,7 @@ SSH into the VM (GCP Console → SSH button), then:
 sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
 
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git nginx certbot python3-certbot-nginx ufw
+sudo apt install -y git nginx certbot python3-certbot-nginx ufw micro
 
 # Docker
 curl -fsSL https://get.docker.com | sudo sh
@@ -102,7 +108,7 @@ sudo cat /home/deploy/.ssh/id_ed25519
 sudo -u deploy git clone https://github.com/hamidkarim8/Saifzz-Aircond.git /var/www/Saifzz-Aircond
 cd /var/www/Saifzz-Aircond
 sudo -u deploy cp .env.example .env
-sudo -u deploy nano .env
+sudo -u deploy micro .env
 ```
 
 Set these values in `.env`. **`DB_HOST` and `REDIS_HOST` must be the Docker service names** (`postgres`, `redis`) — not `127.0.0.1`. Leave `APP_KEY` blank; Step 6 fills it.
@@ -134,7 +140,13 @@ LOG_CHANNEL=daily
 LOG_LEVEL=error
 ```
 
-> In nano: paste with `Ctrl+Shift+V`, save with `Ctrl+X` → `Y` → `Enter`.
+> **Payments stay stubbed.** `.env.example` ships `BAYARCASH_DRIVER=fake`, so a
+> fresh deploy will *not* take real money. To go live later: set
+> `BAYARCASH_DRIVER=live` and fill `BAYARCASH_API_TOKEN`, `BAYARCASH_PORTAL_KEY`,
+> `BAYARCASH_CHANNEL=5`, `BAYARCASH_BASE_URL=https://console.bayar.cash/api/v3`,
+> then `$DC exec -T app php artisan optimize:clear && ... optimize`.
+
+> In micro: paste with `Ctrl+V` (or right-click), save with `Ctrl+S`, quit with `Ctrl+Q`.
 
 ---
 
@@ -156,16 +168,18 @@ $DC exec -T app php artisan key:generate
 # 3. Let the container's php-fpm user (uid 82) write to mounted storage
 sudo chown -R 82:82 storage
 
-# 4. Database: run migrations, then seed once (creates the admin user)
+# 4. Database: run migrations, then seed once (creates the two admin accounts —
+#    khalid@admin.com and saifzz@admin.com. Idempotent firstOrCreate; no demo
+#    data: service types, fee schedule and business identity are left blank for
+#    the bosses to set up from the live UI.)
 $DC exec -T app php artisan migrate --force
 $DC exec -T app php artisan db:seed --force
 
-# 4b. Re-fix storage ownership AFTER seeding. The seeder writes the
-#     bundled QR into storage/app/public/qr — if that dir is created by a
-#     root-run command it stays root-owned and later in-app QR uploads
-#     fail SILENTLY (public disk has throw=false → put() returns false,
-#     DB path saves but no file is written → broken image). Hand the whole
-#     tree back to the php-fpm user so uploads can write.
+# 4b. Re-fix storage ownership AFTER any root-run artisan command. If a dir
+#     under storage/app/public (e.g. qr/) gets created root-owned, later in-app
+#     uploads fail SILENTLY (public disk has throw=false → put() returns false,
+#     DB path saves but no file is written → broken image). Hand the whole tree
+#     back to the php-fpm user so uploads can write.
 sudo chown -R 82:82 storage
 
 # 5. Cache config/routes/views (reads the new APP_KEY)
@@ -186,7 +200,7 @@ $DC ps
 ## 7. Nginx + SSL
 
 ```bash
-sudo nano /etc/nginx/sites-available/saifzz
+sudo micro /etc/nginx/sites-available/saifzz
 ```
 
 Paste:
@@ -245,11 +259,16 @@ Certbot rewrites the nginx config to HTTPS automatically.
 curl -sS -o /dev/null -w "%{http_code}\n" https://saifzz.mktechnologies.my   # expect 200
 ```
 
-Open `https://saifzz.mktechnologies.my` and log in:
-- **Email:** `admin@saifzz.test`
-- **Password:** `password` → **change it immediately after first login.**
+Open `https://saifzz.mktechnologies.my` and log in with one of the seeded admin accounts:
+- `khalid@admin.com` / `pass`
+- `saifzz@admin.com` / `pass`
+
+→ **change both passwords immediately after first login.**
 
 Confirm the page is styled (proves the `/build` assets were copied).
+
+The system starts blank — no service types, fee schedule, or business identity.
+Set these up from the in-app admin UI after logging in.
 
 Deployment complete.
 
