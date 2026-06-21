@@ -60,7 +60,7 @@ SSH into the VM (GCP Console → SSH button), then:
 sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
 
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git nginx certbot python3-certbot-nginx ufw
+sudo apt install -y git nginx certbot python3-certbot-nginx ufw micro
 
 # Docker
 curl -fsSL https://get.docker.com | sudo sh
@@ -108,7 +108,7 @@ sudo cat /home/deploy/.ssh/id_ed25519
 sudo -u deploy git clone https://github.com/hamidkarim8/Saifzz-Aircond.git /var/www/Saifzz-Aircond
 cd /var/www/Saifzz-Aircond
 sudo -u deploy cp .env.example .env
-sudo -u deploy nano .env
+sudo -u deploy micro .env
 ```
 
 Set these values in `.env`. **`DB_HOST` and `REDIS_HOST` must be the Docker service names** (`postgres`, `redis`) — not `127.0.0.1`. Leave `APP_KEY` blank; Step 6 fills it.
@@ -146,7 +146,7 @@ LOG_LEVEL=error
 > `BAYARCASH_CHANNEL=5`, `BAYARCASH_BASE_URL=https://console.bayar.cash/api/v3`,
 > then `$DC exec -T app php artisan optimize:clear && ... optimize`.
 
-> In nano: paste with `Ctrl+Shift+V`, save with `Ctrl+X` → `Y` → `Enter`.
+> In micro: paste with `Ctrl+V` (or right-click), save with `Ctrl+S`, quit with `Ctrl+Q`.
 
 ---
 
@@ -200,7 +200,7 @@ $DC ps
 ## 7. Nginx + SSL
 
 ```bash
-sudo nano /etc/nginx/sites-available/saifzz
+sudo micro /etc/nginx/sites-available/saifzz
 ```
 
 Paste:
