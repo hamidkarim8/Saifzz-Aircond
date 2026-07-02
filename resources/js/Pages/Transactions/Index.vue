@@ -94,39 +94,38 @@ const rows = computed(() =>
 
     <AdminLayout>
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <h1 class="text-base font-bold text-navy-800">Transactions</h1>
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="flex gap-1">
-                        <button
-                            v-for="p in periods"
-                            :key="p"
-                            class="rounded-ra px-3 py-1.5 text-xs font-semibold transition"
-                            :class="period === p
-                                ? 'bg-primary text-white shadow-card'
-                                : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
-                            @click="setPeriod(p)"
-                        >
-                            {{ PERIOD_LABELS[p] ?? p }}
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <input v-model="rangeFrom" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
-                        <span class="text-xs text-ink-muted">to</span>
-                        <input v-model="rangeTo" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
-                        <button
-                            class="rounded-ra border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-card transition hover:bg-surface-muted hover:text-ink"
-                            @click="applyRange"
-                        >Apply</button>
-                        <button
-                            v-if="dateFrom || dateTo"
-                            class="text-xs font-medium text-ink-muted hover:text-ink transition"
-                            @click="clearRange"
-                        >Clear</button>
-                    </div>
-                </div>
-            </div>
+            <h1 class="text-lg font-bold tracking-tight text-navy-800">Transactions</h1>
         </template>
+
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-wrap gap-1">
+                <button
+                    v-for="p in periods"
+                    :key="p"
+                    class="rounded-ra px-3 py-1.5 text-xs font-semibold transition"
+                    :class="period === p
+                        ? 'bg-primary text-white shadow-card'
+                        : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
+                    @click="setPeriod(p)"
+                >
+                    {{ PERIOD_LABELS[p] ?? p }}
+                </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <input v-model="rangeFrom" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
+                <span class="text-xs text-ink-muted">to</span>
+                <input v-model="rangeTo" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
+                <button
+                    class="rounded-ra border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-card transition hover:bg-surface-muted hover:text-ink"
+                    @click="applyRange"
+                >Apply</button>
+                <button
+                    v-if="dateFrom || dateTo"
+                    class="text-xs font-medium text-ink-muted hover:text-ink transition"
+                    @click="clearRange"
+                >Clear</button>
+            </div>
+        </div>
 
         <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
