@@ -120,4 +120,56 @@ class ServiceVisitVoidTest extends TestCase
 
         $this->assertSame('void', $visit->transaction->fresh()->status);
     }
+
+    public function test_pending_record_still_cancels_without_reason(): void
+    {
+        $boss = $this->boss();
+        $client = Client::create(['name' => 'A', 'phone' => '011-0000000', 'address' => 'KL', 'tenant_id' => $boss->tenantId()]);
+        $visit = $client->visits()->create(['visit_date' => '2026-07-01', 'warranty_months' => 0, 'total_amount' => 60, 'tenant_id' => $boss->tenantId()]);
+        $visit->transaction()->create(['txn_id' => 'TXN-20260701-900', 'amount' => 60, 'method' => 'Cash', 'status' => 'pending']);
+
+        $this->actingAs($boss)
+            ->delete(route('service-records.destroy', $visit))
+            ->assertRedirect(route('service-records.index'));
+
+        $this->assertSame('cancelled', $visit->transaction->fresh()->status);
+    }
+
+    public function test_void_requires_reason(): void
+    {
+        $boss = $this->boss();
+        $visit = $this->paidVisit($boss);
+
+        $this->actingAs($boss)
+            ->delete(route('service-records.destroy', $visit))
+            ->assertSessionHasErrors('reason');
+
+        $this->assertSame('paid', $visit->transaction->fresh()->status);
+    }
+
+    public function test_void_via_http_persists_reason(): void
+    {
+        $boss = $this->boss();
+        $visit = $this->paidVisit($boss);
+
+        $this->actingAs($boss)
+            ->delete(route('service-records.destroy', $visit), ['reason' => 'Billed by mistake'])
+            ->assertRedirect(route('service-records.index'));
+
+        $txn = $visit->transaction->fresh();
+        $this->assertSame('void', $txn->status);
+        $this->assertSame('Billed by mistake', $txn->void_reason);
+        $this->assertSame($boss->id, $txn->voided_by);
+    }
+
+    public function test_void_blocked_once_already_void(): void
+    {
+        $boss = $this->boss();
+        $visit = $this->paidVisit($boss);
+        $this->actingAs($boss)->delete(route('service-records.destroy', $visit), ['reason' => 'first']);
+
+        $this->actingAs($boss)
+            ->delete(route('service-records.destroy', $visit), ['reason' => 'second'])
+            ->assertStatus(422);
+    }
 }
