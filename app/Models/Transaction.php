@@ -19,6 +19,9 @@ class Transaction extends Model
         'status',
         'gateway_ref',
         'paid_at',
+        'void_reason',
+        'voided_at',
+        'voided_by',
     ];
 
     protected function casts(): array
@@ -26,6 +29,7 @@ class Transaction extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 
