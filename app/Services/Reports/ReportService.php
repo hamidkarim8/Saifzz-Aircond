@@ -139,9 +139,18 @@ class ReportService
      *
      * @return list<array<string, mixed>>
      */
-    public function transactions(string $period, ?int $limit = 50, ?int $technicianId = null, ?int $tenantId = null): array
+    public function transactions(
+        string $period,
+        ?int $limit = 50,
+        ?int $technicianId = null,
+        ?int $tenantId = null,
+        ?Carbon $from = null,
+        ?Carbon $to = null,
+    ): array
     {
-        [$from, $to] = $this->range($period);
+        if (! $from || ! $to) {
+            [$from, $to] = $this->range($period);
+        }
 
         $q = DB::table('transactions as t')
             ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
