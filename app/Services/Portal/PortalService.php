@@ -34,7 +34,7 @@ final class PortalService
     {
         $client->load([
             'visits' => fn ($q) => $q->latest('visit_date')
-                ->whereHas('transaction', fn ($t) => $t->whereNotIn('status', ['void', 'cancelled'])),
+                ->whereDoesntHave('transaction', fn ($t) => $t->whereIn('status', ['void', 'cancelled'])),
             'visits.lines',
             'visits.transaction',
         ]);
