@@ -4,6 +4,7 @@ namespace Tests\Feature\Portal;
 
 use App\Models\Client;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Payments\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -73,5 +74,16 @@ class PortalReceiptTest extends TestCase
         [, $txn] = $this->clientWithTxn();
 
         $this->get(route('portal.receipt', $txn))->assertRedirect(route('portal.login'));
+    }
+
+    public function test_voided_transaction_is_404(): void
+    {
+        [$client, $txn] = $this->clientWithTxn();
+
+        app(PaymentService::class)->voidPaid($txn, 'mistaken billing', User::factory()->create());
+
+        $this->withSession(['portal_client_id' => $client->id])
+            ->get(route('portal.receipt', $txn->fresh()))
+            ->assertNotFound();
     }
 }
