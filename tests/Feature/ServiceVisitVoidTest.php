@@ -172,4 +172,20 @@ class ServiceVisitVoidTest extends TestCase
             ->delete(route('service-records.destroy', $visit), ['reason' => 'second'])
             ->assertStatus(422);
     }
+
+    public function test_index_status_filter_returns_matching_rows_only(): void
+    {
+        $boss = $this->boss();
+        $paid = $this->paidVisit($boss);
+
+        $pendingClient = Client::create(['name' => 'B', 'phone' => '011-1111111', 'address' => 'KL', 'tenant_id' => $boss->tenantId()]);
+        $pendingVisit = $pendingClient->visits()->create(['visit_date' => '2026-07-01', 'warranty_months' => 0, 'total_amount' => 40, 'tenant_id' => $boss->tenantId()]);
+        $pendingVisit->transaction()->create(['txn_id' => 'TXN-20260701-500', 'amount' => 40, 'method' => 'Cash', 'status' => 'pending']);
+
+        $this->actingAs($boss)
+            ->get(route('service-records.index', ['status' => 'paid']))
+            ->assertInertia(fn ($page) => $page
+                ->where('visits.total', 1)
+                ->where('visits.data.0.id', $paid->id));
+    }
 }

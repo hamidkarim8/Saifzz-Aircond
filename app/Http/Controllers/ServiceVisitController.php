@@ -21,6 +21,7 @@ class ServiceVisitController extends Controller
     public function index(): Response
     {
         $search  = request()->string('search')->trim()->value();
+        $status  = request()->string('status')->trim()->value();
         $sortMap = ['visit_date' => 'visit_date', 'total' => 'total_amount', 'serial' => null];
         $sortKey = request()->input('sort');
         $dir     = strtolower(request()->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -45,6 +46,10 @@ class ServiceVisitController extends Controller
             });
         }
 
+        if ($status !== '' && $status !== 'all') {
+            $query->whereHas('transaction', fn ($t) => $t->where('status', $status));
+        }
+
         if ($sortKey && array_key_exists($sortKey, $sortMap) && $sortMap[$sortKey] !== null) {
             $query->orderBy($sortMap[$sortKey], $dir)->orderBy('id', $dir);
         } else {
@@ -55,6 +60,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Index', [
             'visits' => $visits,
+            'status' => $status !== '' ? $status : 'all',
         ]);
     }
 
