@@ -204,6 +204,7 @@ class ServiceVisitController extends Controller
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
             'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
+            'requiresNextServiceTypes' => ServiceType::where('requires_next_service', true)->pluck('name'),
         ]);
     }
 

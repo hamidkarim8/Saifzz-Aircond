@@ -12,6 +12,7 @@ import { serviceVariant, statusVariant } from '@/lib/badges';
 const props = defineProps({
     visit: Object,
     googleReview: { type: Object, default: () => ({ qrUrl: null, url: null }) },
+    requiresNextServiceTypes: { type: Array, default: () => [] },
 });
 
 const showReview = ref(false);
@@ -43,6 +44,28 @@ const warrantyLabel = computed(() => {
 });
 
 const lineLabel = (l) => l.unit_type || '';
+
+const requiresNext = (l) => props.requiresNextServiceTypes.includes(l.service_type);
+
+const editingLineId = ref(null);
+const editDate = ref('');
+
+const startEditNextService = (l) => {
+    editingLineId.value = l.id;
+    editDate.value = l.next_service_date ? l.next_service_date.slice(0, 10) : '';
+};
+
+const cancelEditNextService = () => {
+    editingLineId.value = null;
+};
+
+const saveNextServiceDate = (l) => {
+    router.patch(
+        route('service-records.lines.next-service-date', { serviceRecord: props.visit.id, line: l.id }),
+        { next_service_date: editDate.value || null },
+        { preserveScroll: true, onSuccess: () => { editingLineId.value = null; } },
+    );
+};
 
 const canCollect = computed(() => usePage().props.auth?.can?.collect_payment ?? false);
 
@@ -121,7 +144,18 @@ const voidRecord = async () => {
                                     </div>
                                     <p v-if="l.repair_desc" class="mt-1 text-sm text-ink-soft">{{ l.repair_desc }}</p>
                                     <p v-if="l.notes" class="mt-1 text-xs italic text-ink-muted">{{ l.notes }}</p>
-                                    <p v-if="l.next_service_date" class="mt-1 text-xs font-medium text-primary">Next service: {{ fmtDate(l.next_service_date) }}</p>
+                                    <div v-if="requiresNext(l) && l.unit_id" class="mt-1.5 flex items-center gap-2">
+                                        <template v-if="editingLineId === l.id">
+                                            <input type="date" v-model="editDate" class="rounded-ra border border-line px-2 py-1 text-xs" />
+                                            <button type="button" class="text-xs font-semibold text-primary" @click="saveNextServiceDate(l)">Save</button>
+                                            <button type="button" class="text-xs text-ink-soft" @click="cancelEditNextService">Cancel</button>
+                                        </template>
+                                        <template v-else>
+                                            <span class="text-xs font-medium text-primary">Next service: {{ l.next_service_date ? fmtDate(l.next_service_date) : 'Not set' }}</span>
+                                            <button type="button" class="text-xs text-primary underline" @click="startEditNextService(l)">Edit</button>
+                                        </template>
+                                    </div>
+                                    <p v-else-if="l.next_service_date" class="mt-1 text-xs font-medium text-primary">Next service: {{ fmtDate(l.next_service_date) }}</p>
                                 </div>
                                 <span class="shrink-0 font-mono text-sm font-bold text-navy-800">{{ money(l.subtotal) }}</span>
                             </div>
