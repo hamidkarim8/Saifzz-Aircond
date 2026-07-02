@@ -6,6 +6,23 @@
 
 ---
 
+## Session 46 — 2026-07-02 — Set next service date on a paid record (FEAT-020)
+
+**Goal:** Khalid often forgets to pick the next-service month while creating a visit. If still `pending` he can fix it via Edit, but once paid, `ServiceVisitController::edit/update` are hard-gated to `pending` and the field stays permanently null. Add a narrow way to set/correct it after payment.
+
+**Done:**
+- New endpoint `PATCH /service-records/{serviceRecord}/lines/{line}/next-service-date` (`ServiceVisitController::updateNextServiceDate`) — updates one `service_lines.next_service_date`, deliberately exempt from the paid-lock (no status check), always editable (not null-only). Resyncs `client_units.next_service_date`/`next_service_type` when the line has a `unit_id`, reusing the exact sync pattern from `store()`/`update()`. Clearing to null updates the line but doesn't blank an already-set unit value.
+- `ServiceRecords/Show.vue` gets an inline pencil-edit control (date input → Save) next to the next-service-date display, shown for lines whose service type has `requires_next_service` and a `unit_id`; new prop `requiresNextServiceTypes` on `show()`.
+- Executed via subagent-driven-development: 2 tasks (backend endpoint, frontend UI), each with a fresh implementer + independent task reviewer, plus a final whole-branch review — all clean, only cosmetic Minors (import order, no explicit pending/void status test though behavior is status-independent by inspection, no onError/loading state on Save matching existing file convention).
+- Design: `docs/superpowers/specs/2026-07-02-paid-record-next-service-date-design.md`. Plan: `docs/superpowers/plans/2026-07-02-paid-record-next-service-date.md`.
+- Full suite: 355/355 passed.
+- `FEEDBACK-02072026.md`: added FEAT-020, OPEN → TESTING.
+- Commits `32632dd`..`5656117` on `dev`, left un-pushed — Khalid pushing himself.
+
+**Next:** Khalid pushes `dev`, confirms/opens PR to `main`, tests FEAT-020 alongside the still-pending FEAT-019/CHG-024/CHG-025/BUG-002 batch.
+
+---
+
 ## Session 45 — 2026-07-02 — Local DB restore, mobile filter fix (BUG-002), CI date-rot fix
 
 **Goal:** Restore a DBeaver prod backup into the local dev DB, then fix a mobile/PWA layout bug Khalid flagged on the new Transactions date-range filter (CHG-025), and unblock the dev→main PR CI.
