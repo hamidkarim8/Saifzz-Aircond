@@ -9,7 +9,9 @@ use App\Models\Client;
 use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
+use App\Services\Payments\PaymentService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +21,7 @@ class ServiceVisitController extends Controller
     public function index(): Response
     {
         $search  = request()->string('search')->trim()->value();
+        $status  = request()->string('status')->trim()->value();
         $sortMap = ['visit_date' => 'visit_date', 'total' => 'total_amount', 'serial' => null];
         $sortKey = request()->input('sort');
         $dir     = strtolower(request()->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -43,6 +46,10 @@ class ServiceVisitController extends Controller
             });
         }
 
+        if ($status !== '' && $status !== 'all') {
+            $query->whereHas('transaction', fn ($t) => $t->where('status', $status));
+        }
+
         if ($sortKey && array_key_exists($sortKey, $sortMap) && $sortMap[$sortKey] !== null) {
             $query->orderBy($sortMap[$sortKey], $dir)->orderBy('id', $dir);
         } else {
@@ -53,6 +60,7 @@ class ServiceVisitController extends Controller
 
         return Inertia::render('ServiceRecords/Index', [
             'visits' => $visits,
+            'status' => $status !== '' ? $status : 'all',
         ]);
     }
 
@@ -283,7 +291,7 @@ class ServiceVisitController extends Controller
             ->with('success', 'Record updated.');
     }
 
-    public function destroy(ServiceVisit $serviceRecord): RedirectResponse
+    public function destroy(Request $request, ServiceVisit $serviceRecord, PaymentService $payments): RedirectResponse
     {
         abort_unless(
             ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo(request()->user())->exists(),
@@ -291,7 +299,15 @@ class ServiceVisitController extends Controller
         );
 
         $txn = $serviceRecord->transaction;
-        abort_unless($txn && $txn->status === 'pending', 422);
+        abort_unless($txn && in_array($txn->status, ['pending', 'paid'], true), 422);
+
+        if ($txn->status === 'paid') {
+            $data = $request->validate(['reason' => 'required|string|max:500']);
+            $payments->voidPaid($txn, $data['reason'], $request->user());
+
+            return redirect()->route('service-records.index')
+                ->with('success', 'Record voided.');
+        }
 
         $txn->update(['status' => 'cancelled']);
 

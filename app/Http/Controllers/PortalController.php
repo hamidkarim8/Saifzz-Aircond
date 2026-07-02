@@ -103,6 +103,7 @@ class PortalController extends Controller
         $client = $request->attributes->get('portal_client');
 
         abort_unless($transaction->visit->client_id === $client->id, 404);
+        abort_if($transaction->status === 'void', 404);
     }
 
     /** Business identity + WhatsApp number (normalized by the module-11 service). */

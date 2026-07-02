@@ -33,7 +33,8 @@ final class PortalService
     public function accountFor(Client $client): array
     {
         $client->load([
-            'visits' => fn ($q) => $q->latest('visit_date'),
+            'visits' => fn ($q) => $q->latest('visit_date')
+                ->whereDoesntHave('transaction', fn ($t) => $t->whereIn('status', ['void', 'cancelled'])),
             'visits.lines',
             'visits.transaction',
         ]);

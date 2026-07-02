@@ -21,6 +21,7 @@ export const STATUS_VARIANT = {
     Paid: 'green', Confirmed: 'green', Done: 'green', Active: 'green',
     Pending: 'amber',
     Failed: 'red', Cancelled: 'red',
+    Void: 'gray',
 };
 
 export const serviceVariant = (t) => SERVICE_TYPE_VARIANT[t] ?? 'gray';

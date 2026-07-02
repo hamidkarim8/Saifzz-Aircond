@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 use App\Models\Receipt;
 use App\Models\TenantGateway;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Documents\SnapshotBuilder;
 use Illuminate\Support\Facades\DB;
 
@@ -71,6 +72,44 @@ final class PaymentService
         if ($appointment->canTransitionTo('completed')) {
             $appointment->update(['status' => 'completed']);
         }
+    }
+
+    public function voidPaid(Transaction $transaction, string $reason, User $actor): void
+    {
+        DB::transaction(function () use ($transaction, $reason, $actor) {
+            $transaction->forceFill([
+                'status' => 'void',
+                'void_reason' => $reason,
+                'voided_at' => now(),
+                'voided_by' => $actor->id,
+            ])->save();
+
+            $this->reopenLinkedAppointment($transaction);
+        });
+    }
+
+    private function reopenLinkedAppointment(Transaction $transaction): void
+    {
+        $visit = $transaction->visit()->first();
+        if (! $visit || ! $visit->appointment_id) {
+            return;
+        }
+
+        $appointment = $visit->appointment()->first();
+        if (! $appointment || $appointment->status !== 'completed') {
+            return;
+        }
+
+        // Reached via the visit's own FK; assert same tenant before mutating.
+        if ($appointment->tenant_id !== $visit->tenant_id) {
+            return;
+        }
+
+        // Appointment::TRANSITIONS treats 'completed' as terminal — that state
+        // machine models the booking flow. Voiding a payment is a billing
+        // correction outside that flow, so we bypass canTransitionTo() here
+        // deliberately rather than adding a backward transition to the machine.
+        $appointment->forceFill(['status' => 'pending'])->save();
     }
 
     public function startGateway(Transaction $transaction): string

@@ -286,4 +286,21 @@ class ReportServiceTest extends TestCase
         $this->assertCount(2, $result['items']);
         $this->assertSame(300.0, $result['total_outstanding']);
     }
+
+    public function test_transactions_custom_date_range_overrides_period(): void
+    {
+        $client = Client::create(['name' => 'C', 'phone' => '011-2222222', 'address' => 'KL']);
+        $visit1 = $this->visitFor($client, 'Cleaning', '2026-06-05');
+        $this->txn($visit1, 100, 'paid', '2026-06-05 10:00:00', 'TXN-1');
+        $visit2 = $this->visitFor($client, 'Cleaning', '2026-06-20');
+        $this->txn($visit2, 200, 'paid', '2026-06-20 10:00:00', 'TXN-2');
+
+        $rows = $this->service()->transactions(
+            'all', null, null, null,
+            Carbon::parse('2026-06-01'), Carbon::parse('2026-06-10'),
+        );
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('TXN-1', $rows[0]['txn_id']);
+    }
 }

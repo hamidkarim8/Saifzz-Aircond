@@ -6,6 +6,25 @@
 
 ---
 
+## Session 44 — 2026-07-02 — Void paid service records + filters (FEAT-019/CHG-024/025)
+
+**Goal:** Khalid mistakenly created + fully paid a service record on 1-Jul with no way to undo it. Added a Void action for paid records (Cancel already existed for pending), plus two related filters he asked for in the same conversation.
+
+**Done:**
+- `transactions` gains `void_reason`/`voided_at`/`voided_by`; new `status='void'` alongside `pending|paid|failed|cancelled`. No row is ever hard-deleted — Invoice/Receipt stay in the DB for audit.
+- `PaymentService::voidPaid()` flips the transaction to void (reason required, actor + timestamp recorded) and reopens a linked appointment if this payment had auto-completed it (deliberate bypass of `Appointment::canTransitionTo` — that machine treats `completed` as terminal by design for the booking flow, void is a billing correction outside it).
+- `ServiceVisitController::destroy()` branches: `pending` → unchanged Cancel (no reason), `paid` → new Void (reason required), anything else → 422.
+- Portal: voided transactions 404 on receipt access; `PortalService::accountFor()` excludes both `void` and `cancelled` visits from the customer's service history (cancelled was already reachable pre-existing, folded into this change) — via `whereDoesntHave`, not `whereHas`, after full-suite verification caught that `whereHas` wrongly excluded transaction-less visits too (fixed same session, see below).
+- New status chip filter (All/Paid/Pending/Cancelled/Void) on Service Records index; new custom date-range filter (From/To) alongside the existing Today/Week/Month/All chips on Transactions.
+- Executed via subagent-driven-development: 13 plan tasks, each with a fresh implementer + independent task reviewer, plus one regression fix (Task 6's `whereHas` semantics) caught by a full-suite run after all tasks passed individually — `PortalAccountTest`'s pre-existing transaction-less visit fixture broke under the original filter; fixed with `whereDoesntHave`/`whereIn` inversion, re-reviewed clean.
+- Design: `docs/superpowers/specs/2026-07-02-void-paid-service-record-design.md`. Plan: `docs/superpowers/plans/2026-07-02-void-paid-service-record.md`.
+- Full suite: 348 passed, 1 pre-existing unrelated failure (`TechnicianScopingTest` — hardcoded `2026-06-20` fixture with no `travelTo()`, now stale since system date passed it; not touched, not this feature's).
+- `FEEDBACK-02072026.md`: FEAT-019/CHG-024/CHG-025 OPEN → TESTING (only Khalid closes to DONE).
+
+**Next:** push for Khalid to test; once confirmed, close out. Separately worth a look sometime: `TechnicianScopingTest`'s stale date fixture (pre-existing, unrelated to this session).
+
+---
+
 ## Session 43 — 2026-06-19 — PWA toast clipped by notch (BUG-004)
 
 **Branch:** `dev`, NOT pushed. 1 file. Frontend-only (CSS).
