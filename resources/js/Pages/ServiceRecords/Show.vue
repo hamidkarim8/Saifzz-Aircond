@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { confirmAction } from '@/lib/swal';
+import { confirmAction, confirmWithReason } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Card from '@/Components/Card.vue';
 import Badge from '@/Components/Badge.vue';
@@ -54,6 +54,16 @@ const cancelRecord = async () => {
     });
     if (!ok) return;
     router.delete(route('service-records.destroy', props.visit.id));
+};
+
+const voidRecord = async () => {
+    const reason = await confirmWithReason({
+        title: 'Void this paid record?',
+        body: 'This reverses the payment. The invoice/receipt stay on file for your records, but the record leaves the customer portal. A linked appointment reopens if it was auto-completed.',
+        confirmText: 'Void record',
+    });
+    if (!reason) return;
+    router.delete(route('service-records.destroy', props.visit.id), { data: { reason }, preserveScroll: true });
 };
 </script>
 
@@ -168,6 +178,11 @@ const cancelRecord = async () => {
                             class="inline-flex items-center rounded-ra border border-ok/50 bg-white px-3 py-1.5 text-sm font-semibold text-ok transition hover:bg-ok/10"
                             @click="showReview = true"
                         >Google Review</button>
+                        <button
+                            type="button"
+                            class="inline-flex items-center rounded-ra border border-danger/40 bg-white px-3 py-1.5 text-sm font-semibold text-danger transition hover:bg-danger/10"
+                            @click="voidRecord"
+                        >Void record</button>
                     </span>
                 </div>
             </div>
