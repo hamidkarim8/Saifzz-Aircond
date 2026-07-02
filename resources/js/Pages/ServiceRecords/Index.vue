@@ -1,14 +1,14 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { confirmAction } from '@/lib/swal';
+import { confirmAction, confirmWithReason } from '@/lib/swal';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import DataTable from '@/Components/DataTable.vue';
 import Badge from '@/Components/Badge.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
 
-defineProps({ visits: Object });
+const props = defineProps({ visits: Object, status: { type: String, default: 'all' } });
 
 const seesAllData = computed(() => usePage().props.auth.can.view_all_data);
 const pageTitle    = computed(() => seesAllData.value ? 'Service Records' : 'My Jobs');
@@ -24,6 +24,22 @@ const cancelRecord = async (row) => {
     });
     if (!ok) return;
     router.delete(route('service-records.destroy', row.id), {}, { preserveScroll: true });
+};
+
+const STATUSES = ['all', 'paid', 'pending', 'cancelled', 'void'];
+
+const setStatus = (s) => {
+    router.get(route('service-records.index'), { status: s }, { preserveState: true, replace: true });
+};
+
+const voidRecord = async (row) => {
+    const reason = await confirmWithReason({
+        title: 'Void this paid record?',
+        body: 'Reverses the payment and removes it from the customer portal. Notes stay on file for audit.',
+        confirmText: 'Void record',
+    });
+    if (!reason) return;
+    router.delete(route('service-records.destroy', row.id), { data: { reason }, preserveScroll: true });
 };
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -69,9 +85,27 @@ const columns = computed(() => [
             :rows="visits.data"
             :pagination="visits"
             :columns="columns"
+            :filter-params="{ status: props.status }"
             searchable
             search-placeholder="Search client, serial or txn…"
         >
+            <template #filters>
+                <div class="flex items-center gap-1">
+                    <span class="mr-1 text-xs font-semibold text-ink-muted">Status</span>
+                    <button
+                        v-for="s in STATUSES"
+                        :key="s"
+                        class="rounded-ra px-2.5 py-1 text-xs font-semibold capitalize transition"
+                        :class="props.status === s
+                            ? 'bg-primary text-white shadow-card'
+                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
+                        @click="setStatus(s)"
+                    >
+                        {{ s === 'all' ? 'All' : s }}
+                    </button>
+                </div>
+            </template>
+
             <!-- Date / Time -->
             <template #cell-visit_date="{ row }">
                 <span class="font-medium text-ink">{{ fmtDate(row.visit_date) }}</span>
@@ -144,6 +178,13 @@ const columns = computed(() => [
                         @click="cancelRecord(row)"
                     >
                         Cancel
+                    </button>
+                    <button
+                        v-if="row.transaction?.status === 'paid'"
+                        class="text-xs font-medium text-danger hover:underline transition"
+                        @click="voidRecord(row)"
+                    >
+                        Void
                     </button>
                 </div>
             </template>
