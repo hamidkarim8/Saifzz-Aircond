@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::get('service-records/{serviceRecord}/edit', [ServiceVisitController::class, 'edit'])->name('service-records.edit');
         Route::patch('service-records/{serviceRecord}', [ServiceVisitController::class, 'update'])->name('service-records.update');
         Route::delete('service-records/{serviceRecord}', [ServiceVisitController::class, 'destroy'])->name('service-records.destroy');
+        Route::patch('service-records/{serviceRecord}/lines/{line}/next-service-date', [ServiceVisitController::class, 'updateNextServiceDate'])->name('service-records.lines.next-service-date');
     });
 
     // Appointments (module 7) — scheduling, all gated by set_appointment (P3)
