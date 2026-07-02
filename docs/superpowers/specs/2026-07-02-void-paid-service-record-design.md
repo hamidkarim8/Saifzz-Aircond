@@ -1,7 +1,7 @@
-# Void paid service records (+ status chip filters)
+# Void paid service records (+ status chip filters + transaction date-range filter)
 
 **Date:** 2026-07-02
-**Trigger:** Khalid mistakenly created a service record 1-Jul, took it through to `paid`. No way to undo a paid record today — `edit`/`destroy` are both hard-gated to `status === 'pending'`. He needs a way to un-bill a mistaken paid record without editing it in place.
+**Trigger:** Khalid mistakenly created a service record 1-Jul, took it through to `paid`. No way to undo a paid record today — `edit`/`destroy` are both hard-gated to `status === 'pending'`. He needs a way to un-bill a mistaken paid record without editing it in place. Bundled with two related filter requests he raised in the same conversation: status chips on Service Records, and a custom date-range filter on Transactions.
 
 ## Current behavior (verified in code)
 
@@ -72,6 +72,15 @@ Feature tests:
 - Portal: voided/cancelled visit excluded from `accountFor()` list; direct receipt/invoice URL 404s post-void.
 - Staff `DocumentController` can still open a voided record's invoice/receipt.
 - `index()` status filter returns the correct row set for each chip value.
+
+## Transactions date-range filter
+
+**Current state (verified in code):** `TransactionController::index()` (`app/Http/Controllers/TransactionController.php:12-29`) only accepts a `period` query param constrained to `ReportService::PERIODS = ['all','month','week','today']` (`ReportService.php:19`). `ReportService::transactions()` (`ReportService.php:142-199`) resolves that preset to a `[from, to]` Carbon range via the private `range()` helper (`ReportService.php:282-292`) and filters `COALESCE(t.paid_at, t.created_at) BETWEEN ? AND ?`. No arbitrary range is possible today.
+
+**Design:**
+- `ReportService::transactions()` gains two optional params: `?Carbon $from = null, ?Carbon $to = null`. When both are passed, they take priority over `$period`-derived range (skip the `range()` lookup entirely).
+- `TransactionController::index()` reads `date_from`/`date_to` query params (validated as `date` format, `date_to >= date_from`). If both present, pass them through as the override; `period` param is ignored/cleared in that case. If either is missing, fall back to existing `period` preset behavior (unchanged).
+- Frontend (`Transactions/Index.vue`): two native `<input type="date">` fields (From/To) placed beside the existing period chips. Selecting a custom range deselects/visually de-emphasizes the chips and triggers `router.get(route('transactions.index'), { date_from, date_to }, ...)`. Clearing both dates falls back to the `all` chip. Chips and custom range are mutually exclusive — picking a chip clears the date inputs and vice versa.
 
 ## Out of scope
 
