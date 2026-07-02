@@ -48,11 +48,11 @@ const lineLabel = (l) => l.unit_type || '';
 const requiresNext = (l) => props.requiresNextServiceTypes.includes(l.service_type);
 
 const editingLineId = ref(null);
-const editDate = ref('');
+const editMonths = ref(null);
 
 const startEditNextService = (l) => {
     editingLineId.value = l.id;
-    editDate.value = l.next_service_date ? l.next_service_date.slice(0, 10) : '';
+    editMonths.value = null;
 };
 
 const cancelEditNextService = () => {
@@ -60,9 +60,15 @@ const cancelEditNextService = () => {
 };
 
 const saveNextServiceDate = (l) => {
+    let nextServiceDate = null;
+    if (editMonths.value) {
+        const d = new Date(props.visit.visit_date);
+        d.setMonth(d.getMonth() + editMonths.value);
+        nextServiceDate = d.toISOString().slice(0, 10);
+    }
     router.patch(
         route('service-records.lines.next-service-date', { serviceRecord: props.visit.id, line: l.id }),
-        { next_service_date: editDate.value || null },
+        { next_service_date: nextServiceDate },
         { preserveScroll: true, onSuccess: () => { editingLineId.value = null; } },
     );
 };
@@ -146,8 +152,11 @@ const voidRecord = async () => {
                                     <p v-if="l.notes" class="mt-1 text-xs italic text-ink-muted">{{ l.notes }}</p>
                                     <div v-if="requiresNext(l)" class="mt-1.5 flex items-center gap-2">
                                         <template v-if="editingLineId === l.id">
-                                            <input type="date" v-model="editDate" class="rounded-ra border border-line px-2 py-1 text-xs" />
-                                            <button type="button" class="text-xs font-semibold text-primary" @click="saveNextServiceDate(l)">Save</button>
+                                            <select v-model.number="editMonths" class="rounded-ra border border-line bg-surface px-2 py-1 text-xs text-ink">
+                                                <option :value="null" disabled>Choose months…</option>
+                                                <option v-for="m in [3,4,5,6,7,8,9,10,11,12]" :key="m" :value="m">{{ m }} months</option>
+                                            </select>
+                                            <button type="button" class="text-xs font-semibold text-primary disabled:text-ink-muted disabled:cursor-not-allowed" :disabled="!editMonths" @click="saveNextServiceDate(l)">Save</button>
                                             <button type="button" class="text-xs text-ink-soft" @click="cancelEditNextService">Cancel</button>
                                         </template>
                                         <template v-else>
