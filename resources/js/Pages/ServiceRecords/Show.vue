@@ -50,6 +50,15 @@ const requiresNext = (l) => props.requiresNextServiceTypes.includes(l.service_ty
 const editingLineId = ref(null);
 const editMonths = ref(null);
 
+const monthsToDate = (months) => {
+    if (!months) return null;
+    const d = new Date(props.visit.visit_date);
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().slice(0, 10);
+};
+
+const previewNextServiceDate = computed(() => monthsToDate(editMonths.value));
+
 const startEditNextService = (l) => {
     editingLineId.value = l.id;
     editMonths.value = null;
@@ -60,12 +69,7 @@ const cancelEditNextService = () => {
 };
 
 const saveNextServiceDate = (l) => {
-    let nextServiceDate = null;
-    if (editMonths.value) {
-        const d = new Date(props.visit.visit_date);
-        d.setMonth(d.getMonth() + editMonths.value);
-        nextServiceDate = d.toISOString().slice(0, 10);
-    }
+    const nextServiceDate = monthsToDate(editMonths.value);
     router.patch(
         route('service-records.lines.next-service-date', { serviceRecord: props.visit.id, line: l.id }),
         { next_service_date: nextServiceDate },
@@ -158,6 +162,7 @@ const voidRecord = async () => {
                                             </select>
                                             <button type="button" class="text-xs font-semibold text-primary disabled:text-ink-muted disabled:cursor-not-allowed" :disabled="!editMonths" @click="saveNextServiceDate(l)">Save</button>
                                             <button type="button" class="text-xs text-ink-soft" @click="cancelEditNextService">Cancel</button>
+                                            <p v-if="previewNextServiceDate" class="w-full text-xs text-ok">Next service: {{ fmtDate(previewNextServiceDate) }}</p>
                                         </template>
                                         <template v-else>
                                             <span class="text-xs font-medium text-primary">Next service: {{ l.next_service_date ? fmtDate(l.next_service_date) : 'Not set' }}</span>
