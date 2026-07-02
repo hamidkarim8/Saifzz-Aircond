@@ -27,8 +27,9 @@ final class PortalService
 
     /**
      * Read-only portal view-model: client header, history (latest first), and the
-     * next recommended service date = MAX(line.next_service_date) ignoring nulls
-     * (Repair/Gas lines carry none), mirroring ReminderService aggregation.
+     * next recommended service date = nearest upcoming line.next_service_date
+     * (today or later; past/lapsed dates are ignored so a stale unfulfilled
+     * date never blocks a more relevant one from showing).
      */
     public function accountFor(Client $client): array
     {
@@ -39,11 +40,13 @@ final class PortalService
             'visits.transaction',
         ]);
 
+        $today = Carbon::today();
         $next = $client->visits
             ->flatMap->lines
             ->pluck('next_service_date')
             ->filter()
-            ->max();
+            ->filter(fn ($d) => $d->greaterThanOrEqualTo($today))
+            ->min();
 
         return [
             'client' => [
@@ -60,6 +63,7 @@ final class PortalService
                     'unit_type' => $l->unit_type,
                     'units' => $l->units,
                     'subtotal' => $l->subtotal,
+                    'next_service_date' => $l->next_service_date?->toDateString(),
                 ])->values(),
                 'transaction' => $v->transaction ? [
                     'id' => $v->transaction->id,

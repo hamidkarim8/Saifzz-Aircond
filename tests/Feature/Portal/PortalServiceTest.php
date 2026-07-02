@@ -52,20 +52,34 @@ class PortalServiceTest extends TestCase
         $this->assertNotNull($this->service()->authenticate($client->serial_no, '6789'));
     }
 
-    public function test_account_next_service_is_max_ignoring_nulls(): void
+    public function test_account_next_service_is_nearest_future_ignoring_nulls_and_past(): void
     {
         $client = $this->client();
-        $v1 = $client->visits()->create(['visit_date' => '2026-01-10', 'warranty_months' => 3, 'total_amount' => 60]);
-        $v1->lines()->create(['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => '2026-07-10']);
-        $v1->transaction()->create(['txn_id' => 'TXN-1', 'amount' => 60, 'method' => 'Cash', 'status' => 'paid']);
-        $v2 = $client->visits()->create(['visit_date' => '2026-03-01', 'warranty_months' => 0, 'total_amount' => 80]);
-        $v2->lines()->create(['service_type' => 'Repair', 'repair_desc' => 'Fan motor', 'units' => 1, 'rate' => 80, 'discount' => 0, 'next_service_date' => null]);
-        $v2->transaction()->create(['txn_id' => 'TXN-2', 'amount' => 80, 'method' => 'Cash', 'status' => 'paid']);
+
+        // Past — a lapsed/unfulfilled date must not surface as "next".
+        $vPast = $client->visits()->create(['visit_date' => '2026-01-10', 'warranty_months' => 3, 'total_amount' => 60]);
+        $vPast->lines()->create(['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => now()->subMonth()->toDateString()]);
+        $vPast->transaction()->create(['txn_id' => 'TXN-1', 'amount' => 60, 'method' => 'Cash', 'status' => 'paid']);
+
+        // Null — Repair carries no next-service concept.
+        $vNull = $client->visits()->create(['visit_date' => '2026-03-01', 'warranty_months' => 0, 'total_amount' => 80]);
+        $vNull->lines()->create(['service_type' => 'Repair', 'repair_desc' => 'Fan motor', 'units' => 1, 'rate' => 80, 'discount' => 0, 'next_service_date' => null]);
+        $vNull->transaction()->create(['txn_id' => 'TXN-2', 'amount' => 80, 'method' => 'Cash', 'status' => 'paid']);
+
+        // Further future — must lose to the nearer one below.
+        $vFar = $client->visits()->create(['visit_date' => '2026-04-01', 'warranty_months' => 0, 'total_amount' => 60]);
+        $vFar->lines()->create(['service_type' => 'Installation', 'unit_type' => 'Cassette', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => now()->addMonths(6)->toDateString()]);
+        $vFar->transaction()->create(['txn_id' => 'TXN-3', 'amount' => 60, 'method' => 'Cash', 'status' => 'paid']);
+
+        // Nearest future — this is the one that should win.
+        $vNear = $client->visits()->create(['visit_date' => '2026-05-01', 'warranty_months' => 0, 'total_amount' => 60]);
+        $vNear->lines()->create(['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => now()->addMonth()->toDateString()]);
+        $vNear->transaction()->create(['txn_id' => 'TXN-4', 'amount' => 60, 'method' => 'Cash', 'status' => 'paid']);
 
         $account = $this->service()->accountFor($client->fresh());
 
-        $this->assertSame('2026-07-10', $account['next_service_date']);
-        $this->assertCount(2, $account['visits']);
+        $this->assertSame(now()->addMonth()->toDateString(), $account['next_service_date']);
+        $this->assertCount(4, $account['visits']);
         $this->assertSame('000001', $account['client']['serial_no']);
     }
 
