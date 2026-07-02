@@ -8,7 +8,6 @@ import Badge from '@/Components/Badge.vue';
 import WarrantyPill from '@/Components/WarrantyPill.vue';
 import Modal from '@/Components/Modal.vue';
 import { serviceVariant, statusVariant } from '@/lib/badges';
-import { IconCalendarEvent, IconAlertTriangle } from '@tabler/icons-vue';
 
 const props = defineProps({
     visit: Object,
@@ -151,46 +150,18 @@ const voidRecord = async () => {
                                     </div>
                                     <p v-if="l.repair_desc" class="mt-1 text-sm text-ink-soft">{{ l.repair_desc }}</p>
                                     <p v-if="l.notes" class="mt-1 text-xs italic text-ink-muted">{{ l.notes }}</p>
-                                    <div
-                                        v-if="requiresNext(l)"
-                                        class="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-ra border px-3 py-2"
-                                        :class="l.next_service_date ? 'border-line bg-surface-muted' : 'border-warn/40 bg-warn-bg'"
-                                    >
+                                    <div v-if="requiresNext(l)" class="mt-1.5 flex flex-wrap items-center gap-2">
                                         <template v-if="editingLineId === l.id">
-                                            <div class="flex min-w-0 flex-1 items-center gap-2">
-                                                <IconCalendarEvent :size="16" :stroke="2" class="shrink-0 text-ink-soft" />
-                                                <select
-                                                    v-model.number="editMonths"
-                                                    class="min-w-0 flex-1 rounded-ra border border-line bg-white px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:flex-none"
-                                                >
-                                                    <option :value="null" disabled>Choose months…</option>
-                                                    <option v-for="m in [3,4,5,6,7,8,9,10,11,12]" :key="m" :value="m">{{ m }} months</option>
-                                                </select>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" class="rounded-ra border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-surface" @click="cancelEditNextService">Cancel</button>
-                                                <button
-                                                    type="button"
-                                                    class="rounded-ra bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-                                                    :disabled="!editMonths"
-                                                    @click="saveNextServiceDate(l)"
-                                                >Save</button>
-                                            </div>
+                                            <select v-model.number="editMonths" class="rounded-ra border border-line bg-surface py-1 pl-2 pr-8 text-xs text-ink">
+                                                <option :value="null" disabled>Choose months…</option>
+                                                <option v-for="m in [3,4,5,6,7,8,9,10,11,12]" :key="m" :value="m">{{ m }} months</option>
+                                            </select>
+                                            <button type="button" class="text-xs font-semibold text-primary disabled:text-ink-muted disabled:cursor-not-allowed" :disabled="!editMonths" @click="saveNextServiceDate(l)">Save</button>
+                                            <button type="button" class="text-xs text-ink-soft" @click="cancelEditNextService">Cancel</button>
                                         </template>
                                         <template v-else>
-                                            <div class="flex min-w-0 items-center gap-2">
-                                                <IconCalendarEvent v-if="l.next_service_date" :size="16" :stroke="2" class="shrink-0 text-ink-soft" />
-                                                <IconAlertTriangle v-else :size="16" :stroke="2" class="shrink-0 text-warn" />
-                                                <span class="truncate text-sm" :class="l.next_service_date ? 'text-ink' : 'font-semibold text-warn'">
-                                                    {{ l.next_service_date ? `Next service: ${fmtDate(l.next_service_date)}` : 'Next service date not set' }}
-                                                </span>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                class="rounded-ra border px-3 py-1.5 text-xs font-semibold transition"
-                                                :class="l.next_service_date ? 'border-line bg-white text-ink-soft hover:bg-surface' : 'border-warn/50 bg-white text-warn hover:bg-warn/10'"
-                                                @click="startEditNextService(l)"
-                                            >{{ l.next_service_date ? 'Change' : 'Set date' }}</button>
+                                            <span class="text-xs font-medium text-primary">Next service: {{ l.next_service_date ? fmtDate(l.next_service_date) : 'Not set' }}</span>
+                                            <button type="button" class="text-xs text-primary underline" @click="startEditNextService(l)">Edit</button>
                                         </template>
                                     </div>
                                 </div>
