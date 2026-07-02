@@ -92,7 +92,7 @@ class TechnicianScopingTest extends TestCase
     {
         $client = Client::create(['name' => 'C', 'phone' => '011-0000000', 'address' => 'KL']);
         return $client->appointments()->create([
-            'datetime' => '2026-06-20 10:00:00',
+            'datetime' => now()->startOfMonth()->addDays(19)->setTime(10, 0),
             'status' => 'pending',
             'technician_id' => $technicianId,
         ]);
