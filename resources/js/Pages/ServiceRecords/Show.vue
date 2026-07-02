@@ -144,7 +144,7 @@ const voidRecord = async () => {
                                     </div>
                                     <p v-if="l.repair_desc" class="mt-1 text-sm text-ink-soft">{{ l.repair_desc }}</p>
                                     <p v-if="l.notes" class="mt-1 text-xs italic text-ink-muted">{{ l.notes }}</p>
-                                    <div v-if="requiresNext(l) && l.unit_id" class="mt-1.5 flex items-center gap-2">
+                                    <div v-if="requiresNext(l)" class="mt-1.5 flex items-center gap-2">
                                         <template v-if="editingLineId === l.id">
                                             <input type="date" v-model="editDate" class="rounded-ra border border-line px-2 py-1 text-xs" />
                                             <button type="button" class="text-xs font-semibold text-primary" @click="saveNextServiceDate(l)">Save</button>
