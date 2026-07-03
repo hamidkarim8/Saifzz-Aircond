@@ -27,7 +27,7 @@
             <td class="v">{{ $methodLabel }}</td>
         </tr>
         <tr>
-            <td class="k">Txn ID</td>
+            <td class="k">Transaction ID</td>
             <td class="v mono">{{ $s['txn_id'] }}</td>
         </tr>
     </table>

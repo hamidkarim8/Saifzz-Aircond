@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateServiceVisitRequest;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ServiceType;
+use App\Models\ServiceLine;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
 use App\Services\Payments\PaymentService;
@@ -203,6 +204,7 @@ class ServiceVisitController extends Controller
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
             'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
+            'requiresNextServiceTypes' => ServiceType::where('requires_next_service', true)->pluck('name'),
         ]);
     }
 
@@ -313,6 +315,35 @@ class ServiceVisitController extends Controller
 
         return redirect()->route('service-records.index')
             ->with('success', 'Record cancelled.');
+    }
+
+    public function updateNextServiceDate(Request $request, ServiceVisit $serviceRecord, ServiceLine $line): RedirectResponse
+    {
+        abort_unless(
+            ServiceVisit::whereKey($serviceRecord->getKey())->visibleTo($request->user())->exists(),
+            403,
+        );
+        abort_unless($line->visit_id === $serviceRecord->id, 404);
+
+        $data = $request->validate([
+            'next_service_date' => ['nullable', 'date'],
+        ]);
+
+        DB::transaction(function () use ($data, $line, $serviceRecord) {
+            $line->update(['next_service_date' => $data['next_service_date']]);
+
+            if ($line->unit_id && !empty($data['next_service_date'])) {
+                \App\Models\ClientUnit::where('id', $line->unit_id)
+                    ->where('client_id', $serviceRecord->client_id)
+                    ->update([
+                        'next_service_date' => $data['next_service_date'],
+                        'next_service_type' => $line->service_type,
+                    ]);
+            }
+        });
+
+        return redirect()->route('service-records.show', $serviceRecord)
+            ->with('success', 'Next service date updated.');
     }
 
     /**

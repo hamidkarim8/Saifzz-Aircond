@@ -15,9 +15,14 @@ class PortalAccountTest extends TestCase
     {
         $client = Client::create(['name' => 'Zainab', 'phone' => '012-345 6789', 'address' => 'No. 5, KL']);
         $visit = $client->visits()->create(['visit_date' => '2026-02-01', 'warranty_months' => 3, 'total_amount' => 60]);
-        $visit->lines()->create(['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => '2026-08-01']);
+        $visit->lines()->create(['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 60, 'discount' => 0, 'next_service_date' => $this->nextServiceDate()]);
 
         return $client;
+    }
+
+    private function nextServiceDate(): string
+    {
+        return now()->addMonth()->toDateString();
     }
 
     public function test_guest_without_session_is_redirected_to_login(): void
@@ -35,7 +40,7 @@ class PortalAccountTest extends TestCase
         $res->assertInertia(fn (Assert $page) => $page
             ->component('Portal/Show')
             ->where('client.serial_no', $client->serial_no)
-            ->where('next_service_date', '2026-08-01')
+            ->where('next_service_date', $this->nextServiceDate())
             ->has('visits', 1)
             ->has('business.wa')
         );

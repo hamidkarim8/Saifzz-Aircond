@@ -6,6 +6,40 @@
 
 ---
 
+## Session 46 — 2026-07-02 — Set next service date on a paid record (FEAT-020)
+
+**Goal:** Khalid often forgets to pick the next-service month while creating a visit. If still `pending` he can fix it via Edit, but once paid, `ServiceVisitController::edit/update` are hard-gated to `pending` and the field stays permanently null. Add a narrow way to set/correct it after payment.
+
+**Done:**
+- New endpoint `PATCH /service-records/{serviceRecord}/lines/{line}/next-service-date` (`ServiceVisitController::updateNextServiceDate`) — updates one `service_lines.next_service_date`, deliberately exempt from the paid-lock (no status check), always editable (not null-only). Resyncs `client_units.next_service_date`/`next_service_type` when the line has a `unit_id`, reusing the exact sync pattern from `store()`/`update()`. Clearing to null updates the line but doesn't blank an already-set unit value.
+- `ServiceRecords/Show.vue` gets an inline pencil-edit control (date input → Save) next to the next-service-date display, shown for lines whose service type has `requires_next_service` and a `unit_id`; new prop `requiresNextServiceTypes` on `show()`.
+- Executed via subagent-driven-development: 2 tasks (backend endpoint, frontend UI), each with a fresh implementer + independent task reviewer, plus a final whole-branch review — all clean, only cosmetic Minors (import order, no explicit pending/void status test though behavior is status-independent by inspection, no onError/loading state on Save matching existing file convention).
+- Design: `docs/superpowers/specs/2026-07-02-paid-record-next-service-date-design.md`. Plan: `docs/superpowers/plans/2026-07-02-paid-record-next-service-date.md`.
+- Full suite: 355/355 passed.
+- `FEEDBACK-02072026.md`: added FEAT-020, OPEN → TESTING.
+- Commits `32632dd`..`5656117` on `dev`, left un-pushed — Khalid pushing himself.
+
+**Next:** Khalid pushes `dev`, confirms/opens PR to `main`, tests FEAT-020 alongside the still-pending FEAT-019/CHG-024/CHG-025/BUG-002 batch.
+
+---
+
+## Session 45 — 2026-07-02 — Local DB restore, mobile filter fix (BUG-002), CI date-rot fix
+
+**Goal:** Restore a DBeaver prod backup into the local dev DB, then fix a mobile/PWA layout bug Khalid flagged on the new Transactions date-range filter (CHG-025), and unblock the dev→main PR CI.
+
+**Done:**
+- Restored a plain-SQL DBeaver prod backup into local Postgres. Hit two snags along the way: (1) `DROP DATABASE` fails while connected to it in DBeaver — worked around by targeting `postgres` as the active DB first; (2) post-restore `artisan migrate` failed with `no schema has been selected to create in` — the `public` schema was missing (dropped along with the DB), fixed with `CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO sail;`. After restore, `void_reason` column was missing because the prod dump predates the void feature (Session 44) — resolved by re-running `artisan migrate` to apply the pending migration on top of the restored data.
+- **BUG-002 (mobile):** period chips + date-range picker (CHG-025) were inside `AdminLayout`'s sticky header, which has a fixed `h-16`. On narrow viewports the content needed to wrap but the header couldn't grow, clipping/overlapping the bell and user-menu icons. Moved into a normal-flow filter row above the stat cards (`resources/js/Pages/Transactions/Index.vue`), matching the existing Service Records pattern (title in sticky header only, filters below in page flow). Commit `b3e665e`.
+- **CI unblock:** `TechnicianScopingTest::test_appointment_index_scoped_to_own` — flagged as pre-existing date-rot in Session 44, actually broke the dev→main PR's CI gate today. Root cause: the appointment index defaults to the current month, and the test fixture hardcoded `2026-06-20`; once the calendar rolled into July the fixture appointment fell out of range. Fixed by anchoring the fixture to `now()->startOfMonth()->addDays(19)` so it can't rot again. Commit `eae85f1`. Full suite 349/349.
+- Cleaned up 42 untracked `.superpowers/sdd/*` scratch files (task briefs/reports/review diffs) left over from Session 44's subagent-driven-development run — feature already merged and documented, scratch no longer needed. Restored the one file among them that was actually tracked (`task-6-fix-report.md`, committed in `ec29e6c`).
+- Verified the dev→main merge is safe for prod: `origin/main` was 20 commits behind `dev`, with exactly one new migration (`add_void_fields_to_transactions_table`) — purely additive nullable columns, no drops. CD only runs `migrate --force`, never seeds/truncates on prod.
+- `FEEDBACK-02072026.md`: added BUG-002, OPEN → TESTING.
+- Pushed `dev` (`b3e665e`, `eae85f1`) to origin for the PR's CI to re-run.
+
+**Next:** confirm CI is green on the PR, then merge dev→main. Khalid to test FEAT-019/CHG-024/CHG-025/BUG-002 on next deploy.
+
+---
+
 ## Session 44 — 2026-07-02 — Void paid service records + filters (FEAT-019/CHG-024/025)
 
 **Goal:** Khalid mistakenly created + fully paid a service record on 1-Jul with no way to undo it. Added a Void action for paid records (Cancel already existed for pending), plus two related filters he asked for in the same conversation.

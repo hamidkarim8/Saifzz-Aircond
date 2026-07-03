@@ -131,6 +131,7 @@ const waAppointment = computed(() => wa(props.business.wa, `Hi, I'd like to set 
                                 </span>
                             </div>
                             <span class="mt-0.5 block text-xs text-ink-muted">× {{ l.units }} unit{{ l.units !== 1 ? 's' : '' }}</span>
+                            <span v-if="l.next_service_date" class="mt-0.5 block text-xs font-medium text-primary">Next service: {{ fmtDate(l.next_service_date) }}</span>
                         </div>
                         <span class="shrink-0 font-mono font-semibold text-ink">{{ money(l.subtotal) }}</span>
                     </li>
