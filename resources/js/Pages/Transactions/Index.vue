@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import StatCard from '@/Components/StatCard.vue';
 import DataTable from '@/Components/DataTable.vue';
@@ -71,6 +71,7 @@ const pendingAmount = computed(() =>
 );
 
 const columns = [
+    { key: 'txn_id',       label: 'Transaction ID', sortable: false },
     { key: 'date',         label: 'Date',         sortable: true },
     { key: 'client_name',  label: 'Client',        sortable: true },
     { key: 'serial_no',    label: 'Serial #',      sortable: false },
@@ -112,9 +113,14 @@ const rows = computed(() =>
                 </button>
             </div>
             <div class="flex flex-wrap items-center gap-1.5">
-                <input v-model="rangeFrom" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
-                <span class="text-xs text-ink-muted">to</span>
-                <input v-model="rangeTo" type="date" class="rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
+                <label class="flex items-center gap-1.5">
+                    <span class="text-xs font-semibold text-ink-muted">From</span>
+                    <input v-model="rangeFrom" type="date" class="w-[8.5rem] rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
+                </label>
+                <label class="flex items-center gap-1.5">
+                    <span class="text-xs font-semibold text-ink-muted">To</span>
+                    <input v-model="rangeTo" type="date" class="w-[8.5rem] rounded-ra border-line py-1 text-xs shadow-card focus:border-primary focus:ring-primary" />
+                </label>
                 <button
                     class="rounded-ra border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-card transition hover:bg-surface-muted hover:text-ink"
                     @click="applyRange"
@@ -191,10 +197,16 @@ const rows = computed(() =>
                     :rows="rows"
                     mode="client"
                     :searchable="true"
-                    :search-keys="['client_name', 'serial_no', 'service_type', 'status', 'method']"
+                    :search-keys="['txn_id', 'client_name', 'serial_no', 'service_type', 'status', 'method']"
                     search-placeholder="Search transactions…"
                     :per-page="20"
                 >
+                    <template #cell-txn_id="{ row }">
+                        <Link :href="route('service-records.show', row.visit_id)" class="font-mono text-xs text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary">
+                            {{ row.txn_id }}
+                        </Link>
+                    </template>
+
                     <template #cell-date="{ row }">
                         <span class="text-ink-soft">{{ row.date_fmt }}</span>
                     </template>
@@ -232,6 +244,9 @@ const rows = computed(() =>
                                 <span class="font-semibold text-ink">{{ row.client_name }}</span>
                                 <Badge :variant="statusVariant(row.status)" class="capitalize">{{ row.status }}</Badge>
                             </div>
+                            <Link :href="route('service-records.show', row.visit_id)" class="mb-2 block font-mono text-xs text-primary underline decoration-primary/30 underline-offset-2">
+                                {{ row.txn_id }}
+                            </Link>
                             <div class="flex items-center justify-between gap-2 text-xs text-ink-muted">
                                 <span class="font-mono">{{ row.serial_no ?? '—' }}</span>
                                 <Badge :variant="serviceVariant(row.service_type)">{{ row.service_type }}</Badge>

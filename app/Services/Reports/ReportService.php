@@ -165,6 +165,7 @@ class ReportService
             )
             ->select(
                 't.txn_id',
+                't.visit_id',
                 't.amount',
                 't.method',
                 't.status',
@@ -195,6 +196,7 @@ class ReportService
 
         return $q->get()->map(fn ($r) => [
             'txn_id' => $r->txn_id,
+            'visit_id' => $r->visit_id,
             'date' => substr((string) $r->occurred_at, 0, 10),
             'client_name' => $r->client_name,
             'serial_no' => $r->serial_no,

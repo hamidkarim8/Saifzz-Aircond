@@ -184,9 +184,10 @@ const voidRecord = async () => {
             <!-- Payment / document card -->
             <div v-if="txn && txn.status === 'pending'" class="overflow-hidden rounded-ral border border-warn/40 bg-warn-bg shadow-card">
                 <div class="px-5 py-4 space-y-3">
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <Badge variant="amber">Pending</Badge>
                         <span class="text-sm text-warn">Payment pending via {{ txn.method }}.</span>
+                        <span class="font-mono text-xs text-warn/70">{{ txn.txn_id }}</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a
@@ -212,9 +213,10 @@ const voidRecord = async () => {
             </div>
             <div v-else-if="txn && txn.status === 'paid'" class="overflow-hidden rounded-ral border border-ok/40 bg-ok-bg shadow-card">
                 <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <Badge variant="green">Paid</Badge>
                         <span class="text-sm text-ok">Paid via {{ txn.method }}.</span>
+                        <span class="font-mono text-xs text-ok/70">{{ txn.txn_id }}</span>
                     </div>
                     <span class="flex flex-wrap items-center gap-3">
                         <a :href="route('documents.receipt', txn.id)" target="_blank" class="text-sm font-semibold text-ok underline hover:text-ok/80 transition">View receipt</a>
