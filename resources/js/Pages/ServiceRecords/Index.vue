@@ -48,6 +48,7 @@ const roleLabel = (r) => r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
 
 const columns = computed(() => [
     { key: 'visit_date', label: 'Date / Time', sortable: true },
+    { key: 'txn_id',     label: 'Transaction ID' },
     { key: 'client',     label: 'Client' },
     { key: 'serial',     label: 'Serial', headerClass: 'font-mono' },
     { key: 'lines',      label: 'Services' },
@@ -110,6 +111,11 @@ const columns = computed(() => [
             <template #cell-visit_date="{ row }">
                 <span class="font-medium text-ink">{{ fmtDate(row.visit_date) }}</span>
                 <span v-if="fmtTime(row.created_at)" class="ml-1 text-xs text-ink-muted">{{ fmtTime(row.created_at) }}</span>
+            </template>
+
+            <!-- Transaction ID -->
+            <template #cell-txn_id="{ row }">
+                <span class="font-mono text-xs text-ink-soft">{{ row.transaction?.txn_id ?? '—' }}</span>
             </template>
 
             <!-- Client name -->
@@ -199,6 +205,7 @@ const columns = computed(() => [
                                 {{ fmtDate(row.visit_date) }}
                                 <span class="font-mono text-xs text-primary ml-1">#{{ row.client?.serial_no }}</span>
                             </div>
+                            <div v-if="row.transaction?.txn_id" class="mt-0.5 font-mono text-xs text-ink-muted">{{ row.transaction.txn_id }}</div>
                             <div v-if="row.lines && row.lines.length" class="mt-1 flex flex-wrap gap-1">
                                 <Badge v-for="(line, i) in row.lines" :key="i" :variant="serviceVariant(line.service_type)">
                                     {{ line.service_type }}
