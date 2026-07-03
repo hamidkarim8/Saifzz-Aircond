@@ -51,14 +51,21 @@ class AppointmentController extends Controller
         $sort = in_array($request->input('sort'), $sortWhitelist, true)
             ? $request->input('sort')
             : 'datetime';
-        $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+        // Default newest-first: Khalid mainly checks the list on mobile/PWA and
+        // doesn't want to page through old dates to reach today's appointments.
+        $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
         $perPage = max(1, min(100, (int) $request->input('per_page', 10)));
         $search = $request->input('search', '');
+        $status = $request->string('status')->trim()->value();
 
         $tableQuery = Appointment::query()
             ->visibleTo($request->user())
             ->with(['client:id,serial_no,name', 'technician:id,name'])
             ->forMonth($month);
+
+        if ($status !== '' && $status !== 'all') {
+            $tableQuery->where('status', $status);
+        }
 
         if ($search) {
             $tableQuery->where(function ($q) use ($search) {
@@ -75,6 +82,7 @@ class AppointmentController extends Controller
             'table' => $table,
             'today' => $today,
             'month' => $month,
+            'status' => $status !== '' ? $status : 'all',
             'stats' => $stats,
             'transitions' => Appointment::TRANSITIONS,
             // Optional pre-selected client (e.g. arriving from a client profile or reminder).
