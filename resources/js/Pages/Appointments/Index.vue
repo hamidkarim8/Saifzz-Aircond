@@ -27,7 +27,13 @@ const props = defineProps({
     transitions:  { type: Object, default: () => ({}) },
     presetClient: { type: Object, default: null },
     technicians:  { type: Array, default: null },
+    status:       { type: String, default: 'all' },
 });
+
+const STATUSES = ['all', 'pending', 'completed', 'cancelled'];
+const setStatusFilter = (s) => {
+    router.get(route('appointments.index'), { month: props.month, status: s }, { preserveState: true, replace: true });
+};
 
 const modalOpen  = ref(false);
 const editing    = ref(null);
@@ -229,10 +235,27 @@ const columns = [
                 :pagination="table"
                 :columns="columns"
                 :rows="table?.data ?? []"
-                :filter-params="{ month }"
+                :filter-params="{ month, status: props.status }"
                 search-placeholder="Search client, phone, address…"
                 :searchable="true"
             >
+                <template #filters>
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs font-semibold text-ink-muted">Status</span>
+                        <button
+                            v-for="s in STATUSES"
+                            :key="s"
+                            class="rounded-ra px-2.5 py-1 text-xs font-semibold capitalize transition"
+                            :class="props.status === s
+                                ? 'bg-primary text-white shadow-card'
+                                : 'border border-line bg-surface text-ink-soft hover:bg-surface-muted hover:text-ink'"
+                            @click="setStatusFilter(s)"
+                        >
+                            {{ s === 'all' ? 'All' : s }}
+                        </button>
+                    </div>
+                </template>
+
                 <!-- Date/time -->
                 <template #cell-datetime="{ value }">
                     <div class="font-medium text-ink">{{ fmtDate(value) }}</div>
