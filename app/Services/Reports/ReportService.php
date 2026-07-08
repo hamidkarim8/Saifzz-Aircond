@@ -103,6 +103,8 @@ class ReportService
 
     /**
      * Count of service lines grouped by service type, scoped to the period by visit_date.
+     * Only lines whose visit has a paid transaction are counted (pending/failed/void/no-transaction
+     * visits are excluded) so this matches the paid-revenue definition used by kpis().
      * When $technicianId is provided, only visits assigned to that technician are counted.
      *
      * @return list<array{type: string, count: int}>
@@ -112,7 +114,9 @@ class ReportService
         [$from, $to] = $this->range($period);
 
         $q = DB::table('service_lines as sl')
-            ->join('service_visits as sv', 'sv.id', '=', 'sl.visit_id');
+            ->join('service_visits as sv', 'sv.id', '=', 'sl.visit_id')
+            ->join('transactions as t', 't.visit_id', '=', 'sv.id')
+            ->where('t.status', 'paid');
 
         if ($technicianId !== null) {
             $q->where('sv.technician_id', $technicianId);

@@ -100,9 +100,9 @@ class ReportServiceTest extends TestCase
     public function test_services_by_type_counts_and_respects_period(): void
     {
         $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
-        $this->visitFor($c, 'Cleaning', '2026-06-10');
-        $this->visitFor($c, 'Cleaning', '2026-06-12');
-        $this->visitFor($c, 'Repair', '2026-05-20'); // last month
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-10'), 100, 'paid', '2026-06-10 09:00:00', 'TXN-1');
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-12'), 100, 'paid', '2026-06-12 09:00:00', 'TXN-2');
+        $this->txn($this->visitFor($c, 'Repair', '2026-05-20'), 100, 'paid', '2026-05-20 09:00:00', 'TXN-3'); // last month
 
         $all = $this->service()->servicesByType('all');
         $this->assertSame([['type' => 'Cleaning', 'count' => 2], ['type' => 'Repair', 'count' => 1]], $all);
@@ -111,6 +111,24 @@ class ReportServiceTest extends TestCase
         $this->assertSame([['type' => 'Cleaning', 'count' => 2]], $month); // Repair excluded (last month)
 
         $this->assertSame([], $this->service()->servicesByType('today')); // nothing dated today
+    }
+
+    public function test_services_by_type_counts_only_paid_transactions(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-10'), 100, 'paid', '2026-06-10 09:00:00', 'TXN-1');
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-11'), 100, 'pending', null, 'TXN-2');
+        $this->txn($this->visitFor($c, 'Repair', '2026-06-12'), 100, 'failed', null, 'TXN-3');
+        $t = $this->txn($this->visitFor($c, 'Repair', '2026-06-13'), 100, 'paid', '2026-06-13 09:00:00', 'TXN-4');
+        $t->forceFill(['status' => 'void', 'voided_at' => now()])->save();
+        $this->visitFor($c, 'Gas Top-Up', '2026-06-14'); // no transaction row at all
+
+        $result = $this->service()->servicesByType('all');
+
+        // Only TXN-1 (Cleaning) is paid: TXN-2 pending, TXN-3 failed, TXN-4 paid-then-voided,
+        // and the Gas Top-Up visit has no transaction row at all (default 'pending').
+        $this->assertSame([['type' => 'Cleaning', 'count' => 1]], $result);
     }
 
     public function test_transactions_respect_period_and_are_newest_first(): void
