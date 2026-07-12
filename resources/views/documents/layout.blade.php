@@ -5,10 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $number }}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Do NOT reset the margin of `html` or `body` (and do not use a `*` reset).
+           dompdf carries the @page margin on the root frame, so zeroing html/body's
+           margin silently zeroes the page margin too — which left every continuation
+           page flush against the paper edge. Reset only the elements we actually use. */
+        * { box-sizing: border-box; }
+        div, p, span, table, thead, tbody, tr, th, td, img, hr, h1, h2, h3 { margin: 0; padding: 0; }
 
+        /* PDF only — browsers ignore @page. Gives EVERY page its margin, so page 2 of a
+           long record is framed like page 1 instead of starting at the paper edge. */
+        @page { margin: 10mm 8mm; }
+
+        /* The root background paints the whole sheet, including the @page margin — that
+           is what puts the blue behind the card on every page. `body` alone would only
+           paint its own content box, leaving the page margin white. */
+        html { background: #f0f4f8; }
         body { font-family: 'DejaVu Sans', sans-serif; color: #0A1628; font-size: 12px; background: #f0f4f8; }
-        .doc { max-width: 500px; width: 100%; margin: 20px auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
+        .doc { max-width: 500px; width: 100%; margin: 0 auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
         @media (max-width: 540px) {
             body { background: #fff; }
             .doc { margin: 0; border: none; border-radius: 0; padding: 20px 16px; }
@@ -46,12 +59,10 @@
 
         /* ── Line-item table ── */
         table.items { width: 100%; border-collapse: collapse; }
-        /* dompdf ignores @page here, and a block's margin/padding is only drawn at its
-           start and end — never on a continuation page — so page 2 of a long record had
-           its header row flush against the paper edge. The <thead> DOES re-render on
-           every page, so its own top padding is the one thing that reliably puts space
-           above the table after a break. .sec-label's margin-bottom is zeroed to keep
-           page 1 looking the same. */
+        /* The <thead> re-renders on every page, so its top padding is what keeps the
+           header row off the card's top edge after a break — the card's own padding is
+           drawn only at its start and end. .sec-label's margin-bottom is zeroed so page
+           1 does not gain double spacing above the table. */
         table.items thead th { font-size: 9px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .6px; text-align: left; padding: 22px 0 6px; border-bottom: 1.5px solid #0E2040; }
         table.items thead th.num { text-align: right; padding-left: 6px; }
         table.items tbody tr { page-break-inside: avoid; }
