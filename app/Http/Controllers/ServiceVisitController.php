@@ -10,6 +10,7 @@ use App\Models\ServiceType;
 use App\Models\ServiceLine;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
+use App\Services\Documents\DocumentService;
 use App\Services\Payments\PaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class ServiceVisitController extends Controller
 {
+    public function __construct(private readonly DocumentService $documents) {}
+
     public function index(): Response
     {
         $search  = request()->string('search')->trim()->value();
@@ -287,6 +290,11 @@ class ServiceVisitController extends Controller
             $serviceRecord->transaction->update([
                 'amount' => $serviceRecord->total_amount, // method preserved; set at payment collection
             ]);
+
+            // If the invoice was already viewed (and so already frozen), re-freeze it
+            // against the corrected record. Otherwise it would keep billing the old
+            // figures while the payment page charges the new ones. No-op if unissued.
+            $this->documents->refreshInvoiceFor($serviceRecord->transaction->fresh());
         });
 
         return redirect()->route('service-records.show', $serviceRecord)
