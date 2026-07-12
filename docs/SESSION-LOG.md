@@ -6,6 +6,33 @@
 
 ---
 
+## Session 47 — 2026-07-13 — Invoice / receipt v2 redesign + 3 money bugs found
+
+**Goal:** Khalid raised 7 items on the invoice/receipt PDFs: drop "Official" from the receipt, show HP per service line, remove Due Date + Status from the invoice, fix PDF page-break overflow, fix a stray `?` on every discount, show next-service once under Warranty, and make the whole thing less crowded.
+
+**Done — the 7 reported items** (spec `docs/superpowers/specs/2026-07-13-invoice-receipt-redesign-design.md`, plan `docs/superpowers/plans/2026-07-13-invoice-receipt-redesign.md`, subagent-driven: 3 tasks + task reviews + final opus whole-branch review, all clean):
+- **Per-service cards → one line-item table** (`# · Service · Qty · Rate · Disc · Amount`) on both documents. Subtotal / Discount summary rows above the total. Disc column only renders when something was actually discounted. 4 services went from 2 pages to 1.
+- **HP per line.** `service_lines.hp_value` existed since the HP-pricing feature but `SnapshotBuilder` never copied it into the frozen snapshot, so the templates had nothing to render. Added; both blades `!empty()`-guard it.
+- **The `?` on discounts:** `&minus;` (U+2212) written into a `.mono` cell. dompdf's DejaVu Sans **Mono** has no glyph for it and falls back to a literal `?`. (`&mdash;`/`&middot;` render fine because those cells aren't mono.) Fixed with an ASCII `-`. **Gotcha: never put a non-ASCII char in a mono cell.**
+- Due Date + Status removed from the invoice; `dueDate`/`status` dropped from `invoiceData()` and the preview call. Two-column header (Bill To block beside doc meta) on both docs.
+- Receipt: `OFFICIAL RECEIPT` → `RECEIPT`; next-service consolidated into one row under Warranty (distinct dates comma-joined, each in a nowrap span so a date never breaks mid-date in the narrow column); warranty reads `6 months — 12 Jan 2027` (no "expires").
+- Page breaks: `page-break-inside: avoid` on item rows + `.total`, repeating `<thead>`, and **top padding on the `<thead>`** — a block's padding is drawn at its start/end only, never on a continuation page, so the thead (which re-renders per page) is the one thing that reliably spaces the table after a break.
+
+**Three bugs found while in there, none reported** (all money-related, all on the invoice):
+- **BUG-011 — stale invoice.** The invoice is minted lazily and **frozen on first view**. Editing a pending record rewrote its lines and the transaction amount but never touched the Invoice row, so any invoice already opened kept billing the old figures forever while the payment page charged the new ones. `DocumentService::refreshInvoiceFor()` re-freezes it on a pending edit, **keeping the invoice number** so a customer holding INV-xxx sees corrected figures under the same reference. No-op when unissued.
+- **BUG-012 — over-discount.** `discount` was validated `min:0` with no upper bound while the line's subtotal floors at zero, so an over-discount printed `Subtotal 370 / Discount -500 / DUE 0.00` — totals that don't add up. Now rejected **against the server-side rate** (the fee-book price), because `normalizeLine()` ignores the submitted rate for priced services — an `lte:rate` request rule would have let a tampered payload buy discount headroom. Equal-to-line-total still allowed (full write-off is legitimate).
+- **FEAT-022 — notes never reached any document.** `notes` (priced services) was captured, validated and stored but never entered the snapshot. `repair_desc` (flexible) was on the receipt but **not the invoice** — so a Repair job billed the customer with only the word "Repair" and a price, the explanation arriving after payment. Both now render as sub-lines on both docs. **Notes are now customer-visible.**
+
+**Also:** `navy-300`/`navy-600` were used in 11 places but never defined in `tailwind.config.js` — Tailwind emits nothing for an undefined shade, so that text fell back to dark ink and was invisible on the navy sticky total bar (Grand total label, service/unit counts, Cancel link) and on ServiceRecords/Show. Defined both shades.
+
+**Rejected (twice) — @page margins.** Tried framing every PDF page so page 2 isn't flush to the paper edge. It changes page 1's proportions and Khalid disliked it both times; reverted both attempts. **But the folklore in the old comment was wrong:** dompdf does NOT ignore `@page` — a `*` margin reset silently zeroes it, because dompdf carries the page margin on the root frame. Left `@page` out; noted inline. Page 2's card top stays square/flush — cosmetic, accepted.
+
+**Suite:** 378/378. **No migrations.** Commits on `dev`, **not pushed**.
+**Feedback:** `docs/FEEDBACK-13072026.md` — 10 items (Khalid's 7 + BUG-011, BUG-012, FEAT-022), all TESTING.
+**Open question for Khalid:** should a **paid** receipt follow a next-service-date correction (FEAT-020)? Today it won't — the receipt froze at payment, so the reminder fires on the new date but the customer's receipt still shows the old one.
+
+---
+
 ## Session 46 — 2026-07-02 — Set next service date on a paid record (FEAT-020)
 
 **Goal:** Khalid often forgets to pick the next-service month while creating a visit. If still `pending` he can fix it via Edit, but once paid, `ServiceVisitController::edit/update` are hard-gated to `pending` and the field stays permanently null. Add a narrow way to set/correct it after payment.
