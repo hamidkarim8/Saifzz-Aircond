@@ -101,17 +101,31 @@ class BusinessSettingController extends Controller
             'visit_date' => now()->toDateString(),
             'warranty_months' => 6,
             'warranty_end' => now()->addMonths(6)->toDateString(),
-            'lines' => [[
-                'service_type' => 'Aircond Service',
-                'unit_type' => '1.5 HP',
-                'units' => 2,
-                'rate' => 60,
-                'discount' => 0,
-                'subtotal' => 120,
-                'repair_desc' => null,
-                'next_service_date' => now()->addMonths(3)->toDateString(),
-            ]],
-            'total_amount' => 120,
+            'lines' => [
+                [
+                    'service_type' => 'Aircond Service',
+                    'unit_type' => 'Wall Mounted',
+                    'hp_value' => 1.0,
+                    'units' => 2,
+                    'rate' => 60,
+                    'discount' => 0,
+                    'subtotal' => 120,
+                    'repair_desc' => null,
+                    'next_service_date' => now()->addMonths(3)->toDateString(),
+                ],
+                [
+                    'service_type' => 'Installation',
+                    'unit_type' => 'Wall Mounted',
+                    'hp_value' => 2.5,
+                    'units' => 1,
+                    'rate' => 500,
+                    'discount' => 120,
+                    'subtotal' => 380,
+                    'repair_desc' => null,
+                    'next_service_date' => now()->addMonths(3)->toDateString(),
+                ],
+            ],
+            'total_amount' => 500,
         ];
     }
 
