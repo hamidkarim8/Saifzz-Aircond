@@ -228,7 +228,7 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
 
                 <!-- Notes (not for flexible — flexible uses description field instead) -->
                 <div v-if="!isFlexible" class="sm:col-span-2">
-                    <label class="mb-1.5 block text-sm font-semibold text-ink">Notes <span class="font-normal text-ink-muted">(optional — shown to the customer on the invoice and receipt)</span></label>
+                    <label class="mb-1.5 block text-sm font-semibold text-ink">Notes <span class="font-normal text-ink-muted">(optional)</span></label>
                     <input v-model="line.notes" type="text" class="w-full rounded-ra border-line bg-surface text-ink shadow-card focus:border-primary focus:ring-primary" />
                 </div>
             </div>

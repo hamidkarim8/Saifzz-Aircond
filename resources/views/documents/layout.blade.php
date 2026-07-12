@@ -6,6 +6,7 @@
     <title>{{ $number }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body { font-family: 'DejaVu Sans', sans-serif; color: #0A1628; font-size: 12px; background: #f0f4f8; }
         .doc { max-width: 500px; width: 100%; margin: 20px auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
         @media (max-width: 540px) {
@@ -32,7 +33,7 @@
         hr { border: none; border-top: 1px dashed #DDE6EE; margin: 13px 0; }
 
         /* ── Section label ── */
-        .sec-label { font-size: 9.5px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+        .sec-label { font-size: 9.5px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 0; }
 
         /* ── Two-column header: bill-to block | doc meta ── */
         table.split { width: 100%; border-collapse: collapse; }
@@ -45,7 +46,13 @@
 
         /* ── Line-item table ── */
         table.items { width: 100%; border-collapse: collapse; }
-        table.items thead th { font-size: 9px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .6px; text-align: left; padding: 0 0 6px; border-bottom: 1.5px solid #0E2040; }
+        /* dompdf ignores @page here, and a block's margin/padding is only drawn at its
+           start and end — never on a continuation page — so page 2 of a long record had
+           its header row flush against the paper edge. The <thead> DOES re-render on
+           every page, so its own top padding is the one thing that reliably puts space
+           above the table after a break. .sec-label's margin-bottom is zeroed to keep
+           page 1 looking the same. */
+        table.items thead th { font-size: 9px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .6px; text-align: left; padding: 22px 0 6px; border-bottom: 1.5px solid #0E2040; }
         table.items thead th.num { text-align: right; padding-left: 6px; }
         table.items tbody tr { page-break-inside: avoid; }
         table.items td { padding: 7px 0; border-bottom: 1px solid #EDF2F7; vertical-align: top; line-height: 1.35; }
