@@ -68,7 +68,7 @@
                     @if (!empty($s['warranty_months']))
                         <tr>
                             <td class="k">Warranty</td>
-                            <td class="v">{{ $s['warranty_months'] }} months &mdash; expires <span class="nb">{{ $date($s['warranty_end']) }}</span></td>
+                            <td class="v">{{ $s['warranty_months'] }} months &mdash; <span class="nb">{{ $date($s['warranty_end']) }}</span></td>
                         </tr>
                     @endif
                     @if ($nextServices->isNotEmpty())
