@@ -35,7 +35,12 @@ class DocumentContentTest extends TestCase
 
         $visit = $client->visits()->create([
             'visit_date' => '2026-07-12',
-            'warranty_months' => 3,
+            // 2 months (not 3): visit_date 2026-07-12 + 3 months would make
+            // warranty_end land on 2026-10-12, the same day as the lines'
+            // next_service_date below, which would make that date render
+            // twice (once for warranty expiry, once for next service) and
+            // break the "renders once" assertion in this file.
+            'warranty_months' => 2,
             'total_amount' => 570,
             'technician_id' => $technicianId,
         ]);
@@ -167,5 +172,62 @@ class DocumentContentTest extends TestCase
         // rendered per-line HP badge markup instead — it only renders when
         // hp_value is present in the line.
         $res->assertDontSee('<div class="svc-meta">', false);
+    }
+
+    public function test_receipt_heading_drops_the_word_official(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+        app(\App\Services\Payments\PaymentService::class)->confirmCash($txn);
+
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
+
+        $res->assertOk();
+        $res->assertSee('RECEIPT');
+        $res->assertDontSee('OFFICIAL RECEIPT');
+    }
+
+    public function test_receipt_shows_next_service_once_when_lines_share_a_date(): void
+    {
+        $viewer = $this->viewer();
+        // Both lines carry next_service_date 2026-10-12.
+        $txn = $this->hpTransaction($viewer->id);
+        app(\App\Services\Payments\PaymentService::class)->confirmCash($txn);
+
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
+
+        $res->assertOk();
+        $res->assertSee('Next Service');
+        $this->assertSame(1, substr_count($res->getContent(), '12 Oct 2026'));
+    }
+
+    public function test_receipt_joins_distinct_next_service_dates(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        // Push the second line's next service three months later than the first.
+        $visit = $txn->visit;
+        $visit->lines()->orderBy('id')->get()->last()
+            ->update(['next_service_date' => '2027-01-12']);
+
+        app(\App\Services\Payments\PaymentService::class)->confirmCash($txn->fresh());
+
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
+
+        $res->assertOk();
+        $res->assertSee('12 Oct 2026, 12 Jan 2027');
+    }
+
+    public function test_receipt_shows_hp_per_line(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+        app(\App\Services\Payments\PaymentService::class)->confirmCash($txn);
+
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
+
+        $res->assertSee('1.0 HP');
+        $res->assertSee('1.5 HP');
     }
 }

@@ -158,7 +158,8 @@ class BusinessSettingTest extends TestCase
         $this->actingAs($boss)
             ->get(route('business-settings.preview', ['type' => 'receipt']))
             ->assertOk()
-            ->assertSee('OFFICIAL RECEIPT')
+            ->assertSee('RECEIPT')
+            ->assertDontSee('OFFICIAL RECEIPT')
             ->assertSee('TOTAL PAID');
     }
 
