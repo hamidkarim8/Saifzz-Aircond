@@ -216,7 +216,12 @@ class DocumentContentTest extends TestCase
         $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
 
         $res->assertOk();
-        $res->assertSee('12 Oct 2026, 12 Jan 2027');
+        // Each date is wrapped in a nowrap span so it never breaks mid-date in
+        // the narrow meta column, so assert the dates and their separator rather
+        // than one contiguous string.
+        $res->assertSeeInOrder([
+            '<span class="nb">12 Oct 2026</span>, <span class="nb">12 Jan 2027</span>',
+        ], false);
     }
 
     public function test_receipt_shows_hp_per_line(): void

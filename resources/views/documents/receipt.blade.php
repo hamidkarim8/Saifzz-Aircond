@@ -25,6 +25,12 @@
             ->unique()
             ->sort()
             ->map(fn ($d) => \Illuminate\Support\Carbon::parse($d)->format('d M Y'))
+            ->values();
+
+        // Each date keeps its own nowrap span so the narrow meta column breaks
+        // between dates, never inside one ("12 Apr" / "2027").
+        $nextServicesHtml = $nextServices
+            ->map(fn ($d) => '<span class="nb">'.e($d).'</span>')
             ->implode(', ');
     @endphp
 
@@ -62,13 +68,13 @@
                     @if (!empty($s['warranty_months']))
                         <tr>
                             <td class="k">Warranty</td>
-                            <td class="v">{{ $s['warranty_months'] }} months &mdash; expires {{ $date($s['warranty_end']) }}</td>
+                            <td class="v">{{ $s['warranty_months'] }} months &mdash; expires <span class="nb">{{ $date($s['warranty_end']) }}</span></td>
                         </tr>
                     @endif
-                    @if ($nextServices !== '')
+                    @if ($nextServices->isNotEmpty())
                         <tr>
                             <td class="k">Next Service</td>
-                            <td class="v">{{ $nextServices }}</td>
+                            <td class="v">{!! $nextServicesHtml !!}</td>
                         </tr>
                     @endif
                 </table>

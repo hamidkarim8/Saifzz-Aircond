@@ -52,6 +52,9 @@
         table.items td.idx { width: 6%; color: #4A6278; }
         table.items td.desc { width: 42%; }
         table.items td.num { text-align: right; padding-left: 6px; font-family: 'DejaVu Sans Mono', monospace; font-size: 10.5px; white-space: nowrap; }
+        /* Keeps a date whole — the meta column is narrow enough to split "12 Apr 2027" across lines. */
+        .nb { white-space: nowrap; }
+
         .svc { font-weight: 700; color: #0E2040; }
         .svc-meta { color: #4A6278; font-size: 10px; margin-top: 2px; }
         .disc-amt { color: #16A34A; }
