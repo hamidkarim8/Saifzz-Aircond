@@ -12,9 +12,12 @@
         * { box-sizing: border-box; }
         div, p, span, table, thead, tbody, tr, th, td, img, hr, h1, h2, h3 { margin: 0; padding: 0; }
 
-        /* PDF only — browsers ignore @page. Gives EVERY page its margin, so page 2 of a
-           long record is framed like page 1 instead of starting at the paper edge. */
-        @page { margin: 10mm 8mm; }
+        /* PDF only — browsers ignore @page. Vertical only: the sides stay at 0 so the
+           card keeps its original width and side spacing (which comes from centering a
+           500px card on the sheet). The top/bottom margin is what gives page 2 the same
+           gap above the card that page 1 has — it is the only way to offset a
+           continuation page, since a block's own margin is drawn at its start only. */
+        @page { margin: 5mm 0; }
 
         /* The root background paints the whole sheet, including the @page margin — that
            is what puts the blue behind the card on every page. `body` alone would only
