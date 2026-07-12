@@ -88,4 +88,84 @@ class DocumentContentTest extends TestCase
         $this->assertArrayHasKey('hp_value', $snapshot['lines'][0]);
         $this->assertNull($snapshot['lines'][0]['hp_value']);
     }
+
+    public function test_invoice_shows_hp_per_line(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertOk();
+        $res->assertSee('1.0 HP');
+        $res->assertSee('1.5 HP');
+    }
+
+    public function test_invoice_discount_uses_ascii_hyphen_not_minus_sign(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        // U+2212 in a mono cell is what dompdf renders as "?" — it must not appear.
+        $this->assertStringNotContainsString("\u{2212}", $res->getContent());
+        $this->assertStringNotContainsString('&minus;', $res->getContent());
+        $res->assertSee('- RM 100.00');
+    }
+
+    public function test_invoice_omits_due_date_and_status(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertDontSee('Due Date');
+        $res->assertDontSee('Pending');
+    }
+
+    public function test_invoice_shows_subtotal_and_total_discount(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertSee('Subtotal');
+        $res->assertSee('RM 770.00');   // 370 + 400 gross
+        $res->assertSee('- RM 200.00'); // 100 + 100 discount
+    }
+
+    public function test_invoice_renders_legacy_snapshot_without_hp_key(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->hpTransaction($viewer->id);
+
+        // Mint an invoice by hand whose frozen snapshot predates hp_value —
+        // exactly what every already-issued document on production looks like.
+        $legacy = app(\App\Services\Documents\SnapshotBuilder::class)->forTransaction($txn);
+        foreach ($legacy['lines'] as $i => $line) {
+            unset($legacy['lines'][$i]['hp_value']);
+        }
+
+        \App\Models\Invoice::create([
+            'number' => 'INV-LEGACY-001',
+            'transaction_id' => $txn->id,
+            'amount' => $txn->amount,
+            'snapshot' => $legacy,
+        ]);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertOk();
+        $res->assertSee('INV-LEGACY-001');
+        // Not assertDontSee('HP'): the base64-encoded brand logo always present
+        // in the doc <head> coincidentally contains the substring "HP" dozens
+        // of times, and the shared layout's ".svc-meta { ... }" CSS rule is
+        // present on every document regardless of data. Assert on the actual
+        // rendered per-line HP badge markup instead — it only renders when
+        // hp_value is present in the line.
+        $res->assertDontSee('<div class="svc-meta">', false);
+    }
 }

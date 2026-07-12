@@ -34,17 +34,36 @@
         /* ── Section label ── */
         .sec-label { font-size: 9.5px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
 
-        /* ── Per-service box ── */
-        .line { background: #f7f9fc; border: 1px solid #DDE6EE; border-radius: 7px; padding: 10px 13px; margin-bottom: 9px; }
-        .line-title { font-weight: 700; color: #0E2040; margin-bottom: 5px; font-size: 12px; }
-        .line table.kv td.k { font-size: 11px; }
-        .line table.kv td.v { font-size: 11px; }
+        /* ── Two-column header: bill-to block | doc meta ── */
+        table.split { width: 100%; border-collapse: collapse; }
+        table.split td.bill { width: 56%; vertical-align: top; padding: 0 12px 0 0; }
+        table.split td.meta { width: 44%; vertical-align: top; padding: 0; }
+        .party-label { font-size: 9.5px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+        .party-name { font-weight: 700; color: #0A1628; font-size: 12.5px; }
+        .party-line { color: #4A6278; line-height: 1.5; margin-top: 2px; }
+        table.split td.meta table.kv td.k { width: 48%; }
 
-        /* ── Discount accent ── */
-        .discount { color: #16A34A; }
+        /* ── Line-item table ── */
+        table.items { width: 100%; border-collapse: collapse; }
+        table.items thead th { font-size: 9px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .6px; text-align: left; padding: 0 0 6px; border-bottom: 1.5px solid #0E2040; }
+        table.items thead th.num { text-align: right; padding-left: 6px; }
+        table.items tbody tr { page-break-inside: avoid; }
+        table.items td { padding: 7px 0; border-bottom: 1px solid #EDF2F7; vertical-align: top; line-height: 1.35; }
+        table.items td.idx { width: 6%; color: #4A6278; }
+        table.items td.desc { width: 42%; }
+        table.items td.num { text-align: right; padding-left: 6px; font-family: 'DejaVu Sans Mono', monospace; font-size: 10.5px; white-space: nowrap; }
+        .svc { font-weight: 700; color: #0E2040; }
+        .svc-meta { color: #4A6278; font-size: 10px; margin-top: 2px; }
+        .disc-amt { color: #16A34A; }
+
+        /* ── Totals summary ── */
+        table.sum { width: 100%; border-collapse: collapse; margin-top: 7px; }
+        table.sum td { padding: 3px 0; }
+        table.sum td.s-label { text-align: right; color: #4A6278; }
+        table.sum td.s-value { text-align: right; width: 34%; padding-left: 6px; font-family: 'DejaVu Sans Mono', monospace; font-size: 11.5px; font-weight: 600; }
 
         /* ── Total block ── */
-        .total { border-radius: 8px; padding: 13px 14px; margin-top: 6px; }
+        .total { border-radius: 8px; padding: 13px 14px; margin-top: 6px; page-break-inside: avoid; }
         .total table { width: 100%; border-collapse: collapse; }
         .total td.t-label { color: #fff; font-weight: 700; font-size: 10.5px; letter-spacing: .5px; vertical-align: middle; }
         .total td.t-amount { color: #fff; font-weight: 800; font-size: 21px; text-align: right; vertical-align: middle; font-family: 'DejaVu Sans Mono', monospace; }

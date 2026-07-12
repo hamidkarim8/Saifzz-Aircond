@@ -70,8 +70,6 @@ class BusinessSettingController extends Controller
                 'snapshot' => $snapshot,
                 'number' => 'INV-'.now()->format('Ymd').'-001',
                 'issuedAt' => now(),
-                'dueDate' => now()->addDays((int) config('business.invoice_due_days')),
-                'status' => 'pending',
                 'logo' => $logo,
             ]));
         }
