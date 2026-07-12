@@ -23,6 +23,8 @@ export default {
                     900: '#0A1628', // c1 — sidebar, portal bg
                     800: '#0E2040', // c2 — headings, total bars
                     700: '#1A3A5C', // c3 — accents
+                    600: '#2C5A87', // dividers ON a navy surface
+                    300: '#9DBAD6', // muted text ON a navy surface (labels, counts, links)
                 },
                 primary: {
                     DEFAULT: '#1E6FAE', // c4

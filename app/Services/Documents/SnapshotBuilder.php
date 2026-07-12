@@ -39,11 +39,13 @@ final class SnapshotBuilder
             'lines' => $visit->lines->map(fn ($l) => [
                 'service_type' => $l->service_type,
                 'unit_type' => $l->unit_type,
+                'hp_value' => $l->hp_value,
                 'units' => $l->units,
                 'rate' => $l->rate,
                 'discount' => $l->discount,
                 'subtotal' => $l->subtotal,
                 'repair_desc' => $l->repair_desc,
+                'notes' => $l->notes,
                 'next_service_date' => optional($l->next_service_date)->toDateString(),
             ])->all(),
             'total_amount' => $visit->total_amount,

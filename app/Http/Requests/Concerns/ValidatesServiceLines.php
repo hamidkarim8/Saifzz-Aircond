@@ -80,7 +80,12 @@ trait ValidatesServiceLines
                 }
                 if (! isset($line['rate']) || $line['rate'] === '' || $line['rate'] === null) {
                     $v->errors()->add("$key.rate", 'Enter a price.');
+
+                    continue;
                 }
+                // Flexible pricing: the price the technician entered IS the rate.
+                $this->validateLineDiscount($v, $key, $line, (float) $line['rate'], $i + 1);
+
                 continue;
             }
 
@@ -102,11 +107,48 @@ trait ValidatesServiceLines
                 $feeQuery->whereNull('hp_value');
             }
 
-            if (! $feeQuery->exists()) {
+            $fee = $feeQuery->first();
+
+            if (! $fee) {
                 $label = $line['unit_type'] . ($serviceType->pricing_mode === 'hp_tiered' ? " · {$line['hp_value']} HP" : '');
                 $field = $serviceType->pricing_mode === 'hp_tiered' ? 'hp_value' : 'unit_type';
                 $v->errors()->add("$key.$field", "No fee configured for {$type} · {$label}.");
+
+                continue;
             }
+
+            // The submitted rate is ignored for priced services — ServiceVisitController
+            // ::normalizeLine() takes the rate from the fee book. Check the discount
+            // against that same server-side price, or a tampered rate would buy
+            // headroom for an arbitrarily large discount.
+            $this->validateLineDiscount($v, $key, $line, (float) $fee->price, $i + 1);
+        }
+    }
+
+    /**
+     * R8 floors a line's subtotal at max(0, rate * units - discount), so a discount
+     * larger than the line total silently vanishes into a zero subtotal while the
+     * invoice still prints the full discount — totals that don't reconcile. Reject it.
+     *
+     * $rate must be the rate the controller will actually store, not the submitted one.
+     */
+    private function validateLineDiscount($v, string $key, array $line, float $rate, int $position): void
+    {
+        $discount = (float) ($line['discount'] ?? 0);
+
+        if ($discount <= 0) {
+            return;
+        }
+
+        // normalizeLine() forces units to 1 when the line is bound to a client unit.
+        $units = ! empty($line['unit_id']) ? 1 : (int) ($line['units'] ?? 0);
+        $gross = $rate * $units;
+
+        if ($discount > $gross) {
+            $v->errors()->add(
+                "$key.discount",
+                "Discount for line {$position} cannot be more than the line total of RM " . number_format($gross, 2) . '.'
+            );
         }
     }
 }

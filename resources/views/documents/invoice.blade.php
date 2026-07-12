@@ -8,49 +8,38 @@
         $money = fn ($v) => 'RM ' . number_format((float) $v, 2);
         // "Manual QR" is the internal label for an in-person DuitNow QR payment.
         $methodLabel = ($s['method'] ?? '') === 'Manual QR' ? 'Duitnow QR Code' : ($s['method'] ?? '');
+
+        $lines = $s['lines'];
+        $hasDiscount = collect($lines)->contains(fn ($l) => (float) ($l['discount'] ?? 0) > 0);
+        $gross = collect($lines)->sum(fn ($l) => (float) $l['rate'] * (int) $l['units']);
+        $totalDiscount = collect($lines)->sum(fn ($l) => (float) ($l['discount'] ?? 0));
     @endphp
 
-    {{-- Invoice + date details --}}
-    <table class="kv">
+    {{-- Bill-to block beside doc meta --}}
+    <table class="split">
         <tr>
-            <td class="k">Invoice No.</td>
-            <td class="v mono">{{ $number }}</td>
-        </tr>
-        <tr>
-            <td class="k">Invoice Date</td>
-            <td class="v">{{ $issuedAt->format('d M Y') }}</td>
-        </tr>
-        <tr>
-            <td class="k">Due Date</td>
-            <td class="v">{{ $dueDate->format('d M Y') }}</td>
-        </tr>
-        <tr>
-            <td class="k">Status</td>
-            <td class="v">
-                <span class="pill">{{ ucfirst($status) }}</span>
+            <td class="bill">
+                <div class="party-label">Bill To</div>
+                <div class="party-name">{{ $s['client']['name'] }}</div>
+                <div class="party-line">{{ $s['client']['phone'] }}</div>
+                <div class="party-line">{{ $s['client']['address'] }}</div>
             </td>
-        </tr>
-    </table>
-
-    <hr>
-
-    {{-- Client details --}}
-    <table class="kv">
-        <tr>
-            <td class="k">Bill To</td>
-            <td class="v">{{ $s['client']['name'] }}</td>
-        </tr>
-        <tr>
-            <td class="k">Phone</td>
-            <td class="v">{{ $s['client']['phone'] }}</td>
-        </tr>
-        <tr>
-            <td class="k">Address</td>
-            <td class="v">{{ $s['client']['address'] }}</td>
-        </tr>
-        <tr>
-            <td class="k">Serial No.</td>
-            <td class="v mono">{{ $s['client']['serial_no'] }}</td>
+            <td class="meta">
+                <table class="kv">
+                    <tr>
+                        <td class="k">Invoice No.</td>
+                        <td class="v mono">{{ $number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Invoice Date</td>
+                        <td class="v">{{ $issuedAt->format('d M Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Serial No.</td>
+                        <td class="v mono">{{ $s['client']['serial_no'] }}</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
     </table>
 
@@ -58,38 +47,61 @@
 
     {{-- Services --}}
     <div class="sec-label">Services</div>
-    @foreach ($s['lines'] as $i => $l)
-        <div class="line">
-            <div class="line-title">{{ $i + 1 }}. {{ $l['service_type'] }}@if ($l['unit_type']) &mdash; {{ $l['unit_type'] }}@endif</div>
-            <table class="kv">
-                <tr>
-                    <td class="k">Units</td>
-                    <td class="v">{{ $l['units'] }}</td>
-                </tr>
-                <tr>
-                    <td class="k">Rate</td>
-                    <td class="v mono">{{ $money($l['rate']) }} / unit</td>
-                </tr>
-                <tr>
-                    <td class="k">Subtotal</td>
-                    <td class="v mono">{{ $money((float) $l['rate'] * (int) $l['units']) }}</td>
-                </tr>
-                @if ((float) $l['discount'] > 0)
-                    <tr>
-                        <td class="k">Discount</td>
-                        <td class="v discount mono">&minus; {{ $money($l['discount']) }}</td>
-                    </tr>
+    <table class="items">
+        <thead>
+            <tr>
+                <th class="idx">#</th>
+                <th>Service</th>
+                <th class="num">Qty</th>
+                <th class="num">Rate</th>
+                @if ($hasDiscount)
+                    <th class="num">Disc</th>
                 @endif
+                <th class="num">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($lines as $i => $l)
                 <tr>
-                    <td class="k"><strong>Service Total</strong></td>
-                    <td class="v mono">{{ $money($l['subtotal']) }}</td>
+                    <td class="idx">{{ $i + 1 }}</td>
+                    <td class="desc">
+                        <div class="svc">{{ $l['service_type'] }}@if ($l['unit_type']) &middot; {{ $l['unit_type'] }}@endif</div>
+                        @if (!empty($l['hp_value']))
+                            <div class="svc-meta">{{ number_format((float) $l['hp_value'], 1) }} HP</div>
+                        @endif
+                        {{-- Free text about the line. Mutually exclusive: repair_desc on
+                             flexible services, notes on priced ones. --}}
+                        @if (!empty($l['repair_desc']))
+                            <div class="svc-meta">{{ $l['repair_desc'] }}</div>
+                        @endif
+                        @if (!empty($l['notes']))
+                            <div class="svc-meta">{{ $l['notes'] }}</div>
+                        @endif
+                    </td>
+                    <td class="num">{{ $l['units'] }}</td>
+                    <td class="num">{{ $money($l['rate']) }}</td>
+                    @if ($hasDiscount)
+                        <td class="num disc-amt">@if ((float) ($l['discount'] ?? 0) > 0)- {{ $money($l['discount']) }}@endif</td>
+                    @endif
+                    <td class="num">{{ $money($l['subtotal']) }}</td>
                 </tr>
-            </table>
-        </div>
-    @endforeach
+            @endforeach
+        </tbody>
+    </table>
 
-    {{-- Dashed rule before total --}}
-    <hr style="border-top: 1px dashed #DDE6EE; margin: 14px 0 10px;">
+    {{-- Subtotal / discount summary, only when something was discounted --}}
+    @if ($hasDiscount)
+        <table class="sum">
+            <tr>
+                <td class="s-label">Subtotal</td>
+                <td class="s-value">{{ $money($gross) }}</td>
+            </tr>
+            <tr>
+                <td class="s-label">Discount</td>
+                <td class="s-value disc-amt">- {{ $money($totalDiscount) }}</td>
+            </tr>
+        </table>
+    @endif
 
     {{-- Amount due block (indigo) --}}
     <div class="total" style="background: #6366F1;">

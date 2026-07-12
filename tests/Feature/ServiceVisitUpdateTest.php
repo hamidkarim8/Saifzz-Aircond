@@ -229,4 +229,47 @@ class ServiceVisitUpdateTest extends TestCase
             ]))
             ->assertSessionHasErrors('lines.0.unit_type');
     }
+
+    public function test_update_refreshes_an_already_issued_invoice_keeping_its_number(): void
+    {
+        $owner = $this->recorder();
+        $visit = $this->makePendingVisit($owner);
+
+        // The invoice is minted and frozen the first time anyone opens it.
+        $invoice = app(\App\Services\Documents\DocumentService::class)->invoiceFor($visit->transaction);
+        $number = $invoice->number;
+        $this->assertSame('60.00', $invoice->amount);
+        $this->assertSame('60.00', $invoice->snapshot['lines'][0]['rate']);
+
+        // Correct the record while it is still pending: 1 unit -> 3.
+        $this->actingAs($owner)
+            ->patch(route('service-records.update', $visit), $this->payload([
+                ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 3, 'discount' => 0],
+            ]))
+            ->assertRedirect();
+
+        $invoice->refresh();
+
+        // Same invoice, corrected figures — the customer's reference still resolves.
+        $this->assertSame($number, $invoice->number);
+        $this->assertSame('180.00', $invoice->amount);
+        $this->assertSame(3, $invoice->snapshot['lines'][0]['units']);
+        $this->assertSame('180.00', $invoice->snapshot['total_amount']);
+        $this->assertSame(1, \App\Models\Invoice::count());
+    }
+
+    public function test_update_does_not_mint_an_invoice_that_was_never_issued(): void
+    {
+        $owner = $this->recorder();
+        $visit = $this->makePendingVisit($owner);
+
+        $this->actingAs($owner)
+            ->patch(route('service-records.update', $visit), $this->payload([
+                ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 2, 'discount' => 0],
+            ]))
+            ->assertRedirect();
+
+        // Editing must not conjure an invoice — it stays lazy until first viewed.
+        $this->assertSame(0, \App\Models\Invoice::count());
+    }
 }
