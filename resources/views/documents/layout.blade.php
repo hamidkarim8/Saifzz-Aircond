@@ -5,27 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $number }}</title>
     <style>
-        /* Reset the elements we use — NOT `*`, and never html/body's margin. dompdf
-           carries the @page margin on the root frame, so a `*` reset silently zeroes
-           the page margin below and every continuation page ends up flush against the
-           paper edge. */
-        * { box-sizing: border-box; }
-        div, p, span, table, thead, tbody, tr, th, td, img, hr, h1, h2, h3 { margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* PDF only (browsers ignore @page). VERTICAL ONLY — the sides stay 0 so the card
-           keeps its full width and its side spacing still comes from being centred on
-           the sheet. A horizontal margin here shrinks the card and frames it: rejected.
-
-           This is the only way to put a gap above the card on page 2, because a block's
-           own margin is drawn at its start and never on a continuation page. The card's
-           former `margin: 20px auto` moves here so page 1 is unchanged. */
-        @page { margin: 5mm 0; }
-
-        /* Blue on the ROOT, so it paints the whole sheet including the page margin.
-           `body` alone would only cover its own content box and leave the gap white. */
-        html { background: #f0f4f8; }
         body { font-family: 'DejaVu Sans', sans-serif; color: #0A1628; font-size: 12px; background: #f0f4f8; }
-        .doc { max-width: 500px; width: 100%; margin: 0 auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
+        .doc { max-width: 500px; width: 100%; margin: 20px auto; background: #fff; border: 1px solid #DDE6EE; border-radius: 10px; padding: 24px; }
         @media (max-width: 540px) {
             body { background: #fff; }
             .doc { margin: 0; border: none; border-radius: 0; padding: 20px 16px; }
@@ -63,10 +46,16 @@
 
         /* ── Line-item table ── */
         table.items { width: 100%; border-collapse: collapse; }
-        /* The card's own padding is drawn at its start and end only, so after a page
-           break the header row would sit on the card's top edge. The <thead> re-renders
-           on every page, so its top padding is what keeps the table clear of that edge.
-           .sec-label's margin-bottom is zeroed so page 1 doesn't gain double spacing. */
+        /* A block's margin/padding is drawn only at its start and end, never on a
+           continuation page, so page 2 of a long record had its header row flush against
+           the card's top edge. The <thead> DOES re-render on every page, so its top
+           padding is what puts space above the table after a break. .sec-label's
+           margin-bottom is zeroed to keep page 1 looking the same.
+
+           (An @page margin would also frame page 2, but it changes page 1's proportions
+           — tried and rejected. If you ever do want it: @page only takes effect if the
+           CSS reset leaves html/body's margin alone, since dompdf carries the page
+           margin on the root frame and a `*` reset silently zeroes it.) */
         table.items thead th { font-size: 9px; font-weight: 700; color: #4A6278; text-transform: uppercase; letter-spacing: .6px; text-align: left; padding: 22px 0 6px; border-bottom: 1.5px solid #0E2040; }
         table.items thead th.num { text-align: right; padding-left: 6px; }
         table.items tbody tr { page-break-inside: avoid; }
