@@ -47,7 +47,7 @@ plus no `page-break-inside` rule anywhere in `layout.blade.php`.
 | Services layout | Line-item table | Standard invoice convention. One row per service instead of a five-row card, so ~20 services fit a page and the overflow largely disappears on its own. |
 | Next-service with differing dates | Distinct dates, comma-joined | Lines *can* carry different dates (the paid-record next-service-date feature sets them per line). Showing only the earliest would silently hide a later one. All-same — the normal case Khalid describes — collapses to a single date. |
 | Already-issued documents | Leave them HP-less | The snapshot is a frozen record of what was issued; rewriting it on live production data to inject HP would be both a lie about history and a risk. New documents carry HP; the blade null-guards the field so old ones simply omit it. |
-| Invoice header | Two columns (doc meta \| client) | Dropping Due Date and Status frees vertical space; spending it on a side-by-side header is what actually resolves "crowded" at the top of the page. |
+| Document header | Two columns (client block \| doc meta) | Dropping Due Date and Status frees vertical space; spending it on a side-by-side header is what actually resolves "crowded" at the top of the page. Applied to **both** documents so the two read as siblings. The client block is a left-aligned paragraph (name, phone, address) rather than a right-aligned key/value table, because a long address wraps gracefully that way and badly the other. |
 
 ## Changes
 
@@ -91,11 +91,14 @@ Replaces the per-service cards. Columns:
 - Due Date and Status rows removed. `dueDate` and `status` then have no reader, so
   they are dropped from `DocumentController::invoiceData()` and from the preview
   call in `BusinessSettingController`.
-- Doc meta (Invoice No., Invoice Date) and the client block sit side by side.
+- Header columns: "Bill To" block (name, phone, address) beside Invoice No. /
+  Invoice Date / Serial No.
 
 ### Receipt only
 
 - `OFFICIAL RECEIPT` → `RECEIPT`.
+- Header columns: "Received From" block beside Receipt No. / Date / Payment /
+  Transaction ID / Serial No. / Warranty / Next Service.
 - Next Service leaves the per-line table and becomes a single row directly under
   Warranty, listing the distinct `next_service_date` values across all lines,
   comma-joined, formatted `d M Y`. The row is omitted when no line has a date.
