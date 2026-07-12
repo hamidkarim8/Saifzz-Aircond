@@ -213,6 +213,7 @@ const unitLabel = (u) => `${u.label} (${u.unit_type}${u.hp ? ' · ' + Number(u.h
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-ink">Discount (RM)</label>
                     <input v-model.number="line.discount" type="number" step="0.01" min="0" inputmode="decimal" class="w-full rounded-ra border-line bg-surface font-mono text-ink shadow-card focus:border-primary focus:ring-primary" placeholder="0.00" />
+                    <InputError :message="err('discount')" />
                 </div>
 
                 <!-- Next service months -->

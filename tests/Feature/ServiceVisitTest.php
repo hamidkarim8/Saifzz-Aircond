@@ -435,4 +435,82 @@ class ServiceVisitTest extends TestCase
 
         $this->assertEquals($client->id, $appt->fresh()->client_id);
     }
+
+    public function test_discount_cannot_exceed_the_line_total(): void
+    {
+        $this->seedFees();
+        // Cleaning · Wall Mounted is RM 60 in the fee book; 1 unit = RM 60 gross.
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'discount' => 500],
+        ]);
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $data)
+            ->assertSessionHasErrors('lines.0.discount');
+
+        $this->assertSame(0, ServiceVisit::count());
+    }
+
+    public function test_discount_is_checked_against_the_server_rate_not_the_submitted_one(): void
+    {
+        $this->seedFees();
+        // The submitted rate is ignored — the server prices this line from the fee
+        // book at RM 60. A tampered rate must not buy headroom for a bigger discount.
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'rate' => 5000, 'discount' => 100],
+        ]);
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $data)
+            ->assertSessionHasErrors('lines.0.discount');
+
+        $this->assertSame(0, ServiceVisit::count());
+    }
+
+    public function test_discount_equal_to_the_line_total_is_allowed(): void
+    {
+        $this->seedFees();
+        // A full write-off is legitimate: 60 * 1 - 60 = 0.
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 1, 'discount' => 60],
+        ]);
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $data)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('0.00', ServiceVisit::latest('id')->first()->lines->first()->subtotal);
+    }
+
+    public function test_discount_on_a_flexible_line_is_checked_against_the_entered_price(): void
+    {
+        $this->seedFees();
+        // Repair is flexible — the technician's own price IS the rate.
+        $data = $this->payload([
+            ['service_type' => 'Repair', 'units' => 1, 'rate' => 200, 'discount' => 300, 'repair_desc' => 'Rewired the PCB'],
+        ]);
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $data)
+            ->assertSessionHasErrors('lines.0.discount');
+
+        $this->assertSame(0, ServiceVisit::count());
+    }
+
+    public function test_discount_scales_with_the_unit_count(): void
+    {
+        $this->seedFees();
+        // 60 * 3 = 180 gross, so a 150 discount is fine where it would fail on 1 unit.
+        $data = $this->payload([
+            ['service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted', 'units' => 3, 'discount' => 150],
+        ]);
+
+        $this->actingAs($this->recorder())
+            ->post(route('service-records.store'), $data)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('30.00', ServiceVisit::latest('id')->first()->lines->first()->subtotal);
+    }
 }
