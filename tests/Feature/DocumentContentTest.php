@@ -235,4 +235,99 @@ class DocumentContentTest extends TestCase
         $res->assertSee('1.0 HP');
         $res->assertSee('1.5 HP');
     }
+
+    /**
+     * A visit carrying both per-line free-text fields: `notes` on a priced line
+     * and `repair_desc` on a flexible one. They are mutually exclusive per line —
+     * normalizeLine() nulls notes on flexible lines and repair_desc on priced ones.
+     */
+    private function notesTransaction(?int $technicianId = null): Transaction
+    {
+        $client = Client::create(['name' => 'Farid', 'phone' => '013-7654321', 'address' => 'No. 9, Jalan Damai, KL']);
+
+        $visit = $client->visits()->create([
+            'visit_date' => '2026-07-12',
+            'warranty_months' => 2,
+            'total_amount' => 510,
+            'technician_id' => $technicianId,
+        ]);
+
+        $visit->lines()->create([
+            'service_type' => 'Cleaning', 'unit_type' => 'Wall Mounted',
+            'units' => 1, 'rate' => 60, 'discount' => 0,
+            'notes' => 'Indoor coil heavily fouled',
+        ]);
+        $visit->lines()->create([
+            'service_type' => 'Repair',
+            'units' => 1, 'rate' => 450, 'discount' => 0,
+            'repair_desc' => 'Replaced the run capacitor',
+        ]);
+
+        return $visit->transaction()->create([
+            'txn_id' => 'TXN-20260712-009', 'amount' => 510,
+            'method' => 'DuitNow QR', 'status' => 'pending',
+        ]);
+    }
+
+    public function test_snapshot_captures_line_notes(): void
+    {
+        $txn = $this->notesTransaction();
+
+        $snapshot = app(SnapshotBuilder::class)->forTransaction($txn);
+
+        $this->assertSame('Indoor coil heavily fouled', $snapshot['lines'][0]['notes']);
+        $this->assertNull($snapshot['lines'][1]['notes']);
+    }
+
+    public function test_invoice_shows_notes_and_repair_description(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->notesTransaction($viewer->id);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertOk();
+        $res->assertSee('Indoor coil heavily fouled');
+        // Previously absent from the invoice: a Repair line billed with no
+        // description of the work the customer is being asked to pay for.
+        $res->assertSee('Replaced the run capacitor');
+    }
+
+    public function test_receipt_shows_notes_and_repair_description(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->notesTransaction($viewer->id);
+        app(\App\Services\Payments\PaymentService::class)->confirmCash($txn);
+
+        $res = $this->actingAs($viewer)->get(route('documents.receipt', $txn->fresh()));
+
+        $res->assertOk();
+        $res->assertSee('Indoor coil heavily fouled');
+        $res->assertSee('Replaced the run capacitor');
+    }
+
+    public function test_documents_render_a_legacy_snapshot_with_no_notes_key(): void
+    {
+        $viewer = $this->viewer();
+        $txn = $this->notesTransaction($viewer->id);
+
+        // Every document issued before this change has a snapshot with no `notes` key.
+        $legacy = app(SnapshotBuilder::class)->forTransaction($txn);
+        foreach ($legacy['lines'] as $i => $line) {
+            unset($legacy['lines'][$i]['notes']);
+        }
+
+        \App\Models\Invoice::create([
+            'number' => 'INV-LEGACY-002',
+            'transaction_id' => $txn->id,
+            'amount' => $txn->amount,
+            'snapshot' => $legacy,
+        ]);
+
+        $res = $this->actingAs($viewer)->get(route('documents.invoice', $txn));
+
+        $res->assertOk();
+        $res->assertSee('INV-LEGACY-002');
+        $res->assertDontSee('Indoor coil heavily fouled');
+    }
 }

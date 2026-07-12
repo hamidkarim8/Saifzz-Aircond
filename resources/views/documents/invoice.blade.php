@@ -69,6 +69,14 @@
                         @if (!empty($l['hp_value']))
                             <div class="svc-meta">{{ number_format((float) $l['hp_value'], 1) }} HP</div>
                         @endif
+                        {{-- Free text about the line. Mutually exclusive: repair_desc on
+                             flexible services, notes on priced ones. --}}
+                        @if (!empty($l['repair_desc']))
+                            <div class="svc-meta">{{ $l['repair_desc'] }}</div>
+                        @endif
+                        @if (!empty($l['notes']))
+                            <div class="svc-meta">{{ $l['notes'] }}</div>
+                        @endif
                     </td>
                     <td class="num">{{ $l['units'] }}</td>
                     <td class="num">{{ $money($l['rate']) }}</td>

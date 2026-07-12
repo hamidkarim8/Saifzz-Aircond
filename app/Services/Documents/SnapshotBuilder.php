@@ -45,6 +45,7 @@ final class SnapshotBuilder
                 'discount' => $l->discount,
                 'subtotal' => $l->subtotal,
                 'repair_desc' => $l->repair_desc,
+                'notes' => $l->notes,
                 'next_service_date' => optional($l->next_service_date)->toDateString(),
             ])->all(),
             'total_amount' => $visit->total_amount,

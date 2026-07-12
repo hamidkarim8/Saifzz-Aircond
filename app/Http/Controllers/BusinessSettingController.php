@@ -109,6 +109,7 @@ class BusinessSettingController extends Controller
                     'discount' => 0,
                     'subtotal' => 120,
                     'repair_desc' => null,
+                    'notes' => 'Indoor coil heavily fouled',
                     'next_service_date' => now()->addMonths(3)->toDateString(),
                 ],
                 [
@@ -120,6 +121,7 @@ class BusinessSettingController extends Controller
                     'discount' => 120,
                     'subtotal' => 380,
                     'repair_desc' => null,
+                    'notes' => null,
                     'next_service_date' => now()->addMonths(3)->toDateString(),
                 ],
             ],
