@@ -6,6 +6,18 @@
 
 ---
 
+## Session 48 — 2026-07-15 — Dashboard: total count on Services-by-Type chart
+
+**Goal:** Khalid — on the dashboard's "Services by Type" chart, show an overall total count somewhere, updating with the period filter.
+
+**Done (CHG-032, `docs/FEEDBACK-15072026.md`):**
+- `resources/js/Pages/Dashboard.vue`: new `totalServices` computed = `reduce` sum of `report.servicesByType[].count`. Rendered as a `N total` pill (primary-50 bg) beside the "Services by Type" heading.
+- The chart data (`servicesByType`) was already period-scoped server-side (`ReportService::servicesByType`, driven by the same period buttons), so the total recomputes automatically when the filter changes — no backend change needed.
+
+**Frontend-only.** No migrations, no tests touched. `npm run build` on deploy. Suite unchanged 378/378. Commit on `dev`, **not pushed** (user pushes).
+
+---
+
 ## Session 47 — 2026-07-13 — Invoice / receipt v2 redesign + 3 money bugs found
 
 **Goal:** Khalid raised 7 items on the invoice/receipt PDFs: drop "Official" from the receipt, show HP per service line, remove Due Date + Status from the invoice, fix PDF page-break overflow, fix a stray `?` on every discount, show next-service once under Warranty, and make the whole thing less crowded.

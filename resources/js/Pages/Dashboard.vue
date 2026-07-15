@@ -67,6 +67,7 @@ const fmtTime = (dt) => (dt ?? '').slice(11, 16);
 
 // ── Services-by-type bars ──
 const maxCount = computed(() => Math.max(1, ...(props.report?.servicesByType ?? []).map((s) => s.count)));
+const totalServices = computed(() => (props.report?.servicesByType ?? []).reduce((sum, s) => sum + s.count, 0));
 
 // Map service type to a Tailwind bg color (CSS bar fill)
 const typeBarColor = {
@@ -234,7 +235,12 @@ const txnRows = computed(() =>
         <!-- Services by Type — horizontal CSS bars -->
         <div class="rounded-ral border border-line bg-surface p-5 shadow-card lg:col-span-2">
             <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-sm font-bold text-navy-800">Services by Type</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-bold text-navy-800">Services by Type</h2>
+                    <span class="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                        {{ totalServices }} total
+                    </span>
+                </div>
                 <div class="flex flex-wrap gap-1">
                     <button
                         v-for="p in PERIODS"
