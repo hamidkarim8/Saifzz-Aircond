@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ServiceLine;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Reports\ReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -27,13 +28,13 @@ class ReportServiceTest extends TestCase
         return app(ReportService::class);
     }
 
-    private function visitFor(Client $client, string $type = 'Cleaning', string $visitDate = '2026-06-10', ?string $nextDate = null): ServiceVisit
+    private function visitFor(Client $client, string $type = 'Cleaning', string $visitDate = '2026-06-10', ?string $nextDate = null, int $units = 1): ServiceVisit
     {
         $visit = ServiceVisit::create(['client_id' => $client->id, 'visit_date' => $visitDate, 'warranty_months' => 0]);
         ServiceLine::create([
             'visit_id' => $visit->id,
             'service_type' => $type,
-            'units' => 1,
+            'units' => $units,
             'rate' => 100,
             'discount' => 0,
             'next_service_date' => $nextDate,
@@ -131,6 +132,38 @@ class ReportServiceTest extends TestCase
         $this->assertSame([['type' => 'Cleaning', 'count' => 1]], $result);
     }
 
+    public function test_services_by_type_counts_units_not_line_rows(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+
+        // One visit, one line, three aircond cleaned — three services, not one.
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-10', null, 3), 300, 'paid', '2026-06-10 09:00:00', 'TXN-1');
+        // A second visit entered the other way round: one unit per line.
+        $this->txn($this->visitFor($c, 'Repair', '2026-06-11', null, 1), 100, 'paid', '2026-06-11 09:00:00', 'TXN-2');
+        // Unpaid multi-unit work still contributes nothing.
+        $this->txn($this->visitFor($c, 'Repair', '2026-06-12', null, 5), 500, 'pending', null, 'TXN-3');
+
+        $this->assertSame(
+            [['type' => 'Cleaning', 'count' => 3], ['type' => 'Repair', 'count' => 1]],
+            $this->service()->servicesByType('all'),
+        );
+    }
+
+    public function test_services_by_type_orders_by_units_not_line_rows(): void
+    {
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+
+        // Repair wins on rows (2 lines vs 1) but loses on units (2 vs 6).
+        $this->txn($this->visitFor($c, 'Cleaning', '2026-06-10', null, 6), 600, 'paid', '2026-06-10 09:00:00', 'TXN-1');
+        $this->txn($this->visitFor($c, 'Repair', '2026-06-11', null, 1), 100, 'paid', '2026-06-11 09:00:00', 'TXN-2');
+        $this->txn($this->visitFor($c, 'Repair', '2026-06-12', null, 1), 100, 'paid', '2026-06-12 09:00:00', 'TXN-3');
+
+        $this->assertSame(
+            [['type' => 'Cleaning', 'count' => 6], ['type' => 'Repair', 'count' => 2]],
+            $this->service()->servicesByType('all'),
+        );
+    }
+
     public function test_transactions_respect_period_and_are_newest_first(): void
     {
         $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
@@ -162,35 +195,35 @@ class ReportServiceTest extends TestCase
     {
         $client = Client::create(['name' => 'C'.$techId.'-'.uniqid(), 'phone' => '011-0000000', 'address' => 'KL']);
         $visit = $client->visits()->create([
-            'visit_date'       => now()->toDateString(),
-            'warranty_months'  => 0,
-            'total_amount'     => $amount,
-            'created_by'       => $techId,
-            'technician_id'    => $techId,
+            'visit_date' => now()->toDateString(),
+            'warranty_months' => 0,
+            'total_amount' => $amount,
+            'created_by' => $techId,
+            'technician_id' => $techId,
         ]);
         $visit->lines()->create([
             'service_type' => 'Cleaning',
-            'units'        => 1,
-            'rate'         => $amount,
-            'discount'     => 0,
+            'units' => 1,
+            'rate' => $amount,
+            'discount' => 0,
         ]);
         $visit->transaction()->create([
-            'txn_id'   => 'TXN-'.now()->format('Ymd').'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
-            'amount'   => $amount,
-            'method'   => 'Cash',
-            'status'   => 'paid',
-            'paid_at'  => now(),
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'amount' => $amount,
+            'method' => 'Cash',
+            'status' => 'paid',
+            'paid_at' => now(),
         ]);
     }
 
     public function test_transactions_scoped_to_technician(): void
     {
-        $alice = \App\Models\User::factory()->technician()->create();
-        $bob   = \App\Models\User::factory()->technician()->create();
+        $alice = User::factory()->technician()->create();
+        $bob = User::factory()->technician()->create();
         $this->paidVisitFor($alice->id, 100);
         $this->paidVisitFor($bob->id, 200);
 
-        $service = app(\App\Services\Reports\ReportService::class);
+        $service = app(ReportService::class);
         $rows = $service->transactions('all', null, $alice->id);
 
         $this->assertCount(1, $rows);
@@ -199,12 +232,12 @@ class ReportServiceTest extends TestCase
 
     public function test_kpis_revenue_scoped_to_technician(): void
     {
-        $alice = \App\Models\User::factory()->technician()->create();
-        $bob   = \App\Models\User::factory()->technician()->create();
+        $alice = User::factory()->technician()->create();
+        $bob = User::factory()->technician()->create();
         $this->paidVisitFor($alice->id, 100);
         $this->paidVisitFor($bob->id, 200);
 
-        $service = app(\App\Services\Reports\ReportService::class);
+        $service = app(ReportService::class);
         $this->assertSame(100.0, $service->kpis($alice->id)['revenue_all_time']);
         $this->assertSame(300.0, $service->kpis(null)['revenue_all_time']);
     }
@@ -214,18 +247,18 @@ class ReportServiceTest extends TestCase
     private function pendingVisit(Client $client, int $daysAgo, float $amount, string $txnId, ?int $technicianId = null): void
     {
         $visit = ServiceVisit::create([
-            'client_id'      => $client->id,
-            'visit_date'     => now()->subDays($daysAgo)->toDateString(),
-            'warranty_months'=> 0,
-            'technician_id'  => $technicianId,
+            'client_id' => $client->id,
+            'visit_date' => now()->subDays($daysAgo)->toDateString(),
+            'warranty_months' => 0,
+            'technician_id' => $technicianId,
         ]);
         Transaction::create([
-            'txn_id'   => $txnId,
+            'txn_id' => $txnId,
             'visit_id' => $visit->id,
-            'amount'   => $amount,
-            'method'   => 'Cash',
-            'status'   => 'pending',
-            'paid_at'  => null,
+            'amount' => $amount,
+            'method' => 'Cash',
+            'status' => 'pending',
+            'paid_at' => null,
         ]);
     }
 
@@ -252,9 +285,9 @@ class ReportServiceTest extends TestCase
     public function test_receivables_buckets_visits_by_age(): void
     {
         $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
-        $this->pendingVisit($c, 10,  100.0, 'TXN-10');   // 10 days → Current  (0–30)
-        $this->pendingVisit($c, 45,  200.0, 'TXN-45');   // 45 days → Overdue  (31–60)
-        $this->pendingVisit($c, 75,  300.0, 'TXN-75');   // 75 days → Late     (61–90)
+        $this->pendingVisit($c, 10, 100.0, 'TXN-10');   // 10 days → Current  (0–30)
+        $this->pendingVisit($c, 45, 200.0, 'TXN-45');   // 45 days → Overdue  (31–60)
+        $this->pendingVisit($c, 75, 300.0, 'TXN-75');   // 75 days → Late     (61–90)
         $this->pendingVisit($c, 120, 400.0, 'TXN-120');  // 120 days → Critical (91+)
 
         $result = $this->service()->receivables();
@@ -263,25 +296,29 @@ class ReportServiceTest extends TestCase
         $this->assertSame(1000.0, $result['total_outstanding']);
 
         [$current, $overdue, $late, $critical] = $result['buckets'];
-        $this->assertSame(1,     $current['count']);  $this->assertSame(100.0, $current['total']);
-        $this->assertSame(1,     $overdue['count']);  $this->assertSame(200.0, $overdue['total']);
-        $this->assertSame(1,     $late['count']);     $this->assertSame(300.0, $late['total']);
-        $this->assertSame(1,     $critical['count']); $this->assertSame(400.0, $critical['total']);
+        $this->assertSame(1, $current['count']);
+        $this->assertSame(100.0, $current['total']);
+        $this->assertSame(1, $overdue['count']);
+        $this->assertSame(200.0, $overdue['total']);
+        $this->assertSame(1, $late['count']);
+        $this->assertSame(300.0, $late['total']);
+        $this->assertSame(1, $critical['count']);
+        $this->assertSame(400.0, $critical['total']);
 
         // Items sorted oldest first
         $this->assertSame('TXN-120', $result['items'][0]['txn_id']);
-        $this->assertSame(120,       $result['items'][0]['days_outstanding']);
-        $this->assertSame('TXN-10',  $result['items'][3]['txn_id']);
+        $this->assertSame(120, $result['items'][0]['days_outstanding']);
+        $this->assertSame('TXN-10', $result['items'][3]['txn_id']);
     }
 
     public function test_receivables_scoped_to_technician(): void
     {
-        $alice = \App\Models\User::factory()->technician()->create();
-        $bob   = \App\Models\User::factory()->technician()->create();
-        $c     = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+        $alice = User::factory()->technician()->create();
+        $bob = User::factory()->technician()->create();
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
 
         $this->pendingVisit($c, 10, 100.0, 'TXN-ALICE', $alice->id);
-        $this->pendingVisit($c, 20, 200.0, 'TXN-BOB',   $bob->id);
+        $this->pendingVisit($c, 20, 200.0, 'TXN-BOB', $bob->id);
 
         $result = $this->service()->receivables($alice->id);
 
@@ -292,9 +329,9 @@ class ReportServiceTest extends TestCase
 
     public function test_receivables_null_technician_id_returns_all(): void
     {
-        $alice = \App\Models\User::factory()->technician()->create();
-        $bob   = \App\Models\User::factory()->technician()->create();
-        $c     = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
+        $alice = User::factory()->technician()->create();
+        $bob = User::factory()->technician()->create();
+        $c = Client::create(['name' => 'A', 'phone' => '011-22334455', 'address' => 'X']);
 
         $this->pendingVisit($c, 10, 100.0, 'TXN-1', $alice->id);
         $this->pendingVisit($c, 20, 200.0, 'TXN-2', $bob->id);
