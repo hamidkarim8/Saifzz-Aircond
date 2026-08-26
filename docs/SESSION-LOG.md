@@ -6,6 +6,36 @@
 
 ---
 
+## Session 49 — 2026-08-26 — QR uploads were dead in the browser + Services-by-Type counted rows, not units
+
+**Goal:** Khalid — "cannot update the image of QR at Manual QR in the Business menu". Then two follow-ups: make the QRs big enough to hold up to a customer, and recheck the Services-by-Type count, which looked like "1 service per customer".
+
+**BUG-013 — no file upload on this app has ever worked from a browser.** `BusinessSettings/Index.vue` submitted both QR forms with Inertia's `.put()` + `forceFormData`, so the browser sent a real `PUT` with a multipart body. **PHP does not parse multipart on PUT** — `$_FILES` is empty, `hasFile()` is false, the upload block is skipped, `updateOrCreate()` runs with nothing to change, and `back()->with('success', …)` reports a save that never happened. Probed inside the container to confirm rather than reason about it:
+
+```
+POST multipart              -> FILES=["payment_qr"]
+PUT  multipart              -> FILES=[]
+POST multipart _method=put  -> FILES=["payment_qr"]
+```
+
+`@inertiajs/core` 2.3.25 does **no** `_method` spoofing of its own (`grep -rn "_method" node_modules/@inertiajs/` → zero hits) — the docs tell you to do it yourself. Both forms now carry `_method: 'put'` and call `.post()`; the route stays `PUT`. Text-only forms are unaffected — Symfony parses urlencoded bodies on PUT.
+
+**Why 378 green tests never caught it:** Laravel's test client injects `UploadedFile` straight into the request object and never touches PHP's SAPI multipart parser, so `$this->put(..., ['payment_qr' => UploadedFile::fake()])` passes against code the browser cannot reach. There is no Dusk and no vitest here, so **nothing in the suite can see the browser path** — the new test pins the `_method`-spoofed POST shape instead, which is the half that is testable.
+
+**BUG-014 — same symptom one page over.** QR filenames are fixed per tenant, so a replacement changes the bytes but not the path and the browser serves its cache. Only `BusinessSettingController` had the mtime cache-bust; `PaymentController` and both `ServiceVisitController` sites used a bare `Storage::url()`. Extracted to `BrandAssets::qrUrl()` and routed all four through it. It also returns `null` for a missing file instead of a URL to nothing, so the UI falls back to "No QR uploaded yet" (one `ServiceVisitTest` fixture stored a path without writing the file and had to be fixed).
+
+**BUG-015 — Services-by-Type counted line rows.** `servicesByType()` grouped on `count(*)`, but `service_lines.units` is a quantity: a job covering 3 aircond is **one row with units = 3**, so the chart said 1. Hence "1 service per customer". Now `sum(sl.units)`, ordered by the same expression. This also removes a self-inconsistency — the builder hides the Units field once a line is bound to a registered client unit and `normalizeLine()` forces `units = 1` there, so the same 3-unit job totalled 3 when entered as three unit-bound lines and 1 when entered as one line with Units 3. Both now give 3. **Paid-only stays** (BUG-008, Khalid confirmed) — in dev data that is still the larger filter, 18 of 37 visits.
+
+**CHG-033 / CHG-034 — QRs sized for presentation.** These get held up to a customer to scan, so a fixed square wastes a phone screen. Manual QR on the payment page: `h-44 w-44` → `aspect-square w-full` inside the `max-w-lg` column (~330px phone, ~460px desktop). Google Review on the new-record page: → `aspect-square w-full max-w-sm`, capped because that column runs to `max-w-3xl`. Google Review popup on a paid record: → `aspect-square w-full`, and the Modal dropped from the default `2xl` (672px) to `sm` — it holds a QR and two lines of text, not a form. Business Settings' "Current QR" thumbnails left at `h-48 w-48`; those confirm which image is saved, nothing scans them.
+
+**Suite 383/383** (+5: `_method`-spoofed upload, QR URL changes on replacement, payment-page cache-bust, unit-summing, ordering-by-units). Pint clean, `npm run build` clean.
+
+**Not visually verified.** No headless browser in this environment, so all three QR resizes need an eyeball at phone width before they go out.
+
+**Commits on `dev`, NOT pushed** (user pushes): `0211ce2` uploads + cache-bust, `92fbb47` unit count + Manual QR, `eda4707` Google Review QR. `docs/FEEDBACK-26082026.md` = 5 items (BUG-013/014/015, CHG-033/034), all TESTING. No migrations. **Deploy needs `npm run build`.**
+
+---
+
 ## Session 48 — 2026-07-15 — Dashboard: total count on Services-by-Type chart
 
 **Goal:** Khalid — on the dashboard's "Services by Type" chart, show an overall total count somewhere, updating with the period filter.
