@@ -152,12 +152,14 @@ const handleConfirm = () => {
                         >✓</div>
                     </div>
 
+                    <!-- The QR fills the card: this is held up to a customer to
+                         scan across a table, so screen real estate beats padding. -->
                     <div
                         v-if="method === 'manualqr'"
-                        class="mt-4 flex flex-col items-center gap-2 rounded-ral border border-primary/20 bg-white px-4 py-6"
+                        class="mt-4 flex flex-col items-center gap-3 rounded-ral border border-primary/20 bg-white p-3"
                     >
-                        <img :src="manualQrUrl" alt="Payment QR" class="h-44 w-44 object-contain" />
-                        <p class="text-xs text-ink-soft">Customer scans, then tap confirm once paid</p>
+                        <img :src="manualQrUrl" alt="Payment QR" class="aspect-square w-full object-contain" />
+                        <p class="text-center text-xs text-ink-soft">Customer scans, then tap confirm once paid</p>
                     </div>
                 </button>
 

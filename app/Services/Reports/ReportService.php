@@ -47,11 +47,12 @@ class ReportService
             if ($tenantId !== null) {
                 $q->where('sv.tenant_id', $tenantId);
             }
+
             return (float) $q->sum('t.amount');
         };
 
         $revenueMonth = $paidRevenue($monthStart, $monthEnd);
-        $revenueLast  = $paidRevenue($lastStart, $lastEnd);
+        $revenueLast = $paidRevenue($lastStart, $lastEnd);
 
         $allTimeQ = DB::table('transactions as t')
             ->join('service_visits as sv', 'sv.id', '=', 't.visit_id')
@@ -65,10 +66,10 @@ class ReportService
         $revenueAllTime = (float) $allTimeQ->sum('t.amount');
 
         if ($technicianId === null) {
-            $totalClients      = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->count();
-            $clientsThisMonth  = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->whereBetween('created_at', [$monthStart, $monthEnd])->count();
-            $reminderStats     = $this->reminders->dueList($tenantId)['stats'];
-            $pending           = $reminderStats['overdue'] + $reminderStats['due_this_month'];
+            $totalClients = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->count();
+            $clientsThisMonth = Client::query()->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))->whereBetween('created_at', [$monthStart, $monthEnd])->count();
+            $reminderStats = $this->reminders->dueList($tenantId)['stats'];
+            $pending = $reminderStats['overdue'] + $reminderStats['due_this_month'];
         } else {
             $totalClients = (int) DB::table('service_visits')
                 ->where('technician_id', $technicianId)
@@ -84,25 +85,31 @@ class ReportService
                 ->where('next_service_date', '<=', $now->copy()->endOfMonth()->toDateString())
                 ->whereIn('client_id', function ($q) use ($technicianId, $tenantId) {
                     $q->select('client_id')->from('service_visits')
-                      ->where('technician_id', $technicianId)
-                      ->when($tenantId !== null, fn ($sq) => $sq->where('tenant_id', $tenantId))
-                      ->distinct();
+                        ->where('technician_id', $technicianId)
+                        ->when($tenantId !== null, fn ($sq) => $sq->where('tenant_id', $tenantId))
+                        ->distinct();
                 })
                 ->count();
         }
 
         return [
-            'total_clients'      => $totalClients,
+            'total_clients' => $totalClients,
             'clients_this_month' => $clientsThisMonth,
-            'revenue_month'      => $revenueMonth,
-            'revenue_mom_pct'    => $revenueLast > 0 ? (int) round((($revenueMonth - $revenueLast) / $revenueLast) * 100) : null,
-            'revenue_all_time'   => $revenueAllTime,
-            'pending_reminders'  => $pending,
+            'revenue_month' => $revenueMonth,
+            'revenue_mom_pct' => $revenueLast > 0 ? (int) round((($revenueMonth - $revenueLast) / $revenueLast) * 100) : null,
+            'revenue_all_time' => $revenueAllTime,
+            'pending_reminders' => $pending,
         ];
     }
 
     /**
-     * Count of service lines grouped by service type, scoped to the period by visit_date.
+     * Number of services performed, grouped by service type, scoped to the period by visit_date.
+     *
+     * Counts UNITS, not line rows: one line covering 3 aircond is 3 services, not 1.
+     * A line bound to a registered client unit always carries units = 1 (the Units field is
+     * hidden in the builder and normalizeLine() forces it), so both ways of entering the same
+     * job — three unit-bound lines, or one line with Units = 3 — now total the same.
+     *
      * Only lines whose visit has a paid transaction are counted (pending/failed/void/no-transaction
      * visits are excluded) so this matches the paid-revenue definition used by kpis().
      * When $technicianId is provided, only visits assigned to that technician are counted.
@@ -130,8 +137,8 @@ class ReportService
         }
 
         return $q->groupBy('sl.service_type')
-            ->select('sl.service_type as type', DB::raw('count(*) as count'))
-            ->orderByRaw('count(*) desc')
+            ->select('sl.service_type as type', DB::raw('sum(sl.units) as count'))
+            ->orderByRaw('sum(sl.units) desc')
             ->get()
             ->map(fn ($r) => ['type' => $r->type, 'count' => (int) $r->count])
             ->all();
@@ -150,8 +157,7 @@ class ReportService
         ?int $tenantId = null,
         ?Carbon $from = null,
         ?Carbon $to = null,
-    ): array
-    {
+    ): array {
         if (! $from || ! $to) {
             [$from, $to] = $this->range($period);
         }
@@ -247,32 +253,32 @@ class ReportService
             ['label' => 'Current',  'days_from' => 0,  'days_to' => 30,  'count' => 0, 'total' => 0.0],
             ['label' => 'Overdue',  'days_from' => 31, 'days_to' => 60,  'count' => 0, 'total' => 0.0],
             ['label' => 'Late',     'days_from' => 61, 'days_to' => 90,  'count' => 0, 'total' => 0.0],
-            ['label' => 'Critical', 'days_from' => 91, 'days_to' => null,'count' => 0, 'total' => 0.0],
+            ['label' => 'Critical', 'days_from' => 91, 'days_to' => null, 'count' => 0, 'total' => 0.0],
         ];
-        $items            = [];
+        $items = [];
         $totalOutstanding = 0.0;
 
         foreach ($rows as $r) {
-            $days             = (int) $r->days_outstanding;
-            $amount           = (float) $r->amount;
+            $days = (int) $r->days_outstanding;
+            $amount = (float) $r->amount;
             $totalOutstanding += $amount;
 
             $idx = match (true) {
                 $days <= 30 => 0,
                 $days <= 60 => 1,
                 $days <= 90 => 2,
-                default     => 3,
+                default => 3,
             };
             $buckets[$idx]['count']++;
             $buckets[$idx]['total'] += $amount;
 
             $items[] = [
-                'visit_id'         => (int) $r->visit_id,
-                'txn_id'           => $r->txn_id,
-                'client_name'      => $r->client_name,
-                'serial_no'        => $r->serial_no,
-                'visit_date'       => substr((string) $r->visit_date, 0, 10),
-                'amount'           => round($amount, 2),
+                'visit_id' => (int) $r->visit_id,
+                'txn_id' => $r->txn_id,
+                'client_name' => $r->client_name,
+                'serial_no' => $r->serial_no,
+                'visit_date' => substr((string) $r->visit_date, 0, 10),
+                'amount' => round($amount, 2),
                 'days_outstanding' => $days,
             ];
         }
@@ -283,8 +289,8 @@ class ReportService
         unset($bucket);
 
         return [
-            'buckets'           => $buckets,
-            'items'             => $items,
+            'buckets' => $buckets,
+            'items' => $items,
             'total_outstanding' => round($totalOutstanding, 2),
         ];
     }
