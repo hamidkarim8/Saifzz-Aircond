@@ -31,12 +31,8 @@ class BusinessSettingController extends Controller
                 'ssm_no' => $identity['ssm_no'],
                 'google_review_url' => $identity['google_review_url'],
             ],
-            // Cache-bust on the FILE's mtime: the QR filename is fixed
-            // (tenant-{id}.png), so the DB path never changes on re-upload and
-            // updated_at won't bump — but the file bytes do. Versioning by
-            // lastModified forces the browser to refetch the new image.
-            'qrUrl' => $this->qrUrl($identity['google_review_qr_path']),
-            'paymentQrUrl' => $this->qrUrl($identity['payment_qr_path']),
+            'qrUrl' => BrandAssets::qrUrl($identity['google_review_qr_path']),
+            'paymentQrUrl' => BrandAssets::qrUrl($identity['payment_qr_path']),
             'payment' => [
                 'isConfigured' => $gateway !== null,
                 'portalKeyHint' => $gateway ? substr($gateway->portal_key, -4) : null,
@@ -127,16 +123,6 @@ class BusinessSettingController extends Controller
             ],
             'total_amount' => 500,
         ];
-    }
-
-    /** Public-disk URL with an mtime cache-bust query, or null when no file. */
-    private function qrUrl(?string $path): ?string
-    {
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($path).'?v='.Storage::disk('public')->lastModified($path);
     }
 
     public function update(UpdateBusinessSettingRequest $request): RedirectResponse

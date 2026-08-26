@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreServiceVisitRequest;
 use App\Http\Requests\UpdateServiceVisitRequest;
 use App\Models\Appointment;
+use App\Models\BusinessSetting;
 use App\Models\Client;
-use App\Models\ServiceType;
+use App\Models\ClientUnit;
+use App\Models\ServiceFee;
 use App\Models\ServiceLine;
+use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\Documents\DocumentService;
 use App\Services\Payments\PaymentService;
+use App\Support\BrandAssets;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,11 +29,11 @@ class ServiceVisitController extends Controller
 
     public function index(): Response
     {
-        $search  = request()->string('search')->trim()->value();
-        $status  = request()->string('status')->trim()->value();
+        $search = request()->string('search')->trim()->value();
+        $status = request()->string('status')->trim()->value();
         $sortMap = ['visit_date' => 'visit_date', 'total' => 'total_amount', 'serial' => null];
         $sortKey = request()->input('sort');
-        $dir     = strtolower(request()->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $dir = strtolower(request()->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
         $perPage = min(max((int) request()->input('per_page', 10), 1), 100);
 
         $query = ServiceVisit::query()
@@ -45,8 +50,8 @@ class ServiceVisitController extends Controller
                 $q->whereHas('client', fn ($c) => $c
                     ->where('name', 'ilike', "%{$search}%")
                     ->orWhere('serial_no', 'ilike', "%{$search}%"))
-                  ->orWhereHas('transaction', fn ($t) => $t
-                    ->where('txn_id', 'ilike', "%{$search}%"));
+                    ->orWhereHas('transaction', fn ($t) => $t
+                        ->where('txn_id', 'ilike', "%{$search}%"));
             });
         }
 
@@ -84,14 +89,12 @@ class ServiceVisitController extends Controller
             : null;
 
         // Walk-in appointment (no client) → prefill the new-client form.
-        $presetNewClient = (!$presetClient && $appointment && !$appointment->client_id)
+        $presetNewClient = (! $presetClient && $appointment && ! $appointment->client_id)
             ? ['name' => $appointment->customer_name ?? '', 'phone' => $appointment->phone ?? '', 'address' => $appointment->address ?? '']
             : null;
 
-        $biz = \App\Models\BusinessSetting::forTenant($user->tenantId());
-        $qrUrl = $biz['google_review_qr_path']
-            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
-            : null;
+        $biz = BusinessSetting::forTenant($user->tenantId());
+        $qrUrl = BrandAssets::qrUrl($biz['google_review_qr_path']);
 
         return Inertia::render('ServiceRecords/Create', [
             'googleReview' => ['qrUrl' => $qrUrl, 'url' => $biz['google_review_url']],
@@ -101,14 +104,14 @@ class ServiceVisitController extends Controller
             'presetClient' => $presetClient,
             'presetNewClient' => $presetNewClient,
             'presetClientUnits' => $presetClient
-                ? \App\Models\ClientUnit::where('client_id', $presetClient->id)
+                ? ClientUnit::where('client_id', $presetClient->id)
                     ->where('is_active', true)->orderBy('label')
                     ->get(['id', 'label', 'unit_type', 'hp'])
                 : [],
             'presetTechnicianId' => request('technician_id') ? (int) request('technician_id') : null,
             'presetAppointmentId' => $appointment?->id,
             'technicians' => $user->seesAllData()
-                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                ? User::where('role', User::ROLE_TECHNICIAN)
                     ->where('active', true)
                     ->when($user->tenantId() !== null, fn ($q) => $q->where('tenant_id', $user->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
@@ -134,7 +137,7 @@ class ServiceVisitController extends Controller
 
             if ($user->tenantId() !== null && $technicianId !== null) {
                 abort_unless(
-                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
                     404,
                 );
             }
@@ -149,7 +152,7 @@ class ServiceVisitController extends Controller
             ]);
 
             // Walk-in appointment promoted to a real client → back-link it (spec decision: back-link on submit).
-            if ($data['client_mode'] === 'new' && !empty($data['appointment_id'])) {
+            if ($data['client_mode'] === 'new' && ! empty($data['appointment_id'])) {
                 Appointment::visibleTo($user)
                     ->whereKey($data['appointment_id'])
                     ->update(['client_id' => $client->id]);
@@ -162,8 +165,8 @@ class ServiceVisitController extends Controller
             // Sync next_service_date/type onto each unit that was referenced in this visit.
             // Scoped to the visit's client to prevent cross-client data corruption.
             foreach ($data['lines'] as $line) {
-                if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
-                    \App\Models\ClientUnit::where('id', $line['unit_id'])
+                if (! empty($line['unit_id']) && ! empty($line['next_service_date'])) {
+                    ClientUnit::where('id', $line['unit_id'])
                         ->where('client_id', $client->id)
                         ->update([
                             'next_service_date' => $line['next_service_date'],
@@ -199,10 +202,8 @@ class ServiceVisitController extends Controller
 
         $serviceRecord->load(['client', 'lines', 'transaction', 'creator:id,name']);
 
-        $biz = \App\Models\BusinessSetting::forTenant($serviceRecord->tenant_id);
-        $qrUrl = $biz['google_review_qr_path']
-            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['google_review_qr_path'])
-            : null;
+        $biz = BusinessSetting::forTenant($serviceRecord->tenant_id);
+        $qrUrl = BrandAssets::qrUrl($biz['google_review_qr_path']);
 
         return Inertia::render('ServiceRecords/Show', [
             'visit' => $serviceRecord,
@@ -224,7 +225,7 @@ class ServiceVisitController extends Controller
         return Inertia::render('ServiceRecords/Edit', [
             'visit' => $serviceRecord,
             'technicians' => request()->user()->seesAllData()
-                ? \App\Models\User::where('role', \App\Models\User::ROLE_TECHNICIAN)
+                ? User::where('role', User::ROLE_TECHNICIAN)
                     ->where('active', true)
                     ->when(request()->user()->tenantId() !== null, fn ($q) => $q->where('tenant_id', request()->user()->tenantId()))
                     ->orderBy('name')->get(['id', 'name'])
@@ -232,7 +233,7 @@ class ServiceVisitController extends Controller
             'serviceTypes' => ServiceType::orderBy('sort_order')->orderBy('name')
                 ->with('fees:id,service_type_id,unit_type,hp_value,price')
                 ->get(['id', 'name', 'pricing_mode', 'requires_next_service'])->toArray(),
-            'clientUnits' => \App\Models\ClientUnit::where('client_id', $serviceRecord->client_id)
+            'clientUnits' => ClientUnit::where('client_id', $serviceRecord->client_id)
                 ->where('is_active', true)->orderBy('label')
                 ->get(['id', 'label', 'unit_type', 'hp']),
         ]);
@@ -256,7 +257,7 @@ class ServiceVisitController extends Controller
 
             if ($user->tenantId() !== null && $technicianId !== null) {
                 abort_unless(
-                    \App\Models\User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
+                    User::whereKey($technicianId)->where('tenant_id', $user->tenantId())->exists(),
                     404,
                 );
             }
@@ -275,8 +276,8 @@ class ServiceVisitController extends Controller
 
             // Re-sync next_service_date/type onto referenced units (mirrors store()).
             foreach ($data['lines'] as $line) {
-                if (!empty($line['unit_id']) && !empty($line['next_service_date'])) {
-                    \App\Models\ClientUnit::where('id', $line['unit_id'])
+                if (! empty($line['unit_id']) && ! empty($line['next_service_date'])) {
+                    ClientUnit::where('id', $line['unit_id'])
                         ->where('client_id', $serviceRecord->client_id)
                         ->update([
                             'next_service_date' => $line['next_service_date'],
@@ -340,8 +341,8 @@ class ServiceVisitController extends Controller
         DB::transaction(function () use ($data, $line, $serviceRecord) {
             $line->update(['next_service_date' => $data['next_service_date']]);
 
-            if ($line->unit_id && !empty($data['next_service_date'])) {
-                \App\Models\ClientUnit::where('id', $line->unit_id)
+            if ($line->unit_id && ! empty($data['next_service_date'])) {
+                ClientUnit::where('id', $line->unit_id)
                     ->where('client_id', $serviceRecord->client_id)
                     ->update([
                         'next_service_date' => $data['next_service_date'],
@@ -361,7 +362,7 @@ class ServiceVisitController extends Controller
     private function normalizeLine(array $line): array
     {
         $typeName = $line['service_type'];
-        $serviceType = \App\Models\ServiceType::where('name', $typeName)->first();
+        $serviceType = ServiceType::where('name', $typeName)->first();
         $mode = $serviceType?->pricing_mode ?? 'flexible';
         $isFlexible = $mode === 'flexible';
         $isHp = $mode === 'hp_tiered';
@@ -374,23 +375,23 @@ class ServiceVisitController extends Controller
         if ($isFlexible) {
             $rate = (float) $line['rate'];
         } else {
-            $q = \App\Models\ServiceFee::where('service_type_id', $serviceType->id)
+            $q = ServiceFee::where('service_type_id', $serviceType->id)
                 ->where('unit_type', $unitType);
             $isHp ? $q->where('hp_value', $hpValue) : $q->whereNull('hp_value');
             $rate = (float) $q->value('price');
         }
 
         return [
-            'unit_id'           => $hasUnit ? (int) $line['unit_id'] : null,
-            'service_type'      => $typeName,
-            'unit_type'         => $unitType,
-            'units'             => $hasUnit ? 1 : (int) $line['units'],
-            'rate'              => $rate,
-            'repair_desc'       => $isFlexible ? ($line['repair_desc'] ?? null) : null,
-            'discount'          => (float) ($line['discount'] ?? 0),
+            'unit_id' => $hasUnit ? (int) $line['unit_id'] : null,
+            'service_type' => $typeName,
+            'unit_type' => $unitType,
+            'units' => $hasUnit ? 1 : (int) $line['units'],
+            'rate' => $rate,
+            'repair_desc' => $isFlexible ? ($line['repair_desc'] ?? null) : null,
+            'discount' => (float) ($line['discount'] ?? 0),
             'next_service_date' => ($requiresNext && ! $hasUnit) ? ($line['next_service_date'] ?? null) : null,
-            'notes'             => $isFlexible ? null : ($line['notes'] ?? null),
-            'hp_value'          => $hpValue,
+            'notes' => $isFlexible ? null : ($line['notes'] ?? null),
+            'hp_value' => $hpValue,
         ];
     }
 

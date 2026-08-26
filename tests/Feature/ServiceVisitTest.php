@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Appointment;
+use App\Models\BusinessSetting;
 use App\Models\Client;
 use App\Models\ServiceFee;
+use App\Models\ServiceType;
 use App\Models\ServiceVisit;
 use App\Models\User;
+use Database\Seeders\ServiceTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ServiceVisitTest extends TestCase
@@ -16,7 +21,7 @@ class ServiceVisitTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\ServiceTypeSeeder::class);
+        $this->seed(ServiceTypeSeeder::class);
     }
 
     private function recorder(): User
@@ -39,10 +44,10 @@ class ServiceVisitTest extends TestCase
     {
         // ServiceTypeSeeder seeds Cleaning (hp_tiered), Gas Top-Up (flat), Repair (flexible).
         // These tests use Wall Mounted Cleaning without hp_value, so set Cleaning to flat here.
-        $cleaning = \App\Models\ServiceType::where('name', 'Cleaning')->first();
+        $cleaning = ServiceType::where('name', 'Cleaning')->first();
         $cleaning->update(['pricing_mode' => 'flat']);
 
-        $gasTopUp = \App\Models\ServiceType::where('name', 'Gas Top-Up')->first();
+        $gasTopUp = ServiceType::where('name', 'Gas Top-Up')->first();
 
         // Cleaning: Wall Mounted flat = 60 (test R1 asserts rate 60 from fee book; units=2 − 10 discount = 110)
         ServiceFee::firstOrCreate(
@@ -122,15 +127,18 @@ class ServiceVisitTest extends TestCase
 
     public function test_create_page_receives_google_review_when_configured(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $this->seedFees();
         $user = $this->recorder();
         $user->update(['tenant_id' => $user->id]); // become a tenant so forTenant() resolves the row
 
-        \App\Models\BusinessSetting::updateOrCreate(
+        BusinessSetting::updateOrCreate(
             ['tenant_id' => $user->tenantId()],
             ['google_review_qr_path' => 'qr/review.png', 'google_review_url' => 'https://g.page/r/abc']
         );
+        // The URL is built from the file itself (mtime cache-bust), so the
+        // stored path alone is not enough — the file has to be on the disk.
+        Storage::disk('public')->put('qr/review.png', 'png-bytes');
 
         $this->actingAs($user)
             ->get(route('service-records.create'))
@@ -263,7 +271,7 @@ class ServiceVisitTest extends TestCase
             'created_by' => null,
         ]);
         $visit->transaction()->create([
-            'txn_id' => 'TXN-' . str_replace('-', '', $visitDate) . '-' . str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
+            'txn_id' => 'TXN-'.str_replace('-', '', $visitDate).'-'.str_pad((string) $visit->id, 3, '0', STR_PAD_LEFT),
             'amount' => $total,
             'method' => 'Cash',
             'status' => 'pending',
@@ -344,7 +352,7 @@ class ServiceVisitTest extends TestCase
     public function test_create_prefills_new_client_from_walkin_appointment(): void
     {
         $user = $this->allDataRecorder();
-        $appt = \App\Models\Appointment::create([
+        $appt = Appointment::create([
             'datetime' => '2026-06-20 09:00',
             'customer_name' => 'Walk In Wan',
             'phone' => '012-7654321',
@@ -369,7 +377,7 @@ class ServiceVisitTest extends TestCase
     {
         $user = $this->allDataRecorder();
         $client = Client::create(['name' => 'Acme', 'phone' => '012-3456789', 'address' => 'KL']);
-        $appt = \App\Models\Appointment::create([
+        $appt = Appointment::create([
             'datetime' => '2026-06-20 09:00',
             'client_id' => $client->id,
             'phone' => '012-3456789',
@@ -390,7 +398,7 @@ class ServiceVisitTest extends TestCase
     {
         $this->seedFees();
         $user = $this->recorder();
-        $appt = \App\Models\Appointment::create([
+        $appt = Appointment::create([
             'datetime' => '2026-06-20 09:00',
             'customer_name' => 'Walk In Wan',
             'phone' => '012-7654321',
@@ -421,7 +429,7 @@ class ServiceVisitTest extends TestCase
         $this->seedFees();
         $user = $this->recorder();
         $client = Client::create(['name' => 'Acme', 'phone' => '012-3456789', 'address' => 'KL']);
-        $appt = \App\Models\Appointment::create([
+        $appt = Appointment::create([
             'datetime' => '2026-06-20 09:00', 'client_id' => $client->id,
             'phone' => '012-3456789', 'address' => 'KL', 'status' => 'pending',
         ]);

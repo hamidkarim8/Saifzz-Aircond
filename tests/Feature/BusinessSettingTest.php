@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ServiceVisit;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Documents\SnapshotBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -65,13 +66,13 @@ class BusinessSettingTest extends TestCase
         ]);
         $txn = Transaction::create([
             'visit_id' => $visit->id,
-            'txn_id' => 'TXN-' . now()->format('Ymd') . '-001',
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-001',
             'amount' => '0.00',
             'method' => 'Cash',
             'status' => 'pending',
         ]);
 
-        $snap = app(\App\Services\Documents\SnapshotBuilder::class)->forTransaction($txn);
+        $snap = app(SnapshotBuilder::class)->forTransaction($txn);
 
         $this->assertSame('Tenant Cooling Co', $snap['business']['name']);
         $this->assertSame('SSM-123', $snap['business']['ssm_no']);
@@ -81,6 +82,7 @@ class BusinessSettingTest extends TestCase
     {
         $boss = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $boss->update(['tenant_id' => $boss->id]);
+
         return $boss;
     }
 
@@ -108,18 +110,18 @@ class BusinessSettingTest extends TestCase
 
     public function test_qr_upload_stores_file_and_path(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $boss = $this->bossAdmin();
 
         $this->actingAs($boss)->put(route('business-settings.update'), [
-            'google_review_qr' => \Illuminate\Http\UploadedFile::fake()->image('qr.png', 200, 200),
+            'google_review_qr' => UploadedFile::fake()->image('qr.png', 200, 200),
         ])->assertRedirect();
 
         $this->assertDatabaseHas('business_settings', [
             'tenant_id' => $boss->id,
             'google_review_qr_path' => "qr/tenant-{$boss->id}.png",
         ]);
-        \Illuminate\Support\Facades\Storage::disk('public')->assertExists("qr/tenant-{$boss->id}.png");
+        Storage::disk('public')->assertExists("qr/tenant-{$boss->id}.png");
     }
 
     public function test_tenant_id_not_honored_from_input(): void
@@ -202,20 +204,20 @@ class BusinessSettingTest extends TestCase
 
     public function test_show_passes_google_review_qr_url(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $boss = $this->bossAdmin();
         BusinessSetting::create([
             'tenant_id' => $boss->id,
             'google_review_qr_path' => 'qr/sample.png',
             'google_review_url' => 'https://g.page/r/test',
         ]);
-        \Illuminate\Support\Facades\Storage::disk('public')->put('qr/sample.png', 'x');
+        Storage::disk('public')->put('qr/sample.png', 'x');
 
-        $client = \App\Models\Client::create([
+        $client = Client::create([
             'name' => 'QR Client', 'phone' => '0123', 'address' => 'Addr',
             'tenant_id' => $boss->id,
         ]);
-        $visit = \App\Models\ServiceVisit::create([
+        $visit = ServiceVisit::create([
             'client_id' => $client->id, 'visit_date' => now()->toDateString(),
             'tenant_id' => $boss->id, 'technician_id' => $boss->id, 'created_by' => $boss->id,
         ]);
@@ -230,7 +232,7 @@ class BusinessSettingTest extends TestCase
     public function test_admin_uploads_payment_qr_and_show_exposes_url(): void
     {
         Storage::fake('public');
-        $admin = \App\Models\User::factory()->create(['role' => \App\Models\User::ROLE_ADMIN]);
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
         $this->actingAs($admin)
             ->put(route('business-settings.update'), [
@@ -238,7 +240,7 @@ class BusinessSettingTest extends TestCase
             ])
             ->assertRedirect();
 
-        $row = \App\Models\BusinessSetting::where('tenant_id', $admin->id)->first();
+        $row = BusinessSetting::where('tenant_id', $admin->id)->first();
         $this->assertSame("payment-qr/tenant-{$admin->id}.png", $row->payment_qr_path);
         Storage::disk('public')->assertExists($row->payment_qr_path);
 
@@ -246,5 +248,114 @@ class BusinessSettingTest extends TestCase
             ->get(route('business-settings.show'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('paymentQrUrl', fn ($url) => $url !== null));
+    }
+
+    /**
+     * The browser CANNOT send a QR as a real PUT — PHP does not parse a
+     * multipart body on PUT, so $_FILES arrives empty and the upload silently
+     * no-ops behind a success flash. Both upload forms therefore POST with
+     * `_method: 'put'`; this pins the route down to what they actually send.
+     */
+    public function test_qr_uploads_arrive_via_method_spoofed_post(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->post(route('business-settings.update'), [
+                '_method' => 'put',
+                'payment_qr' => UploadedFile::fake()->image('manual.png', 300, 300),
+                'google_review_qr' => UploadedFile::fake()->image('review.png', 300, 300),
+            ])
+            ->assertRedirect();
+
+        $row = BusinessSetting::where('tenant_id', $admin->id)->first();
+        $this->assertSame("payment-qr/tenant-{$admin->id}.png", $row->payment_qr_path);
+        $this->assertSame("qr/tenant-{$admin->id}.png", $row->google_review_qr_path);
+        Storage::disk('public')->assertExists($row->payment_qr_path);
+        Storage::disk('public')->assertExists($row->google_review_qr_path);
+    }
+
+    /**
+     * Re-uploading overwrites a fixed filename, so the DB path never changes.
+     * The exposed URL must still change, or the browser keeps the old image —
+     * which is exactly how a working upload looks broken to the user.
+     */
+    public function test_replacing_a_qr_changes_the_exposed_url(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $upload = fn (int $size) => $this->actingAs($admin)
+            ->post(route('business-settings.update'), [
+                '_method' => 'put',
+                'payment_qr' => UploadedFile::fake()->image('qr.png', $size, $size),
+            ])
+            ->assertRedirect();
+
+        $urlAfterUpload = fn () => $this->actingAs($admin)
+            ->get(route('business-settings.show'))
+            ->viewData('page')['props']['paymentQrUrl'];
+
+        $path = "payment-qr/tenant-{$admin->id}.png";
+
+        $upload(300);
+        $first = $urlAfterUpload();
+        $firstBytes = Storage::disk('public')->get($path);
+
+        $upload(400);
+        // Two uploads a fraction of a second apart share an mtime, so nudge it
+        // forward to stand in for the real-world gap between replacements.
+        touch(Storage::disk('public')->path($path), time() + 10);
+        $second = $urlAfterUpload();
+
+        // Same path, different bytes — the only thing that can move the URL is
+        // the cache-bust version, which is keyed on the file's mtime.
+        $this->assertNotSame($firstBytes, Storage::disk('public')->get($path));
+        $this->assertStringContainsString('?v=', $first);
+        $this->assertNotSame($first, $second);
+    }
+
+    public function test_payment_page_qr_url_is_cache_busted(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $admin->update(['tenant_id' => $admin->id]);
+
+        $this->actingAs($admin)
+            ->post(route('business-settings.update'), [
+                '_method' => 'put',
+                'payment_qr' => UploadedFile::fake()->image('qr.png', 300, 300),
+            ])
+            ->assertRedirect();
+
+        $client = Client::create([
+            'tenant_id' => $admin->id,
+            'name' => 'QR Client',
+            'phone' => '0123456789',
+            'address' => '1 Jalan Test',
+        ]);
+        $visit = ServiceVisit::create([
+            'tenant_id' => $admin->id,
+            'client_id' => $client->id,
+            'visit_date' => now()->toDateString(),
+            'created_by' => $admin->id,
+            'technician_id' => $admin->id,
+        ]);
+        $txn = Transaction::create([
+            'visit_id' => $visit->id,
+            'txn_id' => 'TXN-'.now()->format('Ymd').'-900',
+            'amount' => '120.00',
+            'method' => 'Cash',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('payments.show', $txn))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where(
+                'manualQrUrl',
+                fn ($url) => $url !== null && str_contains($url, '?v='),
+            ));
     }
 }
