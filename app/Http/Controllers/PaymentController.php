@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BusinessSetting;
+use App\Models\ServiceVisit;
 use App\Models\Transaction;
 use App\Services\Payments\PaymentService;
+use App\Support\BrandAssets;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,10 +14,10 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class PaymentController extends Controller
 {
-    private function authorizeVisitScope(\App\Models\Transaction $transaction): void
+    private function authorizeVisitScope(Transaction $transaction): void
     {
         abort_unless(
-            \App\Models\ServiceVisit::whereKey($transaction->visit_id)
+            ServiceVisit::whereKey($transaction->visit_id)
                 ->visibleTo(request()->user())->exists(),
             403,
         );
@@ -30,10 +33,8 @@ class PaymentController extends Controller
 
         $transaction->load('visit.client');
 
-        $biz = \App\Models\BusinessSetting::forTenant($transaction->visit->tenant_id);
-        $manualQrUrl = $biz['payment_qr_path']
-            ? \Illuminate\Support\Facades\Storage::disk('public')->url($biz['payment_qr_path'])
-            : null;
+        $biz = BusinessSetting::forTenant($transaction->visit->tenant_id);
+        $manualQrUrl = BrandAssets::qrUrl($biz['payment_qr_path']);
 
         return Inertia::render('Payments/Show', [
             'transaction' => [

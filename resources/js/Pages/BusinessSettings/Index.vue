@@ -52,13 +52,17 @@ const waPreview = computed(() => {
     return n ? `https://wa.me/${n}` : '';
 });
 
+// Uploads must go out as POST + `_method: 'put'`. PHP does not parse a
+// multipart body on a real PUT, so the file never lands in $_FILES: the save
+// reports success while the image silently stays unchanged. Inertia does not
+// spoof the method for us. Text-only forms above can keep using .put().
 const reviewForm = useForm({
+    _method: 'put',
     google_review_url: props.settings.google_review_url ?? '',
     google_review_qr: null,
 });
-const saveReview = () => reviewForm.put(route('business-settings.update'), {
+const saveReview = () => reviewForm.post(route('business-settings.update'), {
     preserveScroll: true,
-    forceFormData: true,
     onSuccess: () => { reviewForm.google_review_qr = null; },
 });
 
@@ -68,10 +72,10 @@ const savePayment = () => payForm.put(route('payment-settings.update'), {
     onSuccess: () => payForm.reset(),
 });
 
-const manualQrForm = useForm({ payment_qr: null });
-const saveManualQr = () => manualQrForm.put(route('business-settings.update'), {
+// POST + `_method` spoof — see the note on reviewForm above.
+const manualQrForm = useForm({ _method: 'put', payment_qr: null });
+const saveManualQr = () => manualQrForm.post(route('business-settings.update'), {
     preserveScroll: true,
-    forceFormData: true,
     onSuccess: () => { manualQrForm.payment_qr = null; },
 });
 
