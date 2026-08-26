@@ -199,7 +199,9 @@ const submit = () => form.post(route('service-records.store'));
             <Card v-if="googleReview.qrUrl" title="Google Review">
                 <div class="flex flex-col items-center gap-3 text-center">
                     <p class="text-sm text-ink-soft">Show this to the customer to leave a review.</p>
-                    <img :src="googleReview.qrUrl" alt="Google Review QR" class="h-44 w-44 object-contain" />
+                    <!-- Held up for a customer to scan, so it fills the phone's
+                         width; capped on desktop where the column is wide. -->
+                    <img :src="googleReview.qrUrl" alt="Google Review QR" class="aspect-square w-full max-w-sm object-contain" />
                     <a
                         v-if="googleReview.url"
                         :href="googleReview.url"

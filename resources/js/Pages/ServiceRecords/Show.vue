@@ -236,11 +236,12 @@ const voidRecord = async () => {
                 </div>
             </div>
         </div>
-        <Modal :show="showReview" @close="showReview = false">
-            <div class="space-y-4 p-6 text-center">
+        <!-- Narrow dialog: it is a QR held up to a customer, not a form. -->
+        <Modal :show="showReview" max-width="sm" @close="showReview = false">
+            <div class="space-y-4 p-5 text-center">
                 <h3 class="text-base font-bold text-navy-800">Rate us on Google</h3>
                 <p class="text-sm text-ink-soft">Scan the QR code to leave a review.</p>
-                <img v-if="googleReview.qrUrl" :src="googleReview.qrUrl" alt="Google Review QR" class="mx-auto h-56 w-56 object-contain" />
+                <img v-if="googleReview.qrUrl" :src="googleReview.qrUrl" alt="Google Review QR" class="aspect-square w-full object-contain" />
                 <a v-if="googleReview.url" :href="googleReview.url" target="_blank" rel="noopener"
                     class="block text-sm font-semibold text-primary underline">Open review page</a>
                 <button type="button" class="rounded-ra border border-line px-4 py-2 text-sm font-semibold text-ink-soft hover:bg-surface" @click="showReview = false">Close</button>
